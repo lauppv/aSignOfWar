@@ -1,0 +1,77 @@
+Copie Triburile in epoca contemporana. Atat codul sursa cat si jocul vor fi in RO pentru consistenta. Doar numele fisierelor vor fi in EN si configurari (env, diferite config) 
+
+Fiecare jucator incepe cu un singur oras si:
+1) 10 bazooka
+2) 10 mitraliori
+3) 1000 din fiecare resursa
+4) Sediu central nivel 1
+5) Centrala electrica nivel 1
+6) Banca nivel 1
+7) Fabrica de armament nivel 1
+8) Baza militara nivel 0 (necesita Sediu central nivel 5)
+9) Cladiri rezidentiale nivel 1
+10) Depozit nivel 1
+11) Port nivel 0 (necesita Sediu central nivel 15)
+12) Scut antiaerian nivel 0 (necesita Sediu central nivel 5)
+13) TODO academie (necesita Sediu central nivel 25 + Port nivel 15 + Baza militara nivel 20)
+
+Unitatile si resursele vor fi pe oras, nu pe cont
+Nu exista Fierarie. Unitatile vor fi deblocate pe masura ce Sediul central si Baza militara cresc in nivel (vezi Unitati + deblocare)
+
+
+Tipuri de resurse:
+1) energie electrica (produs de centrala electrica)
+2) bani (produs de banca)
+3) munitie (produs de fabrica de armament)
+
+Cladiri (cu perpendiculara pe Triburile):
+1) Sediu central (Cladire principala). Nivel maxim 30
+2) Centrala electrica. Nivel maxim 30
+3) Banca. Nivel maxim 30
+4) Fabrica de armament. Nivel maxim 30
+5) Baza militara (cazarma + grajd). Nivel maxim 25
+6) Cladiri rezidentiale (Ferma (populatie)). Nivel maxim 30
+7) Depozit (Magazie (depoziteaza resurse)). Nivel maxim 30
+8) Port (targ (pentru a trimite resurse catre alte orase)). Nivel maxim 25
+9) Scut antiaerian (Zid). Cladire speciala care nu apare in imaginea orasului, dar va avea propriul ei card/componenta (probabil sub tabloul cu numarul de unitati din oras). Nivel maxim 20
+10) TODO Academie
+
+Unitati(cu perpendiculara pe Triburile) + deblocare (nivel Sediu central):
+1) De atac:
+    Mitralior (luptator cu topor) - nu necesita Sediu central
+    Infanterie mecanizata (cavalerie usoara) - Sediu central nivel 10
+    Forte speciale (arcas calare) - sediu central nivel 15 + Baza militara nivel 10
+2) De aparare:
+    Bazooka (lancier) - nu necesita Sediu central
+    Gardian (luptator cu spada) - Sediu central nivel 5
+    Lunetist (arcas) - Sediu central nivel 10 + Baza militara nivel 10
+3) Mix:
+    Tanc (cavalerie grea) - Sediu central nivel 20 + Baza militara nivel 15
+4) Asediu:
+    Lansator de rachete (berbec) - Sediu central nivel 20 + Baza militara nivel 15
+    Drona (catapulta) - Sediu central nivel 20 + Baza militara nivel 20
+
+Tipuri de unitati:
+    1) infanterie: mitralior, gardian, bazooka
+    2) distanta: lunetist, forte speciale
+    3) infanterie mecanizata, tanc
+    4) asediu: lansator de rachete, drona
+
+
+Toate unitatile se recruteaza din Baza militara
+
+Pentru MVP nu exista harta cu coordonate. Pentru a trimite comenzi (atac, suport, resurse) catre un oras, va exista o cladire (piata centrala din triburile) unde vei selecta tipul comenzii (militar(atac, suport) sau resurse) si ID-ul orasului. Daca ID-ul este valid, va aparea o noua componenta cu numele orasului si numele jucatorului care detine orasul. In functie de tipul comenzii, componenta va contine informatii diferite:
+1) atac/suport:
+    nume oras
+    nume proprietar
+    de unde vine comanda(orasul tau)
+    timp de deplasare (fara harta vom considera ca fiecare comanda face 60 de secunde)
+    ora sosire comanda (updatata in timp real, in fiecare secunda, ca in triburile, pentru incadrari de atac/suport)
+    ce trupe sunt pe cale sa fie trimise
+2) resurse:
+    cantiate energie electrica
+    cantitate bani
+    cantitate munitie
+    timp de deplasare (fara harta, 60 de secunde)
+    ora sosire (la fel ca la atac/suport)
+Daca ID-ul nu e valabil, componenta va contine un simplu mesaj "orasul cu ID-ul X nu exista"
