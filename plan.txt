@@ -13,28 +13,28 @@ Fiecare jucator incepe cu un singur oras si:
 10) Depozit nivel 1
 11) Port nivel 0 (necesita Sediu central nivel 15)
 12) Scut antiaerian nivel 0 (necesita Sediu central nivel 5)
-13) TODO academie (necesita Sediu central nivel 25 + Port nivel 15 + Baza militara nivel 20)
+
 
 Unitatile si resursele vor fi pe oras, nu pe cont
 Nu exista Fierarie. Unitatile vor fi deblocate pe masura ce Sediul central si Baza militara cresc in nivel (vezi Unitati + deblocare)
 
 
 Tipuri de resurse:
-1) energie electrica (produs de centrala electrica)
-2) bani (produs de banca)
-3) munitie (produs de fabrica de armament)
+1) bani (produs de banca) - Lemn in Triburile
+2) energie electrica (produs de centrala electrica - Argila in Triburile)
+3) munitie (produs de fabrica de armament - Fier in Triburile)
 
 Cladiri (cu perpendiculara pe Triburile):
 1) Sediu central (Cladire principala). Nivel maxim 30
-2) Centrala electrica. Nivel maxim 30
-3) Banca. Nivel maxim 30
-4) Fabrica de armament. Nivel maxim 30
+2) Banca (Taietori de lemne). Nivel maxim 30
+3) Centrala electrica (Mina de lut). Nivel maxim 30
+4) Fabrica de armament (Mina de fier). Nivel maxim 30
 5) Baza militara (cazarma + grajd). Nivel maxim 25
 6) Cladiri rezidentiale (Ferma (populatie)). Nivel maxim 30
 7) Depozit (Magazie (depoziteaza resurse)). Nivel maxim 30
 8) Port (targ (pentru a trimite resurse catre alte orase)). Nivel maxim 25
 9) Scut antiaerian (Zid). Cladire speciala care nu apare in imaginea orasului, dar va avea propriul ei card/componenta (probabil sub tabloul cu numarul de unitati din oras). Nivel maxim 20
-10) TODO Academie
+
 
 Unitati(cu perpendiculara pe Triburile) + deblocare (nivel Sediu central):
 1) De atac:
@@ -56,6 +56,7 @@ Tipuri de unitati:
     2) distanta: lunetist, forte speciale
     3) infanterie mecanizata, tanc
     4) asediu: lansator de rachete, drona
+    5) cucerire: guvernator
 
 
 Toate unitatile se recruteaza din Baza militara
@@ -75,3 +76,305 @@ Pentru MVP nu exista harta cu coordonate. Pentru a trimite comenzi (atac, suport
     timp de deplasare (fara harta, 60 de secunde)
     ora sosire (la fel ca la atac/suport)
 Daca ID-ul nu e valabil, componenta va contine un simplu mesaj "orasul cu ID-ul X nu exista"
+
+Fiecare oras are ceva ce se numeste Stabilitate economica (adeziune in Triburile). Fiecare oras incepe cu Stabilitate economica = 100%. Cand aceasta scade sub 0%, orasul este cucerit. Pentru a scadea stabilitatea, e nevoie de unul sau mai multi guvernatori. Un guvernator poate scadea stabilitatea cu 20-35%, iar acest lucru se intampla doar daca orasul atacat e lipsit de orice unitate in aparare. Un guvernator nu are valori ofensive sau defensive, dar ocupa 100 populatie.
+Pentru a recruta un guvernator e necesar ca Sediul central sa fie la nivel 30 (maxim). Acesta se poate recruta din Sediul central. In Sediul central avem numarul de guvernatori actuali din oras. Deoarece nu avem taleri ca in Triburile, fiecare guvernator va costa exponential mai mult. Vor fi 3 bare de progres are trebuie umplute cu cele 3 resurse (ca Minunile Antice in Grepolis sau ca nivelurile cladirilor legendare in Forge of Empires)
+
+
+--------------------------------------------------------------------------------
+INFANTERIE
+--------------------------------------------------------------------------------
+ 
+mitralior (luptator cu topor)
+  tip: infanterie
+  rol: ofensiv
+  cost: 60 bani, 30 energie, 40 munitie
+  populatie: 1
+  viteza: 18
+  transport: 10
+  timp recrutare baza: 120 sec
+  atac: 40
+  aparare vs infanterie: 10
+  aparare vs mecanizat: 5
+  aparare vs distanta: 10
+ 
+gardian (luptator cu spada)
+  tip: infanterie
+  rol: defensiv
+  cost: 30 bani, 30 energie, 70 munitie
+  populatie: 1
+  viteza: 22
+  transport: 15
+  timp recrutare baza: 150 sec
+  atac: 25
+  aparare vs infanterie: 50
+  aparare vs mecanizat: 15
+  aparare vs distanta: 40
+ 
+bazooka (lancier)
+  tip: infanterie
+  rol: anti-mecanizat
+  cost: 50 bani, 30 energie, 10 munitie
+  populatie: 1
+  viteza: 18
+  transport: 25
+  timp recrutare baza: 130 sec
+  atac: 10
+  aparare vs infanterie: 15
+  aparare vs mecanizat: 45
+  aparare vs distanta: 20
+ 
+--------------------------------------------------------------------------------
+DISTANTA
+--------------------------------------------------------------------------------
+ 
+lunetist (arcas)
+  tip: distanta
+  rol: anti-infanterie
+  cost: 100 bani, 30 energie, 60 munitie
+  populatie: 1
+  viteza: 18
+  transport: 10
+  timp recrutare baza: 200 sec
+  atac: 15
+  aparare vs infanterie: 50
+  aparare vs mecanizat: 40
+  aparare vs distanta: 5
+ 
+forte_speciale (arcas calare)
+  tip: distanta
+  rol: mobil
+  cost: 250 bani, 100 energie, 150 munitie
+  populatie: 5
+  viteza: 10
+  transport: 50
+  timp recrutare baza: 400 sec
+  atac: 120
+  aparare vs infanterie: 40
+  aparare vs mecanizat: 30
+  aparare vs distanta: 50
+ 
+--------------------------------------------------------------------------------
+MECANIZAT
+--------------------------------------------------------------------------------
+ 
+infanterie_mecanizata (cavalerie usoara)
+  tip: mecanizat
+  rol: raider
+  cost: 125 bani, 100 energie, 250 munitie
+  populatie: 4
+  viteza: 10
+  transport: 80
+  timp recrutare baza: 300 sec
+  atac: 130
+  aparare vs infanterie: 30
+  aparare vs mecanizat: 40
+  aparare vs distanta: 30
+ 
+tanc (cavalerie grea)
+  tip: mecanizat
+  rol: greu
+  cost: 200 bani, 150 energie, 600 munitie
+  populatie: 6
+  viteza: 11
+  transport: 50
+  timp recrutare baza: 600 sec
+  atac: 150
+  aparare vs infanterie: 200
+  aparare vs mecanizat: 80
+  aparare vs distanta: 180
+ 
+--------------------------------------------------------------------------------
+ASEDIU
+--------------------------------------------------------------------------------
+ 
+lansator_de_rachete (berbec)
+  tip: asediu
+  rol: asediu zid
+  cost: 300 bani, 200 energie, 200 munitie
+  populatie: 5
+  viteza: 30
+  transport: 0
+  timp recrutare baza: 800 sec
+  atac: 2
+  aparare vs infanterie: 20
+  aparare vs mecanizat: 50
+  aparare vs distanta: 20
+  efect asediu: wallDamage 60
+ 
+drona (catapulta)
+  tip: asediu
+  rol: asediu cladiri
+  cost: 320 bani, 400 energie, 100 munitie
+  populatie: 8
+  viteza: 30
+  transport: 0
+  timp recrutare baza: 1000 sec
+  atac: 100
+  aparare vs infanterie: 100
+  aparare vs mecanizat: 50
+  aparare vs distanta: 100
+  efect asediu: wallDamage 15, buildingDamage 80
+ 
+--------------------------------------------------------------------------------
+CUCERIRE
+--------------------------------------------------------------------------------
+ 
+guvernator (nobil)
+  tip: cucerire
+  cost: 1000 bani, 500 energie, 500 munitie
+  populatie: 100
+  viteza: 18
+  transport: 0
+  timp recrutare baza: 3600 sec
+  atac: 0
+  aparare: 0
+  efect special: scade stabilitatea economica cu 20-35%
+  conditie: functioneaza DOAR daca orasul atacat nu are unitati in aparare
+
+
+
+================================================================================
+BUILDINGS CONFIG
+================================================================================
+ 
+Nota: costurile cresc exponential per nivel (costGrowth ~1.22-1.28).
+Timpul de constructie creste exponential per nivel (timeGrowth ~1.18-1.25).
+Valorile de mai jos sunt pentru nivelul 1 (baza).
+ 
+--------------------------------------------------------------------------------
+SEDIU CENTRAL (Cladire principala)
+--------------------------------------------------------------------------------
+  nivel maxim: 30
+  cost baza: 90 bani, 80 energie, 70 munitie
+  timp baza: 60 sec
+  nivel initial: 1
+  efect per nivel:
+    - reduce timpul de constructie al tuturor cladirilor cu 2% per nivel
+    - deblocheaza niveluri pentru celelalte cladiri si unitati
+ 
+--------------------------------------------------------------------------------
+DEPOZIT (Magazie)
+--------------------------------------------------------------------------------
+  nivel maxim: 30
+  cost baza: 60 bani, 50 energie, 40 munitie
+  timp baza: 50 sec
+  nivel initial: 1
+  efect per nivel:
+    - capacitate depozitare per resursa:
+      niv.1=1000,   niv.2=1229,   niv.3=1511,   niv.4=1858,   niv.5=2285
+      niv.6=2809,   niv.7=3454,   niv.8=4247,   niv.9=5221,   niv.10=6420
+      niv.11=7893,  niv.12=9704,  niv.13=11932, niv.14=14670, niv.15=18037
+      niv.16=22176, niv.17=27265, niv.18=33523, niv.19=41216, niv.20=50675
+      niv.21=62305, niv.22=76603, niv.23=94183, niv.24=115798,niv.25=142373
+      niv.26=175047,niv.27=215219,niv.28=264610,niv.29=325337,niv.30=400000
+--------------------------------------------------------------------------------
+BANCA (Taietori de lemne)
+--------------------------------------------------------------------------------
+  nivel maxim: 30
+  cost baza: 50 bani, 60 energie, 30 munitie
+  timp baza: 45 sec
+  nivel initial: 1
+  efect per nivel:
+    - productie bani per ora (valorile din Triburile):
+      niv.1=30,   niv.2=34,   niv.3=40,   niv.4=47,   niv.5=54
+      niv.6=63,   niv.7=74,   niv.8=86,   niv.9=100,  niv.10=116
+      niv.11=135, niv.12=158, niv.13=183, niv.14=213, niv.15=248
+      niv.16=289, niv.17=336, niv.18=391, niv.19=455, niv.20=529
+      niv.21=616, niv.22=716, niv.23=833, niv.24=969, niv.25=1127
+      niv.26=1311,niv.27=1525,niv.28=1774,niv.29=2063,niv.30=2400
+
+--------------------------------------------------------------------------------
+CENTRALA ELECTRICA (Mina de argila)
+--------------------------------------------------------------------------------
+  nivel maxim: 30
+  cost baza: 55 bani, 35 energie, 25 munitie
+  timp baza: 45 sec
+  nivel initial: 1
+  efect per nivel:
+    - productie energie per ora (valorile din Triburile):
+      niv.1=30,   niv.2=34,   niv.3=40,   niv.4=47,   niv.5=54
+      niv.6=63,   niv.7=74,   niv.8=86,   niv.9=100,  niv.10=116
+      niv.11=135, niv.12=158, niv.13=183, niv.14=213, niv.15=248
+      niv.16=289, niv.17=336, niv.18=391, niv.19=455, niv.20=529
+      niv.21=616, niv.22=716, niv.23=833, niv.24=969, niv.25=1127
+      niv.26=1311,niv.27=1525,niv.28=1774,niv.29=2063,niv.30=2400
+
+--------------------------------------------------------------------------------
+FABRICA DE ARMAMENT (Mina de fier)
+--------------------------------------------------------------------------------
+  nivel maxim: 30
+  cost baza: 65 bani, 55 energie, 35 munitie
+  timp baza: 55 sec
+  nivel initial: 1
+  efect per nivel:
+    - productie munitie per ora (valorile din Triburile):
+      niv.1=30,   niv.2=34,   niv.3=40,   niv.4=47,   niv.5=54
+      niv.6=63,   niv.7=74,   niv.8=86,   niv.9=100,  niv.10=116
+      niv.11=135, niv.12=158, niv.13=183, niv.14=213, niv.15=248
+      niv.16=289, niv.17=336, niv.18=391, niv.19=455, niv.20=529
+      niv.21=616, niv.22=716, niv.23=833, niv.24=969, niv.25=1127
+      niv.26=1311,niv.27=1525,niv.28=1774,niv.29=2063,niv.30=2400
+
+--------------------------------------------------------------------------------
+CLADIRI REZIDENTIALE (Ferma)
+--------------------------------------------------------------------------------
+  nivel maxim: 30
+  cost baza: 45 bani, 40 energie, 20 munitie
+  timp baza: 50 sec
+  nivel initial: 1
+  efect per nivel:
+    - populatie maxima (valorile din Triburile):
+      niv.1=240,  niv.2=281,  niv.3=329,  niv.4=386,  niv.5=452
+      niv.6=530,  niv.7=621,  niv.8=728,  niv.9=854,  niv.10=1001
+      niv.11=1173,niv.12=1375,niv.13=1611,niv.14=1889,niv.15=2214
+      niv.16=2594,niv.17=3041,niv.18=3564,niv.19=4177,niv.20=4895
+      niv.21=5738,niv.22=6724,niv.23=7881,niv.24=9237,niv.25=10848
+      niv.26=12688,niv.27=14870,niv.28=17428,niv.29=20426,niv.30=23939
+
+--------------------------------------------------------------------------------
+PORT (Targ)
+--------------------------------------------------------------------------------
+  nivel maxim: 25
+  cost baza: 80 bani, 60 energie, 45 munitie
+  timp baza: 70 sec
+  nivel initial: 0 (blocat pana la Sediu central niv. 15)
+  efect per nivel:
+    - capacitate transport resurse per trimitere (factor 1.25):
+      niv.1=200,   niv.2=250,   niv.3=312,   niv.4=390,   niv.5=488
+      niv.6=610,   niv.7=762,   niv.8=953,   niv.9=1192,  niv.10=1490
+      niv.11=1862, niv.12=2328, niv.13=2910, niv.14=3637, niv.15=4547
+      niv.16=5684, niv.17=7105, niv.18=8881, niv.19=11102,niv.20=13877
+      niv.21=17347,niv.22=21684,niv.23=27105,niv.24=33881,niv.25=42351
+--------------------------------------------------------------------------------
+BAZA MILITARA (Cazarma + Grajd)
+--------------------------------------------------------------------------------
+  nivel maxim: 25
+  cost baza: 85 bani, 75 energie, 55 munitie
+  timp baza: 80 sec
+  nivel initial: 0 (blocat pana la Sediu central niv. 5)
+  efect per nivel:
+    - timp recrutare = timp_baza_unitate * speed_factor(nivel)
+      niv.1=63%,  niv.2=59%,  niv.3=56%,  niv.4=53%,  niv.5=50%
+      niv.6=47%,  niv.7=44%,  niv.8=42%,  niv.9=39%,  niv.10=37%
+      niv.11=35%, niv.12=33%, niv.13=31%, niv.14=29%, niv.15=28%
+      niv.16=26%, niv.17=25%, niv.18=23%, niv.19=22%, niv.20=21%
+      niv.21=20%, niv.22=19%, niv.23=17%, niv.24=16%, niv.25=16%
+    - exemplu: mitralior (880 sec) la baza militara niv.10 = 880 * 0.37 = 325 sec
+
+--------------------------------------------------------------------------------
+SCUT ANTIAERIAN (Zid)
+--------------------------------------------------------------------------------
+  nivel maxim: 20
+  cost baza: 120 bani, 140 energie, 90 munitie
+  timp baza: 120 sec
+  nivel initial: 0 (blocat pana la Sediu central niv. 5)
+  nota: NU apare in imaginea orasului. Are propriul card/componenta separat
+  efect per nivel:
+    - bonus aparare trupe defensive (valorile din Triburile):
+      niv.1=4%,   niv.2=8%,   niv.3=12%,  niv.4=16%,  niv.5=20%
+      niv.6=24%,  niv.7=29%,  niv.8=34%,  niv.9=39%,  niv.10=44%
+      niv.11=49%, niv.12=55%, niv.13=60%, niv.14=66%, niv.15=72%
+      niv.16=79%, niv.17=85%, niv.18=92%, niv.19=99%, niv.20=107%
+
+
