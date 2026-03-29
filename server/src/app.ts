@@ -1,14 +1,13 @@
 import express from "express";
+import env from "./config/env";
+import authRoutes from "./api/routes/auth.routes";
 
 const app = express();
-const PORT = 3000;
 
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.json({ message: "Hello World!" });
-});
+app.use("/api/auth", authRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server pornit pe http://localhost:${PORT}`);
+app.listen(env.port, () => {
+  console.log(`Server pornit pe http://localhost:${env.port}`);
 });
