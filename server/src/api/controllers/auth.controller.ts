@@ -3,11 +3,12 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../../config/db";
 import env from "../../config/env";
+import { createStarterCity } from "../../services/city.service";
 
 export const register = async (req: Request, res: Response) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, cityName } = req.body;
 
-  if (!username || !email || !password) {
+  if (!username || !email || !password || !cityName) {
     return res.status(400).json({ mesaj: "Toate campurile sunt obligatorii" });
   }
 
@@ -21,8 +22,12 @@ export const register = async (req: Request, res: Response) => {
 
   const hash = await bcrypt.hash(password, 10);
 
-  const user = await prisma.user.create({
-    data: { username, email, password: hash },
+  const user = await prisma.$transaction(async (tx) => {
+    const newUser = await tx.user.create({
+      data: { username, email, password: hash },
+    });
+    await createStarterCity(newUser.id, cityName, tx);
+    return newUser;
   });
 
   const token = jwt.sign({ id: user.id }, env.jwtSecret, { expiresIn: "7d" });

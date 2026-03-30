@@ -9,7 +9,7 @@ datasource db {
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-enum BuildingType {
+enum BuildingName {
   HEADQUARTERS
   BANK
   POWER_PLANT
@@ -21,7 +21,7 @@ enum BuildingType {
   AIR_DEFENSE
 }
 
-enum UnitType {
+enum UnitName {
   LIGHT_INFANTRY
   DEFENDER_INFANTRY
   ANTI_TANK_INFANTRY
@@ -32,6 +32,14 @@ enum UnitType {
   MISSILE_LAUNCHER
   DRONE
   GOVERNOR
+}
+
+enum UnitCategory {
+  INFANTRY
+  RANGE
+  MECHANIZED
+  SIEGE
+  CONQUER
 }
 
 enum CommandType {
@@ -67,6 +75,7 @@ model City {
   money     Float    @default(1000.0)
   energy    Float    @default(1000.0)
   ammo      Float    @default(1000.0)
+  lastResourceUpdate DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -74,31 +83,34 @@ model City {
   owner   User   @relation(fields: [ownerId], references: [id])
 
   buildings        Building[]
-  units            CityUnit[]
+  units            Unit[]
   outgoingCommands Command[]  @relation("CommandFrom")
   incomingCommands Command[]  @relation("CommandTo")
 }
 
 model Building {
-  id    String       @id @default(uuid())
-  type  BuildingType
-  level Int          @default(0)
+  id                 String       @id @default(uuid())
+  name               BuildingName
+  level              Int          @default(0)
+  upgradeFinishesAt  DateTime?
+  upgradeJobId       String?
 
   cityId String
   city   City   @relation(fields: [cityId], references: [id])
 
-  @@unique([cityId, type])
+  @@unique([cityId, name])
 }
 
-model CityUnit {
-  id       String   @id @default(uuid())
-  unitType UnitType
-  quantity Int      @default(0)
+model Unit {
+  id       String       @id @default(uuid())
+  name     UnitName
+  category UnitCategory
+  quantity Int          @default(0)
 
   cityId String
   city   City   @relation(fields: [cityId], references: [id])
 
-  @@unique([cityId, unitType])
+  @@unique([cityId, name])
 }
 
 model Command {
@@ -124,11 +136,11 @@ model Command {
 
 model CommandUnit {
   id       String   @id @default(uuid())
-  unitType UnitType
+  name     UnitName
   quantity Int
 
   commandId String
   command   Command @relation(fields: [commandId], references: [id])
 
-  @@unique([commandId, unitType])
+  @@unique([commandId, name])
 }
