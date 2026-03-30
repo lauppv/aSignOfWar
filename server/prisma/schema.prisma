@@ -7,6 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum BuildingType {
+  HEADQUARTERS
+  BANK
+  POWER_PLANT
+  WEAPONS_FACTORY
+  MILITARY_BASE
+  HOUSING
+  WAREHOUSE
+  HARBOR
+  AIR_DEFENSE
+}
+
+enum UnitType {
+  LIGHT_INFANTRY
+  DEFENDER_INFANTRY
+  ANTI_TANK_INFANTRY
+  SNIPER
+  SPECIAL_FORCES
+  RAIDER
+  TANK
+  MISSILE_LAUNCHER
+  DRONE
+  GOVERNOR
+}
+
+enum CommandType {
+  ATTACK
+  SUPPORT
+  RESOURCES
+}
+
+enum CommandStatus {
+  TRAVELING
+  RETURNING
+  ARRIVED
+  COMPLETED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
@@ -14,4 +56,79 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  cities City[]
+}
+
+model City {
+  id        String   @id @default(uuid())
+  name      String
+  loyalty   Float    @default(100.0)
+  money     Float    @default(1000.0)
+  energy    Float    @default(1000.0)
+  ammo      Float    @default(1000.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  buildings        Building[]
+  units            CityUnit[]
+  outgoingCommands Command[]  @relation("CommandFrom")
+  incomingCommands Command[]  @relation("CommandTo")
+}
+
+model Building {
+  id    String       @id @default(uuid())
+  type  BuildingType
+  level Int          @default(0)
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id])
+
+  @@unique([cityId, type])
+}
+
+model CityUnit {
+  id       String   @id @default(uuid())
+  unitType UnitType
+  quantity Int      @default(0)
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id])
+
+  @@unique([cityId, unitType])
+}
+
+model Command {
+  id          String        @id @default(uuid())
+  type        CommandType
+  status      CommandStatus @default(TRAVELING)
+  departureAt DateTime      @default(now())
+  arrivalAt   DateTime
+
+  // resurse trimise (folosit doar pentru CommandType.RESOURCES)
+  resourceMoney  Float @default(0)
+  resourceEnergy Float @default(0)
+  resourceAmmo   Float @default(0)
+
+  fromCityId String
+  fromCity   City   @relation("CommandFrom", fields: [fromCityId], references: [id])
+
+  toCityId String
+  toCity   City   @relation("CommandTo", fields: [toCityId], references: [id])
+
+  units CommandUnit[]
+}
+
+model CommandUnit {
+  id       String   @id @default(uuid())
+  unitType UnitType
+  quantity Int
+
+  commandId String
+  command   Command @relation(fields: [commandId], references: [id])
+
+  @@unique([commandId, unitType])
 }
