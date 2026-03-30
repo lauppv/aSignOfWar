@@ -8,6 +8,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 
+
 app.listen(env.port, () => {
   console.log(`Server pornit pe http://localhost:${env.port}`);
 });
