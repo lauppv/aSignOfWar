@@ -61,7 +61,7 @@ Tipuri de unitati:
 
 Toate unitatile se recruteaza din Baza militara
 
-Pentru MVP nu exista harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista o cladire (piata centrala din triburile) unde vei selecta tipul comenzii (militar(attack, suport) sau resurse) si ID-ul orasului. Daca ID-ul este valid, va aparea o noua componenta cu numele orasului si numele jucatorului care detine orasul. In functie de tipul comenzii, componenta va contine informatii diferite:
+Pentru MVP nu exista harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista un camp cu Command unde vei putea selecta tipul comenzii (militar(attack, suport) sau resurse) si numele jucatorului tinta. Daca jucatorul exista, arata-i orasele si selectezi orasul tinta. In functie de tipul comenzii, componenta va contine informatii diferite:
 1) attack/suport:
     nume oras
     nume proprietar
