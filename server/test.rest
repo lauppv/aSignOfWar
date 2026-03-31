@@ -35,6 +35,7 @@ Content-Type: application/json
 # 1. Fa login mai sus si copiaza token-ul
 # 2. Gaseste buildingId: SELECT id, name, level FROM "Building" WHERE "cityId" = '...';
 POST http://localhost:3000/api/buildings/d88804c0-e2d1-4536-bb30-7f8538c38bac/upgrade
-Authorization: Bearer .eyJpZCI6IjRkOTFlZTdhLTliN2ItNDIwYS1iYmU3LTQyZDQwYTZkYjg4MyIsImlhdCI6MTc3NDg4Njc0MCwiZXhwIjoxNzc1NDkxNTQwfQ._1QVF-tovBNw34ryvwdXf1JLET7Dn7MYmHOUq6-DcF4
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRkOTFlZTdhLTliN2ItNDIwYS1iYmU3LTQyZDQwYTZkYjg4MyIsImlhdCI6MTc3NDk1ODgwMCwiZXhwIjoxNzc1NTYzNjAwfQ._DtyNDbgkzPOHNRbqakHpMlDMwbM_yRFqB3lutEV0LE
 
 ###
+

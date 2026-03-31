@@ -1,5 +1,5 @@
 import prisma from "../config/db";
-import boss from "../config/pgboss";
+import { buildingQueue } from "../config/queue";
 import { getBuildingUpgradeCost, getBuildingUpgradeTime, BUILDINGS } from "../config/game.config";
 
 export const startUpgrade = async (buildingId: string, userId: string) => {
@@ -8,46 +8,76 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     include: { city: { include: { buildings: true } } },
   });
 
-  if (!building)                        throw new Error("Cladirea nu exista");
-  if (building.city.ownerId !== userId) throw new Error("Nu ai acces la aceasta cladire");
-  if (building.upgradeFinishesAt)       throw new Error("Upgrade deja in curs");
+  if (!building)                        throw new Error("BUILDING_NOT_FOUND");
+  if (building.city.ownerId !== userId) throw new Error("UNAUTHORIZED");
+  if (building.upgradeFinishesAt)       throw new Error("UPGRADE_IN_PROGRESS");
 
   const cfg = BUILDINGS[building.name];
-  if (building.level >= cfg.maxLevel)   throw new Error("Nivel maxim atins");
+  if (building.level >= cfg.maxLevel)   throw new Error("MAX_LEVEL_REACHED");
 
   const hq = building.city.buildings.find(b => b.name === "HEADQUARTERS")!;
 
   if (cfg.requiresHQ && hq.level < cfg.requiresHQ) {
-    throw new Error(`Necesita Headquarters nivel ${cfg.requiresHQ}`);
+    throw new Error(`HQ_REQUIRED:${cfg.requiresHQ}`);
   }
 
   const cost    = getBuildingUpgradeCost(building.name, building.level);
   const timeSec = getBuildingUpgradeTime(building.name, building.level, hq.level);
-  const city    = building.city;
-
-  if (city.money < cost.money || city.energy < cost.energy || city.ammo < cost.ammo) {
-    throw new Error("Resurse insuficiente");
-  }
-
   const finishesAt = new Date(Date.now() + timeSec * 1000);
 
-  const jobId = await boss.sendAfter("building-upgrade", { buildingId }, {}, timeSec);
-  if (!jobId) throw new Error("Eroare la programarea upgrade-ului");
-
-  await prisma.$transaction([
-    prisma.city.update({
-      where: { id: city.id },
-      data: {
-        money:  { decrement: cost.money },
-        energy: { decrement: cost.energy },
-        ammo:   { decrement: cost.ammo },
+  // Scade resursele si blocheaza cladirea intr-o singura tranzactie atomica
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.city.updateMany({
+      where: {
+        id:     building.city.id,
+        money:  { gte: cost.money  },
+        energy: { gte: cost.energy },
+        ammo:   { gte: cost.ammo  },
       },
-    }),
-    prisma.building.update({
-      where: { id: buildingId },
-      data: { upgradeFinishesAt: finishesAt, upgradeJobId: jobId },
-    }),
-  ]);
+      data: {
+        money:  { decrement: cost.money  },
+        energy: { decrement: cost.energy },
+        ammo:   { decrement: cost.ammo  },
+      },
+    });
 
-  return { finishesAt, cost, timeSec };
+    if (updated.count === 0) throw new Error("INSUFFICIENT_RESOURCES");
+
+    await tx.building.update({
+      where: { id: buildingId, upgradeFinishesAt: null },
+      data: { upgradeFinishesAt: finishesAt },
+    });
+  });
+
+  // Programeaza job-ul in Redis; daca esueaza, anuleaza tranzactia de mai sus
+  try {
+    const job = await buildingQueue.add(
+      "upgrade",
+      { buildingId },
+      { delay: timeSec * 1000 }
+    );
+
+    await prisma.building.update({
+      where: { id: buildingId },
+      data: { upgradeJobId: String(job.id) },
+    });
+  } catch (err) {
+    await prisma.$transaction([
+      prisma.city.update({
+        where: { id: building.city.id },
+        data: {
+          money:  { increment: cost.money  },
+          energy: { increment: cost.energy },
+          ammo:   { increment: cost.ammo  },
+        },
+      }),
+      prisma.building.update({
+        where: { id: buildingId },
+        data: { upgradeFinishesAt: null },
+      }),
+    ]);
+    throw err;
+  }
+
+  return { building: building.name, finishesAt, cost, timeSec };
 };

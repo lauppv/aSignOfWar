@@ -1,9 +1,5 @@
 import { Request, Response } from "express";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import prisma from "../../config/db";
-import env from "../../config/env";
-import { createStarterCity } from "../../services/city.service";
+import { registerUser, loginUser } from "../../services/auth.service";
 
 export const register = async (req: Request, res: Response) => {
   const { username, email, password, cityName } = req.body;
@@ -12,27 +8,15 @@ export const register = async (req: Request, res: Response) => {
     return res.status(400).json({ mesaj: "Toate campurile sunt obligatorii" });
   }
 
-  const existent = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] },
-  });
-
-  if (existent) {
-    return res.status(409).json({ mesaj: "Email sau username deja folosit" });
+  try {
+    const result = await registerUser(username, email, password, cityName);
+    return res.status(201).json(result);
+  } catch (err: any) {
+    if (err.message === "EMAIL_OR_USERNAME_TAKEN") {
+      return res.status(409).json({ mesaj: "Email sau username deja folosit" });
+    }
+    throw err;
   }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  const user = await prisma.$transaction(async (tx) => {
-    const newUser = await tx.user.create({
-      data: { username, email, password: hash },
-    });
-    await createStarterCity(newUser.id, cityName, tx);
-    return newUser;
-  });
-
-  const token = jwt.sign({ id: user.id }, env.jwtSecret, { expiresIn: "7d" });
-
-  return res.status(201).json({ token, username: user.username });
 };
 
 export const login = async (req: Request, res: Response) => {
@@ -42,19 +26,13 @@ export const login = async (req: Request, res: Response) => {
     return res.status(400).json({ mesaj: "Email si parola sunt obligatorii" });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-
-  if (!user) {
-    return res.status(401).json({ mesaj: "Credentiale invalide" });
+  try {
+    const result = await loginUser(email, password);
+    return res.json(result);
+  } catch (err: any) {
+    if (err.message === "INVALID_CREDENTIALS") {
+      return res.status(401).json({ mesaj: "Credentiale invalide" });
+    }
+    throw err;
   }
-
-  const potrivire = await bcrypt.compare(password, user.password);
-
-  if (!potrivire) {
-    return res.status(401).json({ mesaj: "Credentiale invalide" });
-  }
-
-  const token = jwt.sign({ id: user.id }, env.jwtSecret, { expiresIn: "7d" });
-
-  return res.json({ token, username: user.username });
 };

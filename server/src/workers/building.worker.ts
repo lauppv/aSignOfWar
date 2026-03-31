@@ -1,10 +1,11 @@
+import { Worker } from "bullmq";
+import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
-import boss from "../config/pgboss";
 
-export const registerBuildingWorker = async () => {
-  await boss.createQueue("building-upgrade");
-  await boss.work<{ buildingId: string }>("building-upgrade", async (jobs) => {
-    for (const job of jobs) {
+export const registerBuildingWorker = () => {
+  new Worker<{ buildingId: string }>(
+    "building-upgrade",
+    async (job) => {
       await prisma.building.update({
         where: { id: job.data.buildingId },
         data: {
@@ -12,7 +13,11 @@ export const registerBuildingWorker = async () => {
           upgradeFinishesAt: null,
           upgradeJobId:      null,
         },
+      }).catch((err) => {
+        console.error(`[building-worker] Job ${job.id} esuat pentru buildingId ${job.data.buildingId}:`, err);
+        throw err;
       });
-    }
-  });
+    },
+    { connection: createRedisConnection() }
+  );
 };

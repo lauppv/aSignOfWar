@@ -1,8 +1,8 @@
 // Toate datele statice ale jocului — costuri, timpi, efecte per level
 // Niciodata nu se schimba in timp ce jocul ruleaza
 
-import { BuildingName } from "@prisma/client";
-export type { BuildingName };
+import { BuildingName, UnitName, UnitCategory } from "@prisma/client";
+export type { BuildingName, UnitName, UnitCategory };
 
 export interface BuildingConfig {
   maxLevel: number;
@@ -102,6 +102,106 @@ export const BUILDINGS: Record<BuildingName, BuildingConfig> = {
   },
 };
 
+export interface UnitConfig {
+  category:             UnitCategory;
+  costMoney:            number;
+  costEnergy:           number;
+  costAmmo:             number;
+  population:           number;
+  speed:                number;       // minute de deplasare per unitate de distanta
+  carry:                number;       // resurse transportate
+  baseRecruitmentTime:  number;       // secunde la Military base nivel 0
+  attack:               number;
+  defenseVsInfantry:    number;
+  defenseVsMechanized:  number;
+  defenseVsRange:       number;
+  wallDamage?:          number;       // doar unitati Siege
+  buildingDamage?:      number;       // doar Drone
+  requiresHQ?:          number;
+  requiresMilitaryBase?: number;
+}
+
+export const UNITS: Record<UnitName, UnitConfig> = {
+  LIGHT_INFANTRY: {
+    category: "INFANTRY", costMoney: 60, costEnergy: 30, costAmmo: 40,
+    population: 1, speed: 18, carry: 10, baseRecruitmentTime: 120,
+    attack: 40, defenseVsInfantry: 10, defenseVsMechanized: 5, defenseVsRange: 10,
+  },
+  DEFENDER_INFANTRY: {
+    category: "INFANTRY", costMoney: 30, costEnergy: 30, costAmmo: 70,
+    population: 1, speed: 22, carry: 15, baseRecruitmentTime: 150,
+    attack: 25, defenseVsInfantry: 50, defenseVsMechanized: 15, defenseVsRange: 40,
+    requiresHQ: 5,
+  },
+  ANTI_TANK_INFANTRY: {
+    category: "INFANTRY", costMoney: 50, costEnergy: 30, costAmmo: 10,
+    population: 1, speed: 18, carry: 25, baseRecruitmentTime: 130,
+    attack: 10, defenseVsInfantry: 15, defenseVsMechanized: 45, defenseVsRange: 20,
+  },
+  SNIPER: {
+    category: "RANGE", costMoney: 100, costEnergy: 30, costAmmo: 60,
+    population: 1, speed: 18, carry: 10, baseRecruitmentTime: 200,
+    attack: 15, defenseVsInfantry: 50, defenseVsMechanized: 40, defenseVsRange: 5,
+    requiresHQ: 10, requiresMilitaryBase: 10,
+  },
+  SPECIAL_FORCES: {
+    category: "RANGE", costMoney: 250, costEnergy: 100, costAmmo: 150,
+    population: 5, speed: 10, carry: 50, baseRecruitmentTime: 400,
+    attack: 120, defenseVsInfantry: 40, defenseVsMechanized: 30, defenseVsRange: 50,
+    requiresHQ: 15, requiresMilitaryBase: 10,
+  },
+  RAIDER: {
+    category: "MECHANIZED", costMoney: 125, costEnergy: 100, costAmmo: 250,
+    population: 4, speed: 10, carry: 80, baseRecruitmentTime: 300,
+    attack: 130, defenseVsInfantry: 30, defenseVsMechanized: 40, defenseVsRange: 30,
+    requiresHQ: 10,
+  },
+  TANK: {
+    category: "MECHANIZED", costMoney: 200, costEnergy: 150, costAmmo: 600,
+    population: 6, speed: 11, carry: 50, baseRecruitmentTime: 600,
+    attack: 150, defenseVsInfantry: 200, defenseVsMechanized: 80, defenseVsRange: 180,
+    requiresHQ: 20, requiresMilitaryBase: 15,
+  },
+  MISSILE_LAUNCHER: {
+    category: "SIEGE", costMoney: 300, costEnergy: 200, costAmmo: 200,
+    population: 5, speed: 30, carry: 0, baseRecruitmentTime: 800,
+    attack: 2, defenseVsInfantry: 20, defenseVsMechanized: 50, defenseVsRange: 20,
+    wallDamage: 60,
+    requiresHQ: 20, requiresMilitaryBase: 15,
+  },
+  DRONE: {
+    category: "SIEGE", costMoney: 320, costEnergy: 400, costAmmo: 100,
+    population: 8, speed: 30, carry: 0, baseRecruitmentTime: 1000,
+    attack: 100, defenseVsInfantry: 100, defenseVsMechanized: 50, defenseVsRange: 100,
+    wallDamage: 15, buildingDamage: 80,
+    requiresHQ: 20, requiresMilitaryBase: 20,
+  },
+  GOVERNOR: {
+    category: "CONQUER", costMoney: 1000, costEnergy: 500, costAmmo: 500,
+    population: 100, speed: 18, carry: 0, baseRecruitmentTime: 3600,
+    attack: 0, defenseVsInfantry: 0, defenseVsMechanized: 0, defenseVsRange: 0,
+    requiresHQ: 30,
+  },
+};
+
+// Procentul de reducere a timpului de recrutare per nivel Military base (1-25)
+// Hardcodat pentru ca nu urmeaza o scadere uniforma, plus ca se opreste la 16% cu un alt %16 inainte
+// Momentan ramane asa
+const MILITARY_BASE_SPEED_FACTOR = [
+  63, 59, 56, 53, 50, 47, 44, 42, 39, 37,
+  35, 33, 31, 29, 28, 26, 25, 23, 22, 21,
+  20, 19, 17, 16, 16,
+];
+
+// Calculeaza timpul de recrutare (in secunde) pentru o unitate
+// militaryBaseLevel = 0 inseamna fara reducere
+export const getRecruitmentTime = (unit: UnitName, militaryBaseLevel: number): number => {
+  const cfg = UNITS[unit];
+  if (militaryBaseLevel === 0) return cfg.baseRecruitmentTime;
+  const factor = MILITARY_BASE_SPEED_FACTOR[militaryBaseLevel - 1] / 100;
+  return Math.round(cfg.baseRecruitmentTime * factor);
+};
+
 // Calculeaza costul pentru urmatorul level al unei cladiri
 // level = levelul CURENT (upgradezi DE LA acest level)
 export const getBuildingUpgradeCost = (type: BuildingName, currentLevel: number) => {
@@ -123,6 +223,6 @@ export const getBuildingUpgradeTime = (
 ): number => {
   const cfg = BUILDINGS[type];
   const baseTime = cfg.baseTimeSec * Math.pow(cfg.timeGrowth, currentLevel);
-  const hqReduction = 1 - hqLevel * 0.02;
+  const hqReduction = Math.max(0.1, 1 - hqLevel * 0.02);
   return Math.round(baseTime * hqReduction);
 };
