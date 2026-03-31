@@ -2,6 +2,7 @@
 // Niciodata nu se schimba in timp ce jocul ruleaza
 
 import { BuildingName, UnitName, UnitCategory } from "@prisma/client";
+import env from "./env";
 export type { BuildingName, UnitName, UnitCategory };
 
 export interface BuildingConfig {
@@ -197,9 +198,12 @@ const MILITARY_BASE_SPEED_FACTOR = [
 // militaryBaseLevel = 0 inseamna fara reducere
 export const getRecruitmentTime = (unit: UnitName, militaryBaseLevel: number): number => {
   const cfg = UNITS[unit];
-  if (militaryBaseLevel === 0) return cfg.baseRecruitmentTime;
-  const factor = MILITARY_BASE_SPEED_FACTOR[militaryBaseLevel - 1] / 100;
-  return Math.round(cfg.baseRecruitmentTime * factor);
+  let time = cfg.baseRecruitmentTime;
+  if (militaryBaseLevel > 0) {
+    const factor = MILITARY_BASE_SPEED_FACTOR[militaryBaseLevel - 1] / 100;
+    time = Math.round(time * factor);
+  }
+  return Math.max(1, Math.round(time / env.gameSpeed));
 };
 
 // Productie per ora pentru cladirile de resurse (index = level - 1, niveluri 1-30)
@@ -231,7 +235,7 @@ export const getHousingCapacity = (level: number): number => {
 
 export const getResourceProduction = (level: number): number => {
   if (level <= 0) return 0;
-  return RESOURCE_PRODUCTION[level - 1];
+  return RESOURCE_PRODUCTION[level - 1] * env.gameSpeed;
 };
 
 export const getWarehouseCapacity = (level: number): number => {
@@ -261,5 +265,5 @@ export const getBuildingUpgradeTime = (
   const cfg = BUILDINGS[type];
   const baseTime = cfg.baseTimeSec * Math.pow(cfg.timeGrowth, currentLevel);
   const hqReduction = Math.max(0.1, 1 - hqLevel * 0.02);
-  return Math.round(baseTime * hqReduction);
+  return Math.round(baseTime * hqReduction / env.gameSpeed);
 };
