@@ -253,6 +253,10 @@ Headquarters (Cladire principala)
     - reduce timpul de constructie al tuturor cladirilor cu 2% per Level
     - deblocheaza niveluri pentru celelalte cladiri si unitati
  
+
+** Valorile de mai jos sunt cele din Triburile. Ele par hardcodate. Nu par sa urmeze o formula matematica
+
+
 --------------------------------------------------------------------------------
 Warehouse (Magazie)
 --------------------------------------------------------------------------------
@@ -379,5 +383,10 @@ Air defense system (Zid)
       niv.6=24%,  niv.7=29%,  niv.8=34%,  niv.9=39%,  niv.10=44%
       niv.11=49%, niv.12=55%, niv.13=60%, niv.14=66%, niv.15=72%
       niv.16=79%, niv.17=85%, niv.18=92%, niv.19=99%, niv.20=107%
+
+
+Un jucator poate da oricate comenzi de constructie si recrutare, atata timp cat are suficiente resurse si populatie. Comenzile se pun in asteptare, rulandu-se una dupa alta, NU in paralel.
+
+Exista optiune de anulare recrutare si comanda de constructie, dar acest lucru va face ca doar 75% din resurse sa se intoarca in depozit, deci 25% se pierd
 
 

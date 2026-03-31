@@ -202,6 +202,43 @@ export const getRecruitmentTime = (unit: UnitName, militaryBaseLevel: number): n
   return Math.round(cfg.baseRecruitmentTime * factor);
 };
 
+// Productie per ora pentru cladirile de resurse (index = level - 1, niveluri 1-30)
+// BANK -> money, POWER_PLANT -> energy, WEAPONS_FACTORY -> ammo
+const RESOURCE_PRODUCTION = [
+     30,   34,   40,   47,   54,   63,   74,   86,  100,  116,
+    135,  158,  183,  213,  248,  289,  336,  391,  455,  529,
+    616,  716,  833,  969, 1127, 1311, 1525, 1774, 2063, 2400,
+];
+
+// Capacitate depozitare per resursa pentru fiecare level de Warehouse (index = level - 1, niveluri 1-30)
+const WAREHOUSE_CAPACITY = [
+      1000,   1229,   1511,   1858,   2285,   2809,   3454,   4247,   5221,   6420,
+      7893,   9704,  11932,  14670,  18037,  22176,  27265,  33523,  41216,  50675,
+     62305,  76603,  94183, 115798, 142373, 175047, 215219, 264610, 325337, 400000,
+];
+
+// Populatie maxima per nivel Housing (index = level - 1, niveluri 1-30)
+const HOUSING_POPULATION = [
+     240,    281,    329,    386,    452,    530,    621,    728,    854,   1001,
+    1173,   1375,   1611,   1889,   2214,   2594,   3041,   3564,   4177,   4895,
+    5738,   6724,   7881,   9237,  10848,  12688,  14870,  17428,  20426,  23939,
+];
+
+export const getHousingCapacity = (level: number): number => {
+  if (level <= 0) return 0;
+  return HOUSING_POPULATION[level - 1];
+};
+
+export const getResourceProduction = (level: number): number => {
+  if (level <= 0) return 0;
+  return RESOURCE_PRODUCTION[level - 1];
+};
+
+export const getWarehouseCapacity = (level: number): number => {
+  if (level <= 0) return 1000;
+  return WAREHOUSE_CAPACITY[level - 1];
+};
+
 // Calculeaza costul pentru urmatorul level al unei cladiri
 // level = levelul CURENT (upgradezi DE LA acest level)
 export const getBuildingUpgradeCost = (type: BuildingName, currentLevel: number) => {

@@ -82,23 +82,46 @@ model City {
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id])
 
-  buildings        Building[]
-  units            Unit[]
-  outgoingCommands Command[]  @relation("CommandFrom")
-  incomingCommands Command[]  @relation("CommandTo")
+  buildings             Building[]
+  units                 Unit[]
+  outgoingCommands      Command[]              @relation("CommandFrom")
+  incomingCommands      Command[]              @relation("CommandTo")
+  buildingUpgradeOrders BuildingUpgradeOrder[]
+  recruitmentOrders     RecruitmentOrder[]
 }
 
 model Building {
-  id                 String       @id @default(uuid())
-  name               BuildingName
-  level              Int          @default(0)
-  upgradeFinishesAt  DateTime?
-  upgradeJobId       String?
+  id     String       @id @default(uuid())
+  name   BuildingName
+  level  Int          @default(0)
 
   cityId String
   city   City   @relation(fields: [cityId], references: [id])
 
   @@unique([cityId, name])
+}
+
+model BuildingUpgradeOrder {
+  id           String       @id @default(uuid())
+  buildingName BuildingName
+  startAt      DateTime
+  finishAt     DateTime
+  jobId        String?
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id])
+}
+
+model RecruitmentOrder {
+  id       String   @id @default(uuid())
+  unitName UnitName
+  quantity Int
+  startAt  DateTime
+  finishAt DateTime
+  jobId    String?
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id])
 }
 
 model Unit {

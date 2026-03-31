@@ -3,20 +3,17 @@ import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
 
 export const registerBuildingWorker = () => {
-  new Worker<{ buildingId: string }>(
+  new Worker<{ buildingId: string; orderId: string }>(
     "building-upgrade",
     async (job) => {
-      await prisma.building.update({
-        where: { id: job.data.buildingId },
-        data: {
-          level:             { increment: 1 },
-          upgradeFinishesAt: null,
-          upgradeJobId:      null,
-        },
-      }).catch((err) => {
-        console.error(`[building-worker] Job ${job.id} esuat pentru buildingId ${job.data.buildingId}:`, err);
-        throw err;
-      });
+      const { buildingId, orderId } = job.data;
+      await prisma.$transaction([
+        prisma.building.update({
+          where: { id: buildingId },
+          data:  { level: { increment: 1 } },
+        }),
+        prisma.buildingUpgradeOrder.delete({ where: { id: orderId } }),
+      ]);
     },
     { connection: createRedisConnection() }
   );
