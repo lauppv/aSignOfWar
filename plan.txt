@@ -141,7 +141,7 @@ Sniper (arcas)
   defense vs Mechanized: 40
   defense vs Range: 5
  
-forte_speciale (arcas calare)
+Special forces (arcas calare)
   type: Range
   rol: mobil
   cost: 250 Money, 100 energie, 150 Ammo
@@ -158,7 +158,7 @@ forte_speciale (arcas calare)
 Mechanized
 --------------------------------------------------------------------------------
  
-infanterie_mecanizata (cavalerie usoara)
+Raider (cavalerie usoara)
   type: Mechanized
   rol: raider
   cost: 125 Money, 100 energie, 250 Ammo
@@ -188,7 +188,7 @@ Tank (cavalerie grea)
 Siege
 --------------------------------------------------------------------------------
  
-lansator_de_rachete (berbec)
+Missile launcher (berbec)
   type: Siege
   rol: Siege zid
   cost: 300 Money, 200 energie, 200 Ammo
@@ -231,6 +231,7 @@ Governor (nobil)
   defense: 0
   specialEffect: scade stabilitatea economica cu 20-35%
   condition: functioneaza DOAR daca orasul atacat nu are unitati in defense
+
 
 
 
@@ -390,3 +391,12 @@ Un jucator poate da oricate comenzi de constructie si recrutare, atata timp cat 
 Exista optiune de anulare recrutare si comanda de constructie, dar acest lucru va face ca doar 75% din resurse sa se intoarca in depozit, deci 25% se pierd
 
 
+Va exista si un Simulator de batalii, dar nu ca cladire
+
+facem iar cateva simulari. Toate simularile au zid 0 si luck 0. Noi nu avem 
+ luck in joc                                                                  
+Aici poti sa vezi ca arcasii si arcasii calare mor la fel de multi, deci se   
+ia pe tipul unitatii                                                          
+                                                                              
+                                                                       
+                                                                              

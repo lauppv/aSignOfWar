@@ -257,6 +257,44 @@ export const getBuildingUpgradeCost = (type: BuildingName, currentLevel: number)
 
 // Calculeaza timpul de constructie (in secunde) pentru urmatorul level
 // Headquarters reduce timpul tuturor cladirilor cu 2% per level
+// Bonus defense per nivel Air Defense (index = nivel, 0-20)
+const AIR_DEFENSE_BONUS_PCT = [
+  0, 4, 8, 12, 16, 20, 24, 29, 34, 39, 44,
+  49, 55, 60, 66, 72, 79, 85, 92, 99, 107,
+];
+
+export const getAirDefenseBonus = (level: number): number => {
+  if (level <= 0) return 0;
+  if (level >= 20) return AIR_DEFENSE_BONUS_PCT[20];
+  return AIR_DEFENSE_BONUS_PCT[level];
+};
+
+// Formula TW pentru damage la zid
+// Returneaza numarul de niveluri distruse
+export const calcWallDamage = (wallLevel: number, mlCount: number, droneCount: number): number => {
+  if (wallLevel <= 0 || (mlCount === 0 && droneCount === 0)) return 0;
+  const totalDmg = mlCount * 60 + droneCount * 15;
+  const W = wallLevel;
+  const threshold = 2 * Math.pow(1.09, W);
+  const levels = Math.floor((totalDmg - threshold) / (2 * threshold) + 1);
+  return Math.max(0, Math.min(Math.floor(W / 2), levels));
+};
+
+// Timp de deplasare comenzi (60 sec in MVP, redus de gameSpeed)
+export const getTravelTimeSec = (): number => Math.round(60 / env.gameSpeed);
+
+// Capacitate Harbor per nivel (1-25)
+const HARBOR_CAPACITY = [
+    200,   250,   312,   390,   488,   610,   762,   953,  1192,  1490,
+   1862,  2328,  2910,  3637,  4547,  5684,  7105,  8881, 11102, 13877,
+  17347, 21684, 27105, 33881, 42351,
+];
+
+export const getHarborCapacity = (level: number): number => {
+  if (level <= 0) return 0;
+  return HARBOR_CAPACITY[level - 1];
+};
+
 export const getBuildingUpgradeTime = (
   type: BuildingName,
   currentLevel: number,

@@ -1,38 +1,149 @@
+### register
 POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
-  {                                                                                   
-    "username": "test",
-    "email": "test@test.com",                                                         
-    "password": "parola123",                                                          
-    "cityName": "Roma"      
-  }    
+{
+  "username": "attacker",
+  "email": "attacker@test.com",
+  "password": "parola123",
+  "cityName": "Athens"
+}
 
 ###
 
 POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
-  {                                                                                   
-    "username": "test1",
-    "email": "test1@test.com",                                                         
-    "password": "parola123",                                                          
-    "cityName": "Roma"      
-  }    
+{
+  "username": "defender",
+  "email": "defender@test.com",
+  "password": "parola123",
+  "cityName": "Sparta"
+}
 
 ###
+
+### login
 POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
-  {
-    "email": "test1@test.com",
-    "password": "parola123"
-  }
+{
+  "email": "attacker@test.com",
+  "password": "parola123"
+}
 
 ###
 
-POST http://localhost:3000/api/buildings/9ab9504f-b341-40e9-9e33-8c4a1c3a0ba4/upgrade
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjhjZDRiOTQ0LTc2NjktNGQyMS1iM2FhLWUxNWU5YjJkODAwNiIsImlhdCI6MTc3NDk3MDAzNCwiZXhwIjoxNzc1NTc0ODM0fQ.V2BwvwwZ0xIC90aztv6q_97eGK1uF0oQhXV9s4pC9oE
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "defender@test.com",
+  "password": "parola123"
+}
 
 ###
 
+@tokenAtk = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ3MzgwNzljLWIyN2UtNDZlNS05ZjNmLTQ5OTcxMmJlYTBlNiIsImlhdCI6MTc3NTA0NzE3NSwiZXhwIjoxNzc1NjUxOTc1fQ.vsu5PG5bG-2gIlbv0_CNfw0-xm4aQ9A3O0AcDOEw2YA
+@tokenDef  = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjgxODI4MTNiLWYwYmItNDU0ZS1iMGIxLTQ5NTk2NDUwZjQ4ZiIsImlhdCI6MTc3NTA0NzIyNywiZXhwIjoxNzc1NjUyMDI3fQ.vNmepEMbmVbljopWBlZjVlMKlo3clr61MsRqDqlJy_g
+@cityIdAtk = 28b75047-12a0-40e7-a176-7ac22593e1e1
+@cityIdDef = 918e50b4-455f-4e1a-8186-a63cda5ad7e5
+
+###
+
+GET http://localhost:3000/api/cities/mine
+Authorization: Bearer {{tokenAtk}}
+
+###
+
+GET http://localhost:3000/api/cities/mine
+Authorization: Bearer {{tokenDef}}
+
+###
+
+### upgrade HQ ca sa pot debloca military base
+POST http://localhost:3000/api/buildings/fcc13575-7f92-4995-8cbc-4d1a148b7753/upgrade
+Authorization: Bearer {{tokenAtk}}
+
+###
+
+### upgrade military base
+POST http://localhost:3000/api/buildings/faffef9c-d1ed-40ea-9eb4-9837d8146881/upgrade
+Authorization: Bearer {{tokenAtk}}
+
+###
+
+### recrutare
+POST http://localhost:3000/api/cities/{{cityIdAtk}}/recruit
+Authorization: Bearer {{tokenAtk}}
+Content-Type: application/json
+
+{
+  "unitName": "LIGHT_INFANTRY",
+  "quantity": 10
+}
+
+###
+
+### atac - 1000 LI vs oras gol, astept 0 pierderi
+### (1000/40000)^1.5 = 0 pierderi, resurse furate = carry*1000/3
+POST http://localhost:3000/api/cities/{{cityIdAtk}}/commands
+Authorization: Bearer {{tokenAtk}}
+Content-Type: application/json
+
+{
+  "type": "ATTACK",
+  "targetCityId": "{{cityIdDef}}",
+  "units": { "LIGHT_INFANTRY": 100 }
+}
+
+###
+
+### atac - 1000 LI vs 1000 ATI
+### astept: ~770 LI supravietuiesc (23% pierderi), toti ATI mor
+### (15000/40000)^1.5 = 0.229
+POST http://localhost:3000/api/cities/{{cityIdAtk}}/commands
+Authorization: Bearer {{tokenAtk}}
+Content-Type: application/json
+
+{
+  "type": "ATTACK",
+  "targetCityId": "{{cityIdDef}}",
+  "units": { "LIGHT_INFANTRY": 1000 }
+}
+
+###
+
+### atac pierdut - 100 LI vs 10000 ATI
+### astept: toti LI mor, ~44 ATI mor (0.44% pierderi)
+### (4000/150000)^1.5 = 0.0044
+POST http://localhost:3000/api/cities/{{cityIdAtk}}/commands
+Authorization: Bearer {{tokenAtk}}
+Content-Type: application/json
+
+{
+  "type": "ATTACK",
+  "targetCityId": "{{cityIdDef}}",
+  "units": { "LIGHT_INFANTRY": 100 }
+}
+
+###
+
+### verifica comenzile (dupa 60s/gameSpeed apare report-ul)
+GET http://localhost:3000/api/cities/{{cityIdAtk}}/commands
+Authorization: Bearer {{tokenAtk}}
+
+###
+
+### trimitere resurse (trebuie Harbor > 0)
+POST http://localhost:3000/api/cities/{{cityIdAtk}}/commands
+Authorization: Bearer {{tokenAtk}}
+Content-Type: application/json
+
+{
+  "type": "RESOURCES",
+  "targetCityId": "{{cityIdDef}}",
+  "resources": { "money": 100, "energy": 50, "ammo": 0 }
+}
+
+###

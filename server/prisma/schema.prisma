@@ -143,10 +143,13 @@ model Command {
   departureAt DateTime      @default(now())
   arrivalAt   DateTime
 
-  // resurse trimise (folosit doar pentru CommandType.RESOURCES)
+  // resurse trimise (RESOURCES) sau furate (ATTACK return)
   resourceMoney  Float @default(0)
   resourceEnergy Float @default(0)
   resourceAmmo   Float @default(0)
+
+  // raport de lupta (completat dupa sosire, pentru ATTACK)
+  report Json?
 
   fromCityId String
   fromCity   City   @relation("CommandFrom", fields: [fromCityId], references: [id])
