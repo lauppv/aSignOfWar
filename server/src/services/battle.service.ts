@@ -1,12 +1,12 @@
 // Logica pura de calcul al bataliei — fara acces la baza de date
-// Formula confirmata din teste Tribal Wars (luck=0, wall=0):
+// Formula confirmata din teste Tribal Wars (luck=0, air defense=0):
 //   pierderi_castigator = (forta_perdant / forta_castigator) ^ 1.5
 // Atacatorii pierd per categorie (INFANTRY/RANGE/MECHANIZED).
 // Aparatorii pierd uniform, calculat prin compararea fortei totale de atac
 // cu apararea medie ponderata dupa compozitia armatei atacatoare.
 
 import { UnitName } from "@prisma/client";
-import { UNITS, getAirDefenseBonus, calcWallDamage } from "../config/game.config";
+import { UNITS, getAirDefenseBonus, calcAirDefenseDamage } from "../config/game.config";
 
 export interface BattleUnit {
   name: UnitName;
@@ -17,8 +17,8 @@ export interface BattleResult {
   attackerWon: boolean;
   attackerSurvivors: BattleUnit[];
   defenderSurvivors: BattleUnit[];
-  newWallLevel: number;
-  wallLevelsDestroyed: number;
+  newAirDefenseLevel: number;
+  airDefenseLevelsDestroyed: number;
   stolenMoney: number;
   stolenEnergy: number;
   stolenAmmo: number;
@@ -39,7 +39,7 @@ function toAtkCat(name: UnitName): AtkCat {
 export function calculateBattle(
   attackerUnits: BattleUnit[],
   defenderUnits: BattleUnit[],
-  wallLevel: number,
+  airDefenseLevel: number,
   defenderMoney: number,
   defenderEnergy: number,
   defenderAmmo: number
@@ -47,9 +47,9 @@ export function calculateBattle(
   // 1. Damage zid (inainte de lupta)
   const mlCount    = attackerUnits.find(u => u.name === "MISSILE_LAUNCHER")?.quantity ?? 0;
   const droneCount = attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0;
-  const levelsDestroyed = calcWallDamage(wallLevel, mlCount, droneCount);
-  const newWallLevel    = wallLevel - levelsDestroyed;
-  const wallBonus       = getAirDefenseBonus(newWallLevel) / 100;
+  const levelsDestroyed    = calcAirDefenseDamage(airDefenseLevel, mlCount, droneCount);
+  const newAirDefenseLevel = airDefenseLevel - levelsDestroyed;
+  const defenseBonus       = getAirDefenseBonus(newAirDefenseLevel) / 100;
 
   // 2. Forta de atac per categorie
   const A: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
@@ -61,7 +61,7 @@ export function calculateBattle(
   const D: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of defenderUnits) {
     const cfg  = UNITS[name];
-    const mult = 1 + wallBonus;
+    const mult = 1 + defenseBonus;
     D.INFANTRY   += cfg.defenseVsInfantry   * quantity * mult;
     D.RANGE      += cfg.defenseVsRange      * quantity * mult;
     D.MECHANIZED += cfg.defenseVsMechanized * quantity * mult;
@@ -135,8 +135,8 @@ export function calculateBattle(
     attackerWon,
     attackerSurvivors,
     defenderSurvivors,
-    newWallLevel,
-    wallLevelsDestroyed: levelsDestroyed,
+    newAirDefenseLevel,
+    airDefenseLevelsDestroyed: levelsDestroyed,
     stolenMoney,
     stolenEnergy,
     stolenAmmo,

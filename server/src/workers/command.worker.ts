@@ -88,8 +88,8 @@ async function processAttackArrival(command: any) {
   });
   if (!toCity) return;
 
-  const wallBuilding = toCity.buildings.find(b => b.name === "AIR_DEFENSE");
-  const wallLevel    = wallBuilding?.level ?? 0;
+  const airDefenseBuilding = toCity.buildings.find(b => b.name === "AIR_DEFENSE");
+  const airDefenseLevel    = airDefenseBuilding?.level ?? 0;
 
   const attackerUnits  = command.units.map((u: any) => ({ name: u.name as UnitName, quantity: u.quantity }));
   const defenderUnits  = toCity.units.map(u => ({ name: u.name, quantity: u.quantity }));
@@ -97,7 +97,7 @@ async function processAttackArrival(command: any) {
   const result = calculateBattle(
     attackerUnits,
     defenderUnits,
-    wallLevel,
+    airDefenseLevel,
     toCity.money,
     toCity.energy,
     toCity.ammo
@@ -113,10 +113,10 @@ async function processAttackArrival(command: any) {
     }
 
     // Actualizeaza nivelul Air Defense daca a fost damat
-    if (result.wallLevelsDestroyed > 0) {
+    if (result.airDefenseLevelsDestroyed > 0) {
       await tx.building.updateMany({
         where: { cityId: command.toCityId, name: "AIR_DEFENSE" },
-        data:  { level: result.newWallLevel },
+        data:  { level: result.newAirDefenseLevel },
       });
     }
 

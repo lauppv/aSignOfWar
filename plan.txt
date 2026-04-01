@@ -12,7 +12,7 @@ Fiecare jucator incepe cu un singur oras si:
 9) Housing Level 1
 10) Warehouse Level 1
 11) Harbor Level 0 (necesita Headquarters Level 15)
-12) Air defense system Level 0 (necesita Headquarters Level 5)
+12) Air defense Level 0 (necesita Headquarters Level 5)
 
 
 Unitatile si resursele vor fi pe oras, nu pe cont
@@ -33,7 +33,7 @@ Cladiri (cu perpendiculara pe Triburile):
 6) Housing (Ferma (population)). Level maxim 30
 7) Warehouse (Magazie (depoziteaza resurse)). Level maxim 30
 8) Harbor (targ (pentru a trimite resurse catre alte orase)). Level maxim 25
-9) Air defense system (Zid). Cladire speciala care nu apare in imaginea orasului, dar va avea propriul ei card/componenta (probabil sub tabloul cu numarul de unitati din oras). Level maxim 20
+9) Air defense (Zid). Cladire speciala care nu apare in imaginea orasului, dar va avea propriul ei card/componenta (probabil sub tabloul cu numarul de unitati din oras). Level maxim 20
 
 
 Unitati(cu perpendiculara pe Triburile) + deblocare (Level Headquarters):
@@ -370,7 +370,7 @@ Military base (Cazarma + Grajd)
     - exemplu: Light infantry (880 sec) la Military base niv.10 = 880 * 0.37 = 325 sec
 
 --------------------------------------------------------------------------------
-Air defense system (Zid)
+Air defense (Zid)
 --------------------------------------------------------------------------------
   Level maxim: 20
   cost baza: 120 Money, 140 energie, 90 Ammo

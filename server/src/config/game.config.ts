@@ -116,7 +116,7 @@ export interface UnitConfig {
   defenseVsInfantry:    number;
   defenseVsMechanized:  number;
   defenseVsRange:       number;
-  wallDamage?:          number;       // doar unitati Siege
+  airDefenseDamage?:    number;       // doar unitati Siege
   buildingDamage?:      number;       // doar Drone
   requiresHQ?:          number;
   requiresMilitaryBase?: number;
@@ -167,14 +167,14 @@ export const UNITS: Record<UnitName, UnitConfig> = {
     category: "SIEGE", costMoney: 300, costEnergy: 200, costAmmo: 200,
     population: 5, speed: 30, carry: 0, baseRecruitmentTime: 800,
     attack: 2, defenseVsInfantry: 20, defenseVsMechanized: 50, defenseVsRange: 20,
-    wallDamage: 60,
+    airDefenseDamage: 60,
     requiresHQ: 20, requiresMilitaryBase: 15,
   },
   DRONE: {
     category: "SIEGE", costMoney: 320, costEnergy: 400, costAmmo: 100,
     population: 8, speed: 30, carry: 0, baseRecruitmentTime: 1000,
     attack: 100, defenseVsInfantry: 100, defenseVsMechanized: 50, defenseVsRange: 100,
-    wallDamage: 15, buildingDamage: 80,
+    airDefenseDamage: 15, buildingDamage: 80,
     requiresHQ: 20, requiresMilitaryBase: 20,
   },
   GOVERNOR: {
@@ -271,10 +271,10 @@ export const getAirDefenseBonus = (level: number): number => {
 
 // Formula TW pentru damage la zid
 // Returneaza numarul de niveluri distruse
-export const calcWallDamage = (wallLevel: number, mlCount: number, droneCount: number): number => {
-  if (wallLevel <= 0 || (mlCount === 0 && droneCount === 0)) return 0;
+export const calcAirDefenseDamage = (airDefenseLevel: number, mlCount: number, droneCount: number): number => {
+  if (airDefenseLevel <= 0 || (mlCount === 0 && droneCount === 0)) return 0;
   const totalDmg = mlCount * 60 + droneCount * 15;
-  const W = wallLevel;
+  const W = airDefenseLevel;
   const threshold = 2 * Math.pow(1.09, W);
   const levels = Math.floor((totalDmg - threshold) / (2 * threshold) + 1);
   return Math.max(0, Math.min(Math.floor(W / 2), levels));
