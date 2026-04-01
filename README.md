@@ -84,6 +84,8 @@ npm start        # Run compiled build
 |--------|----------|------|-------------|
 | GET | `/api/cities/mine` | Yes | Get city overview (buildings, units, resources, orders) |
 | POST | `/api/cities/:cityId/recruit` | Yes | Start unit recruitment |
+| POST | `/api/cities/:cityId/commands` | Yes | Send attack / support / resources command |
+| GET | `/api/cities/:cityId/commands` | Yes | List outgoing and incoming commands |
 
 Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 
@@ -130,6 +132,31 @@ Production rates increase per building level. Resources are synced every 5 secon
 | DRONE | Siege | 20 | 20 |
 | GOVERNOR | Conquer | 30 | - |
 
+### Commands
+
+Players can send three types of commands between cities:
+
+| Type | Description |
+|------|-------------|
+| ATTACK | Send units to attack another player's city |
+| SUPPORT | Send units to reinforce a city |
+| RESOURCES | Send resources to another city (requires HARBOR) |
+
+All commands have a fixed travel time of 60 seconds (affected by `GAME_SPEED`). After an attack resolves, surviving units return home automatically with any stolen resources.
+
+#### Battle Formula
+
+Attacker losses are calculated per unit category (Infantry, Range, Mechanized):
+
+```
+loss_rate = (defender_force / attacker_force) ^ 1.5   [if attacker wins]
+loss_rate = 1.0                                         [if attacker loses]
+```
+
+The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. AIR_DEFENSE level applies a defense bonus (4%–107%) to all defending units. MISSILE_LAUNCHER and DRONE deal wall damage before combat.
+
+Attacking units that survive return home after another 60 seconds. If a GOVERNOR is in the attacking army and all defenders die, city loyalty is reduced by 20–35% per Governor.
+
 ### Job Queue
 
 Background jobs run via BullMQ + Redis:
@@ -137,6 +164,7 @@ Background jobs run via BullMQ + Redis:
 - `building-upgrade` — completes building upgrades after the required time
 - `unit-recruitment` — completes unit recruitment after the required time
 - `resource-tick` — syncs resource production every 5 seconds
+- `command-travel` — processes command arrivals and return trips
 
 ## Project Structure
 
