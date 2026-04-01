@@ -1,4 +1,5 @@
 import type { Unit } from "../types/index.ts";
+import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 
 const UNIT_DISPLAY: Record<string, string> = {
   LIGHT_INFANTRY:     "Light Infantry",
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function UnitCard({ unit }: Props) {
+  const { openUnit } = useUnitInfo();
   const src = `/images/units/${unit.name.toLowerCase()}.jpg`;
 
   return (
@@ -25,7 +27,8 @@ export default function UnitCard({ unit }: Props) {
       <img
         src={src}
         alt={UNIT_DISPLAY[unit.name] ?? unit.name}
-        className="w-14 h-14 object-contain rounded shrink-0"
+        className="w-14 h-14 object-contain rounded shrink-0 cursor-pointer hover:brightness-125 transition-[filter]"
+        onClick={() => openUnit(unit.name)}
         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
       />
       <span className="flex-1 text-xs text-[#8b949e] truncate">{UNIT_DISPLAY[unit.name] ?? unit.name}</span>

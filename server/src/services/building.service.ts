@@ -14,7 +14,6 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
 
   const cfg = BUILDINGS[building.name];
 
-  // Nivelul efectiv = nivel curent + cate upgrade-uri sunt deja la coada pentru aceasta cladire
   const pendingCount = await prisma.buildingUpgradeOrder.count({
     where: { cityId: building.city.id, buildingName: building.name },
   });
@@ -31,20 +30,23 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
   const cost    = getBuildingUpgradeCost(building.name, effectiveLevel);
   const timeSec = getBuildingUpgradeTime(building.name, effectiveLevel, hq.level);
 
-  // startAt = dupa ultimul order din coada orasului (sau acum daca coada e goala)
-  const lastOrder = await prisma.buildingUpgradeOrder.findFirst({
-    where: { cityId: building.city.id },
-    orderBy: { finishAt: "desc" },
-  });
-
-  const now = new Date();
-  const startAt  = lastOrder ? new Date(Math.max(now.getTime(), lastOrder.finishAt.getTime())) : now;
-  const finishAt = new Date(startAt.getTime() + timeSec * 1000);
-  const delay    = finishAt.getTime() - now.getTime();
-
-  // Scade resursele si creeaza orderul atomic
   let orderId!: string;
+  let finishAt!: Date;
+
+  // lastOrder si calculul startAt/finishAt sunt in interiorul tranzactiei
+  // pentru a evita race conditions intre request-uri simultane
   await prisma.$transaction(async (tx) => {
+    const lastOrder = await tx.buildingUpgradeOrder.findFirst({
+      where:   { cityId: building.city.id },
+      orderBy: { finishAt: "desc" },
+    });
+
+    const now     = new Date();
+    const startAt = lastOrder
+      ? new Date(Math.max(now.getTime(), lastOrder.finishAt.getTime()))
+      : now;
+    finishAt = new Date(startAt.getTime() + timeSec * 1000);
+
     const updated = await tx.city.updateMany({
       where: {
         id:     building.city.id,
@@ -66,7 +68,8 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     orderId = order.id;
   });
 
-  // Programeaza job-ul; daca esueaza, refund + sterge orderul
+  const delay = finishAt.getTime() - Date.now();
+
   try {
     const job = await buildingQueue.add("upgrade", { buildingId, orderId }, { delay });
     await prisma.buildingUpgradeOrder.update({
@@ -84,5 +87,5 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     throw err;
   }
 
-  return { building: building.name, startAt, finishAt, cost, timeSec };
+  return { building: building.name, startAt: finishAt, finishAt, cost, timeSec };
 };

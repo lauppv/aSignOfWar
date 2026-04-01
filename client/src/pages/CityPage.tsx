@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
 import { logout } from "../api/auth.ts";
@@ -12,6 +12,11 @@ import {
 } from "../lib/gameConfig.ts";
 import ResourceBar from "../components/ResourceBar.tsx";
 import UnitCard from "../components/UnitCard.tsx";
+import CityMap from "../components/CityMap.tsx";
+import BuildingsView from "../components/BuildingsView.tsx";
+import MilitaryBaseView from "../components/MilitaryBaseView.tsx";
+import BuildingDetailView from "../components/BuildingDetailView.tsx";
+import type { BuildingName } from "../types/index.ts";
 import type { OutgoingCommand, IncomingCommand } from "../types/index.ts";
 
 type MergedCommand =
@@ -38,6 +43,23 @@ function fmtArrival(iso: string): string {
 
 export default function CityPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const DETAIL_BUILDINGS: BuildingName[] = [
+    "BANK", "POWER_PLANT", "WEAPONS_FACTORY", "HOUSING", "WAREHOUSE", "HARBOR", "AIR_DEFENSE",
+  ];
+
+  const view            = searchParams.get("view");
+  const showBuildings   = view === "buildings";
+  const showMilitaryBase = view === "military_base";
+  const detailBuilding  = view === "building" ? (searchParams.get("name") as BuildingName | null) : null;
+
+  function openView(v: string, extra?: Record<string, string>) {
+    setSearchParams({ view: v, ...extra });
+  }
+  function closeView() {
+    navigate(-1);
+  }
 
   const { data: city, error, isLoading } = useQuery({
     queryKey: ["city"],
@@ -82,6 +104,7 @@ export default function CityPage() {
   ].sort((a, b) => new Date(a.arrivalAt).getTime() - new Date(b.arrivalAt).getTime());
 
   return (
+  <>
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
       <header className="flex justify-between items-center px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0">
@@ -163,10 +186,13 @@ export default function CityPage() {
         </div>
 
         {/* CENTER: City image */}
-        <img
-          src="/images/city.jpg"
-          alt={city.name}
-          className="shrink-0 h-full w-auto object-contain object-top pb-4"
+        <CityMap
+          cityName={city.name}
+          onBuildingClick={(name) => {
+            if (name === "HEADQUARTERS")              openView("buildings");
+            else if (name === "MILITARY_BASE")        openView("military_base");
+            else if (DETAIL_BUILDINGS.includes(name)) openView("building", { name });
+          }}
         />
 
         {/* RIGHT: Units */}
@@ -182,5 +208,10 @@ export default function CityPage() {
 
       </div>
     </div>
+
+    {showBuildings    && <BuildingsView    city={city} onClose={closeView} />}
+    {showMilitaryBase && <MilitaryBaseView city={city} onClose={closeView} />}
+    {detailBuilding   && <BuildingDetailView name={detailBuilding} city={city} onClose={closeView} />}
+  </>
   );
 }

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
 import CityPage from "./pages/CityPage.tsx";
+import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
 
 function isLoggedIn(): boolean {
   return !!localStorage.getItem("token");
@@ -13,6 +14,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <UnitInfoProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -28,5 +30,6 @@ export default function App() {
         <Route path="*" element={<Navigate to={isLoggedIn() ? "/city" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
+    </UnitInfoProvider>
   );
 }
