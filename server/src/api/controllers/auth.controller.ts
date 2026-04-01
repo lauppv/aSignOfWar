@@ -20,14 +20,14 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ mesaj: "Email si parola sunt obligatorii" });
+  if (!username || !password) {
+    return res.status(400).json({ mesaj: "Username si parola sunt obligatorii" });
   }
 
   try {
-    const result = await loginUser(email, password);
+    const result = await loginUser(username, password);
     return res.json(result);
   } catch (err: any) {
     if (err.message === "INVALID_CREDENTIALS") {

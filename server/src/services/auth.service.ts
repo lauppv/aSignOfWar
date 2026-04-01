@@ -33,8 +33,8 @@ export const registerUser = async (
   return { token, username: user.username };
 };
 
-export const loginUser = async (email: string, password: string) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+export const loginUser = async (username: string, password: string) => {
+  const user = await prisma.user.findUnique({ where: { username } });
 
   if (!user) {
     throw new Error("INVALID_CREDENTIALS");
