@@ -84,7 +84,7 @@ export const createStarterCity = async (
       units: {
         create: [
           { name: "LIGHT_INFANTRY",     category: "INFANTRY", quantity: 10 },
-          { name: "ANTI_TANK_INFANTRY", category: "INFANTRY", quantity: 10 },
+          { name: "HEAVY_INFANTRY",     category: "INFANTRY", quantity: 10 },
         ],
       },
     },

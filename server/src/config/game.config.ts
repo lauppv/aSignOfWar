@@ -134,7 +134,7 @@ export const UNITS: Record<UnitName, UnitConfig> = {
     attack: 25, defenseVsInfantry: 50, defenseVsMechanized: 15, defenseVsRange: 40,
     requiresHQ: 5,
   },
-  ANTI_TANK_INFANTRY: {
+  HEAVY_INFANTRY: {
     category: "INFANTRY", costMoney: 50, costEnergy: 30, costAmmo: 10,
     population: 1, speed: 18, carry: 25, baseRecruitmentTime: 130,
     attack: 10, defenseVsInfantry: 15, defenseVsMechanized: 45, defenseVsRange: 20,
