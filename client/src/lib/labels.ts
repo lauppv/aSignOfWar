@@ -5,13 +5,13 @@ import type { BuildingName, UnitName, UnitCategory } from "../types/index.ts";
 export const BUILDING_DISPLAY: Record<BuildingName, string> = {
   HEADQUARTERS:    "Headquarters",
   BANK:            "Bank",
-  POWER_PLANT:     "Power Plant",
-  WEAPONS_FACTORY: "Weapons Factory",
+  POWER_PLANT:     "Power plant",
+  WEAPONS_FACTORY: "Weapons factory",
   HOUSING:         "Housing",
   WAREHOUSE:       "Warehouse",
-  MILITARY_BASE:   "Military Base",
+  MILITARY_BASE:   "Military base",
   HARBOR:          "Harbor",
-  AIR_DEFENSE:     "Air Defense",
+  AIR_DEFENSE:     "Air defense",
 };
 
 export const BUILDING_DESCRIPTION: Record<BuildingName, string> = {
@@ -47,14 +47,14 @@ export const BUILDING_ORDER: BuildingName[] = [
 // ── Unit labels ─────────────────────────────────────────────────────────────
 
 export const UNIT_DISPLAY: Record<UnitName, string> = {
-  LIGHT_INFANTRY:     "Light Infantry",
-  DEFENDER_INFANTRY:  "Defender Infantry",
-  ANTI_TANK_INFANTRY: "Anti-Tank Infantry",
+  LIGHT_INFANTRY:     "Light infantry",
+  DEFENDER_INFANTRY:  "Defender infantry",
+  ANTI_TANK_INFANTRY: "Anti-tank infantry",
   SNIPER:             "Sniper",
-  SPECIAL_FORCES:     "Special Forces",
+  SPECIAL_FORCES:     "Special forces",
   RAIDER:             "Raider",
   TANK:               "Tank",
-  MISSILE_LAUNCHER:   "Missile Launcher",
+  MISSILE_LAUNCHER:   "Missile launcher",
   DRONE:              "Drone",
   GOVERNOR:           "Governor",
 };

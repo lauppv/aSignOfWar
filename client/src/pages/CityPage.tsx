@@ -133,18 +133,18 @@ export default function CityPage() {
         /* 3-column main */
         <div className="flex flex-1 overflow-hidden">
 
-          {/* LEFT: Air Defense + Commands */}
+          {/* LEFT: Air defense + Commands */}
           <div className="flex-1 flex flex-col bg-[#161b22] border-r border-[#30363d] overflow-hidden">
 
-            {/* Air Defense */}
+            {/* Air defense */}
             <div
               className="h-1/4 min-h-[130px] p-2.5 border-b border-[#30363d] flex flex-col gap-1.5 shrink-0 cursor-pointer hover:bg-[#1c2129] transition-colors"
               onClick={() => openView("building", { name: "AIR_DEFENSE" })}
             >
-              <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Air Defense</span>
+              <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Air defense</span>
               <img
                 src="/images/buildings/air_defense.jpg"
-                alt="Air Defense"
+                alt="Air defense"
                 className="w-full flex-1 min-h-0 object-contain rounded"
               />
               <div className="flex justify-between text-xs">

@@ -1,23 +1,23 @@
 import { useState } from "react";
 import type { BuildingName } from "../types/index.ts";
+import { BUILDING_DISPLAY } from "../lib/labels.ts";
 
 interface Hotspot {
   name: BuildingName;
-  label: string;
   top: string;
   left: string;
 }
 
 // Ajusteaza top/left (procente) dupa pozitia reala a cladirilor in city.jpg
 const HOTSPOTS: Hotspot[] = [
-  { name: "HEADQUARTERS",    label: "Headquarters",    top: "47%", left: "50%" },
-  { name: "BANK",            label: "Bank",            top: "42%", left: "34%" },
-  { name: "POWER_PLANT",     label: "Power Plant",     top: "28%", left: "12%" },
-  { name: "WEAPONS_FACTORY", label: "Weapons Factory", top: "50%", left: "90%" },
-  { name: "HOUSING",         label: "Housing",         top: "65%", left: "25%" },
-  { name: "WAREHOUSE",       label: "Warehouse",       top: "21%", left: "55%" },
-  { name: "MILITARY_BASE",   label: "Military Base",   top: "83%", left: "71%" },
-  { name: "HARBOR",          label: "Harbor",          top: "10%", left: "80%" },
+  { name: "HEADQUARTERS",    top: "47%", left: "50%" },
+  { name: "BANK",            top: "42%", left: "34%" },
+  { name: "POWER_PLANT",     top: "28%", left: "12%" },
+  { name: "WEAPONS_FACTORY", top: "50%", left: "90%" },
+  { name: "HOUSING",         top: "65%", left: "25%" },
+  { name: "WAREHOUSE",       top: "21%", left: "55%" },
+  { name: "MILITARY_BASE",   top: "83%", left: "71%" },
+  { name: "HARBOR",          top: "10%", left: "80%" },
 ];
 
 interface Props {
@@ -61,7 +61,7 @@ export default function CityMap({ cityName, onBuildingClick }: Props) {
             {/* Tooltip */}
             {isHovered && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap bg-[#161b22] border border-[#e6b800] text-[#e6b800] text-[11px] font-semibold px-2 py-0.5 rounded pointer-events-none">
-                {spot.label}
+                {BUILDING_DISPLAY[spot.name]}
               </div>
             )}
           </div>

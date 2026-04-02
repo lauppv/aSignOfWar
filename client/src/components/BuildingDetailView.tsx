@@ -169,7 +169,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
                 ← Back
               </button>
             </div>
-            <p className="text-xs text-[#8b949e] mt-1">{BUILDING_DESCRIPTION[name]}</p>
+            <p className="text-xs text-[#b1bac4] mt-1">{BUILDING_DESCRIPTION[name]}</p>
           </div>
           <div className="flex items-center justify-center p-4 flex-1 min-h-0">
             <img
@@ -186,7 +186,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
           {/* Level badge */}
           <div className="flex items-baseline gap-3">
             <span className="text-4xl font-bold text-[#e6b800]">{level}</span>
-            <span className="text-[#484f58] text-lg">/ {cfg.maxLevel}</span>
+            <span className="text-[#8b949e] text-lg">/ {cfg.maxLevel}</span>
           </div>
 
           {/* Stats table */}
@@ -194,7 +194,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
             <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mb-2">Stats</div>
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="text-[10px] uppercase tracking-widest text-[#484f58] border-b border-[#21262d]">
+                <tr className="text-[10px] uppercase tracking-widest text-[#8b949e] border-b border-[#21262d]">
                   <th className="text-left py-1.5 font-normal">Stat</th>
                   <th className="text-right py-1.5 font-normal">Now (lvl {level})</th>
                   <th className="text-right py-1.5 font-normal pr-0">Next (lvl {Math.min(level + 1, cfg.maxLevel)})</th>
@@ -203,7 +203,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
               <tbody>
                 {stats.map((row) => (
                   <tr key={row.label} className="border-b border-[#21262d]">
-                    <td className="py-1.5 text-[#8b949e] text-xs">{row.label}</td>
+                    <td className="py-1.5 text-[#b1bac4] text-xs">{row.label}</td>
                     <td className="py-1.5 text-right text-[#c9d1d9] text-xs">{row.current}</td>
                     <td className="py-1.5 text-right text-[#3fb950] text-xs pr-0 font-medium">{row.next}</td>
                   </tr>

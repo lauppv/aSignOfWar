@@ -53,7 +53,7 @@ export default function UnitInfoModal({ name, onClose }: Props) {
             <Row label="Defense vs Infantry"   value={cfg.defenseVsInfantry} />
             <Row label="Defense vs Mechanized" value={cfg.defenseVsMechanized} />
             <Row label="Defense vs Range"      value={cfg.defenseVsRange} />
-            {cfg.airDefenseDamage != null && <Row label="Air Defense Damage" value={cfg.airDefenseDamage} />}
+            {cfg.airDefenseDamage != null && <Row label="Air defense damage" value={cfg.airDefenseDamage} />}
             {cfg.buildingDamage    != null && <Row label="Building Damage"   value={`${cfg.buildingDamage}%`} />}
           </div>
 
