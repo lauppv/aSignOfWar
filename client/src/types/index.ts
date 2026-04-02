@@ -14,7 +14,7 @@ export type BuildingName =
 export type UnitName =
   | "LIGHT_INFANTRY"
   | "DEFENDER_INFANTRY"
-  | "ANTI_TANK_INFANTRY"
+  | "HEAVY_INFANTRY"
   | "SNIPER"
   | "SPECIAL_FORCES"
   | "RAIDER"

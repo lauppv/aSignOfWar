@@ -49,7 +49,7 @@ export const BUILDING_ORDER: BuildingName[] = [
 export const UNIT_DISPLAY: Record<UnitName, string> = {
   LIGHT_INFANTRY:     "Light infantry",
   DEFENDER_INFANTRY:  "Defender infantry",
-  ANTI_TANK_INFANTRY: "Anti-tank infantry",
+  HEAVY_INFANTRY:     "Heavy infantry",
   SNIPER:             "Sniper",
   SPECIAL_FORCES:     "Special forces",
   RAIDER:             "Raider",
@@ -62,7 +62,7 @@ export const UNIT_DISPLAY: Record<UnitName, string> = {
 export const UNIT_DESCRIPTION: Record<UnitName, string> = {
   LIGHT_INFANTRY:     "Fast and expendable frontline troops. They hit hard on the attack and move quickly, but crumble under sustained fire. Send them in waves and overwhelm the enemy before they can react.",
   DEFENDER_INFANTRY:  "Heavily armored soldiers trained to hold the line at all costs. They absorb punishment that would break lesser units, turning your city walls into an impenetrable fortress.",
-  ANTI_TANK_INFANTRY: "Specialists armed with rocket launchers and shaped charges. They lie in wait for armored columns and tear through steel like paper. Every tank commander's nightmare.",
+  HEAVY_INFANTRY: "Specialists armed with rocket launchers and shaped charges. They lie in wait for armored columns and tear through steel like paper. Every tank commander's nightmare.",
   SNIPER:             "Ghost-like marksmen who strike from impossible distances. A single sniper can pin down entire squads, picking off officers and sowing chaos long before the main force arrives.",
   SPECIAL_FORCES:     "Elite operatives trained in every form of warfare. Fast, deadly, and versatile — they excel on both offense and defense. Expensive to train, but worth every coin on the battlefield.",
   RAIDER:             "Lightning-fast strike units built for plunder. They tear through enemy lines, grab what they can carry, and vanish before reinforcements arrive. The backbone of any raiding party.",
@@ -81,6 +81,6 @@ export const CATEGORY_LABEL: Record<UnitCategory, string> = {
 };
 
 export const UNIT_ORDER: UnitName[] = [
-  "LIGHT_INFANTRY", "DEFENDER_INFANTRY", "ANTI_TANK_INFANTRY",
+  "LIGHT_INFANTRY", "DEFENDER_INFANTRY", "HEAVY_INFANTRY",
   "SNIPER", "SPECIAL_FORCES", "RAIDER", "TANK", "MISSILE_LAUNCHER", "DRONE",
 ];
