@@ -9,6 +9,7 @@ import {
   getMaxPopulation,
   getWarehouseCapacity,
   getAirDefenseBonus,
+  getResourceProduction,
 } from "../lib/gameConfig.ts";
 import ResourceBar from "../components/ResourceBar.tsx";
 import UnitCard from "../components/UnitCard.tsx";
@@ -104,120 +105,116 @@ export default function CityPage() {
   ].sort((a, b) => new Date(a.arrivalAt).getTime() - new Date(b.arrivalAt).getTime());
 
   return (
-  <>
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header */}
-      <header className="flex justify-between items-center px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0">
-        <h1 className="text-base text-[#e6b800] tracking-wider">{city.name}</h1>
-        <button
-          onClick={handleLogout}
-          className="text-xs text-[#8b949e] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#f85149] hover:text-[#f85149] cursor-pointer"
-        >
-          Logout
-        </button>
-      </header>
-
       <ResourceBar
+        cityName={city.name}
         money={city.money}
         energy={city.energy}
         ammo={city.ammo}
         capacity={warehouseCapacity}
+        moneyProd={getResourceProduction(getBuildingLevel(city, "BANK"))}
+        energyProd={getResourceProduction(getBuildingLevel(city, "POWER_PLANT"))}
+        ammoProd={getResourceProduction(getBuildingLevel(city, "WEAPONS_FACTORY"))}
         population={population}
         maxPopulation={maxPopulation}
+        onLogout={handleLogout}
       />
 
-      {/* 3-column main */}
-      <div className="flex flex-1 overflow-hidden">
+      {showBuildings ? (
+        <BuildingsView city={city} onClose={closeView} onBuildingClick={(name) => {
+          if (name === "MILITARY_BASE") openView("military_base");
+          else openView("building", { name });
+        }} />
+      ) : showMilitaryBase ? (
+        <MilitaryBaseView city={city} onClose={closeView} />
+      ) : detailBuilding ? (
+        <BuildingDetailView name={detailBuilding} city={city} onClose={closeView} />
+      ) : (
+        /* 3-column main */
+        <div className="flex flex-1 overflow-hidden">
 
-        {/* LEFT: Air Defense + Commands */}
-        <div className="flex-1 flex flex-col bg-[#161b22] border-r border-[#30363d] overflow-hidden">
+          {/* LEFT: Air Defense + Commands */}
+          <div className="flex-1 flex flex-col bg-[#161b22] border-r border-[#30363d] overflow-hidden">
 
-          {/* Air Defense */}
-          <div
-            className="h-1/4 min-h-[130px] p-2.5 border-b border-[#30363d] flex flex-col gap-1.5 shrink-0 cursor-pointer hover:bg-[#1c2129] transition-colors"
-            onClick={() => openView("building", { name: "AIR_DEFENSE" })}
-          >
-            <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Air Defense</span>
-            <img
-              src="/images/buildings/air_defense.jpg"
-              alt="Air Defense"
-              className="w-full flex-1 min-h-0 object-contain rounded"
-            />
-            <div className="flex justify-between text-xs">
-              <span className="text-[#c9d1d9]">Lvl {airDefenseLevel}</span>
-              <span className="text-[#3fb950] font-semibold">+{airDefenseBonus}% def</span>
+            {/* Air Defense */}
+            <div
+              className="h-1/4 min-h-[130px] p-2.5 border-b border-[#30363d] flex flex-col gap-1.5 shrink-0 cursor-pointer hover:bg-[#1c2129] transition-colors"
+              onClick={() => openView("building", { name: "AIR_DEFENSE" })}
+            >
+              <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Air Defense</span>
+              <img
+                src="/images/buildings/air_defense.jpg"
+                alt="Air Defense"
+                className="w-full flex-1 min-h-0 object-contain rounded"
+              />
+              <div className="flex justify-between text-xs">
+                <span className="text-[#c9d1d9]">Lvl {airDefenseLevel}</span>
+                <span className="text-[#3fb950] font-semibold">+{airDefenseBonus}% def</span>
+              </div>
+            </div>
+
+            {/* Commands */}
+            <div className="flex-1 overflow-y-auto p-2.5 flex flex-col gap-1.5">
+              <span className="text-[10px] uppercase tracking-widest text-[#8b949e] shrink-0">Commands</span>
+              {mergedCommands.length === 0 && (
+                <span className="text-[11px] text-[#484f58] text-center mt-2">No active commands</span>
+              )}
+              {mergedCommands.map((cmd) => {
+                const isOut = cmd.direction === "outgoing";
+                const cityName = isOut
+                  ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity.name
+                  : (cmd as IncomingCommand & { direction: "incoming" }).fromCity.name;
+                const username = isOut
+                  ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity.owner.username
+                  : (cmd as IncomingCommand & { direction: "incoming" }).fromCity.owner.username;
+                const colors = CMD_COLORS[cmd.type];
+
+                return (
+                  <div
+                    key={cmd.id}
+                    className="p-1.5 rounded bg-[#0d1117] border-l-[3px] flex flex-col gap-0.5 shrink-0"
+                    style={{ borderLeftColor: colors.border }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
+                        style={{ background: colors.badgeBg, color: colors.badgeText }}
+                      >
+                        {cmd.type}
+                      </span>
+                      <span className="text-[9px] text-[#484f58]">{isOut ? "▶ OUT" : "◀ IN"}</span>
+                    </div>
+                    <span className="text-[11px] text-[#8b949e] truncate">{cityName} ({username})</span>
+                    <span className="text-[10px] text-[#484f58]">⏱ {fmtArrival(cmd.arrivalAt)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Commands */}
-          <div className="flex-1 overflow-y-auto p-2.5 flex flex-col gap-1.5">
-            <span className="text-[10px] uppercase tracking-widest text-[#8b949e] shrink-0">Commands</span>
-            {mergedCommands.length === 0 && (
-              <span className="text-[11px] text-[#484f58] text-center mt-2">No active commands</span>
+          {/* CENTER: City image */}
+          <CityMap
+            cityName={city.name}
+            onBuildingClick={(name) => {
+              if (name === "HEADQUARTERS")              openView("buildings");
+              else if (name === "MILITARY_BASE")        openView("military_base");
+              else if (DETAIL_BUILDINGS.includes(name)) openView("building", { name });
+            }}
+          />
+
+          {/* RIGHT: Units */}
+          <div className="flex-1 bg-[#161b22] border-l border-[#30363d] overflow-y-auto p-2.5 flex flex-col gap-1.5">
+            <span className="text-[10px] uppercase tracking-widest text-[#8b949e] shrink-0">Units in city</span>
+            {activeUnits.length === 0 && (
+              <span className="text-[11px] text-[#484f58] text-center mt-2">No units</span>
             )}
-            {mergedCommands.map((cmd) => {
-              const isOut = cmd.direction === "outgoing";
-              const cityName = isOut
-                ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity.name
-                : (cmd as IncomingCommand & { direction: "incoming" }).fromCity.name;
-              const username = isOut
-                ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity.owner.username
-                : (cmd as IncomingCommand & { direction: "incoming" }).fromCity.owner.username;
-              const colors = CMD_COLORS[cmd.type];
-
-              return (
-                <div
-                  key={cmd.id}
-                  className="p-1.5 rounded bg-[#0d1117] border-l-[3px] flex flex-col gap-0.5 shrink-0"
-                  style={{ borderLeftColor: colors.border }}
-                >
-                  <div className="flex justify-between items-center">
-                    <span
-                      className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
-                      style={{ background: colors.badgeBg, color: colors.badgeText }}
-                    >
-                      {cmd.type}
-                    </span>
-                    <span className="text-[9px] text-[#484f58]">{isOut ? "▶ OUT" : "◀ IN"}</span>
-                  </div>
-                  <span className="text-[11px] text-[#8b949e] truncate">{cityName} ({username})</span>
-                  <span className="text-[10px] text-[#484f58]">⏱ {fmtArrival(cmd.arrivalAt)}</span>
-                </div>
-              );
-            })}
+            {activeUnits.map((unit) => (
+              <UnitCard key={unit.id} unit={unit} />
+            ))}
           </div>
+
         </div>
-
-        {/* CENTER: City image */}
-        <CityMap
-          cityName={city.name}
-          onBuildingClick={(name) => {
-            if (name === "HEADQUARTERS")              openView("buildings");
-            else if (name === "MILITARY_BASE")        openView("military_base");
-            else if (DETAIL_BUILDINGS.includes(name)) openView("building", { name });
-          }}
-        />
-
-        {/* RIGHT: Units */}
-        <div className="flex-1 bg-[#161b22] border-l border-[#30363d] overflow-y-auto p-2.5 flex flex-col gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-[#8b949e] shrink-0">Units in city</span>
-          {activeUnits.length === 0 && (
-            <span className="text-[11px] text-[#484f58] text-center mt-2">No units</span>
-          )}
-          {activeUnits.map((unit) => (
-            <UnitCard key={unit.id} unit={unit} />
-          ))}
-        </div>
-
-      </div>
+      )}
     </div>
-
-    {showBuildings    && <BuildingsView    city={city} onClose={closeView} onBuildingClick={(name) => {
-      if (name === "MILITARY_BASE") openView("military_base");
-      else openView("building", { name });
-    }} />}
-    {showMilitaryBase && <MilitaryBaseView city={city} onClose={closeView} />}
-    {detailBuilding   && <BuildingDetailView name={detailBuilding} city={city} onClose={closeView} />}
-  </>
   );
 }

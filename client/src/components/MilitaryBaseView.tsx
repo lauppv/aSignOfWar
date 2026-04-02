@@ -59,34 +59,32 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#0d1117]">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-[#161b22] border-b border-[#30363d] shrink-0">
-        <div>
-          <h2 className="text-base font-semibold text-[#e6b800]">Military Base</h2>
-          <p className="text-xs text-[#8b949e] mt-0.5">
-            Enables unit recruitment and reduces training time at higher levels.
-            Current level: <span className="text-[#c9d1d9]">{mbLevel}</span>
-            {" · "}Available population: <span className="text-[#c9d1d9]">{fmt(availablePop)}</span>
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-sm text-[#8b949e] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
-        >
-          ← Back
-        </button>
-      </div>
-
-      {/* Body: 40 / 60 */}
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-1 overflow-hidden bg-[#0d1117]">
         {/* Left 40%: image */}
-        <div className="w-2/5 shrink-0 flex items-center justify-center bg-[#0d1117] border-r border-[#30363d] p-6">
-          <img
-            src="/images/buildings/military_base.jpg"
-            alt="Military Base"
-            className="max-h-full max-w-full object-contain rounded-lg"
-          />
+        <div className="w-2/5 shrink-0 flex flex-col bg-[#0d1117] border-r border-[#30363d]">
+          <div className="px-4 pt-4 pb-2 shrink-0">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-[#e6b800]">Military Base</h2>
+              <button
+                onClick={onClose}
+                className="text-sm text-[#8b949e] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
+              >
+                ← Back
+              </button>
+            </div>
+            <p className="text-xs text-[#8b949e] mt-1">
+              Enables unit recruitment and reduces training time at higher levels.
+              Current level: <span className="text-[#c9d1d9]">{mbLevel}</span>
+              {" · "}Available population: <span className="text-[#c9d1d9]">{fmt(availablePop)}</span>
+            </p>
+          </div>
+          <div className="flex items-center justify-center p-4 flex-1 min-h-0">
+            <img
+              src="/images/buildings/military_base.jpg"
+              alt="Military Base"
+              className="max-h-full max-w-full object-contain rounded-lg"
+            />
+          </div>
         </div>
 
         {/* Right 60%: unit list + queue */}
@@ -229,7 +227,6 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
