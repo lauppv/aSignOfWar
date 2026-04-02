@@ -31,6 +31,7 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
   const timeSec = getBuildingUpgradeTime(building.name, effectiveLevel, hq.level);
 
   let orderId!: string;
+  let startAt!: Date;
   let finishAt!: Date;
 
   // lastOrder si calculul startAt/finishAt sunt in interiorul tranzactiei
@@ -41,8 +42,8 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
       orderBy: { finishAt: "desc" },
     });
 
-    const now     = new Date();
-    const startAt = lastOrder
+    const now = new Date();
+    startAt = lastOrder
       ? new Date(Math.max(now.getTime(), lastOrder.finishAt.getTime()))
       : now;
     finishAt = new Date(startAt.getTime() + timeSec * 1000);
@@ -87,5 +88,54 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     throw err;
   }
 
-  return { building: building.name, startAt: finishAt, finishAt, cost, timeSec };
+  return { building: building.name, startAt, finishAt, cost, timeSec };
+};
+
+export const cancelUpgrade = async (orderId: string, userId: string) => {
+  const order = await prisma.buildingUpgradeOrder.findUnique({
+    where: { id: orderId },
+    include: { city: true },
+  });
+
+  if (!order)                        throw new Error("ORDER_NOT_FOUND");
+  if (order.city.ownerId !== userId) throw new Error("UNAUTHORIZED");
+
+  // Calculeaza costul original al acestui upgrade pentru a returna 75%
+  const building = await prisma.building.findFirst({
+    where: { cityId: order.cityId, name: order.buildingName },
+  });
+  if (!building) throw new Error("BUILDING_NOT_FOUND");
+
+  // Numara cate ordere sunt inaintea acestuia (pentru a determina effectiveLevel)
+  const ordersBefore = await prisma.buildingUpgradeOrder.count({
+    where: { cityId: order.cityId, buildingName: order.buildingName, startAt: { lt: order.startAt } },
+  });
+  const effectiveLevel = building.level + ordersBefore;
+  const cost = getBuildingUpgradeCost(order.buildingName, effectiveLevel);
+
+  const refund = {
+    money:  Math.floor(cost.money  * 0.75),
+    energy: Math.floor(cost.energy * 0.75),
+    ammo:   Math.floor(cost.ammo   * 0.75),
+  };
+
+  // Sterge job-ul din coada daca exista
+  if (order.jobId) {
+    const job = await buildingQueue.getJob(order.jobId);
+    if (job) await job.remove();
+  }
+
+  await prisma.$transaction([
+    prisma.buildingUpgradeOrder.delete({ where: { id: orderId } }),
+    prisma.city.update({
+      where: { id: order.cityId },
+      data: {
+        money:  { increment: refund.money },
+        energy: { increment: refund.energy },
+        ammo:   { increment: refund.ammo },
+      },
+    }),
+  ]);
+
+  return { refund };
 };

@@ -14,17 +14,17 @@ function fmt(n: number): string {
 export default function ResourceBar({ money, energy, ammo, capacity, population, maxPopulation }: Props) {
   return (
     <div className="flex gap-6 px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0 flex-wrap text-sm text-[#c9d1d9]">
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-[#7ee787]">
         <img src="/images/icons/money.png" alt="Money" className="w-4 h-4 object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
-        {fmt(money)} / {fmt(capacity)}
+        Money: {fmt(money)} / {fmt(capacity)}
       </span>
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-[#79c0ff]">
         <img src="/images/icons/energy.png" alt="Energy" className="w-4 h-4 object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
-        {fmt(energy)} / {fmt(capacity)}
+        Energy: {fmt(energy)} / {fmt(capacity)}
       </span>
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-[#e3b341]">
         <img src="/images/icons/ammo.png" alt="Ammo" className="w-4 h-4 object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
-        {fmt(ammo)} / {fmt(capacity)}
+        Ammo: {fmt(ammo)} / {fmt(capacity)}
       </span>
       <span className="flex items-center gap-1.5 text-[#8b949e]">
         Pop: {fmt(population)} / {fmt(maxPopulation)}

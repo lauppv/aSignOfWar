@@ -2,39 +2,9 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { recruitUnits, cancelRecruitmentOrder } from "../api/city.ts";
 import { UNITS, getBuildingLevel, getRecruitmentTime, fmtDuration, computePopulation, getMaxPopulation } from "../lib/gameConfig.ts";
+import { UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import type { CityOverview, UnitName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
-
-const UNIT_DISPLAY: Record<UnitName, string> = {
-  LIGHT_INFANTRY:     "Light Infantry",
-  DEFENDER_INFANTRY:  "Defender Infantry",
-  ANTI_TANK_INFANTRY: "Anti-Tank Infantry",
-  SNIPER:             "Sniper",
-  SPECIAL_FORCES:     "Special Forces",
-  RAIDER:             "Raider",
-  TANK:               "Tank",
-  MISSILE_LAUNCHER:   "Missile Launcher",
-  DRONE:              "Drone",
-  GOVERNOR:           "Governor",
-};
-
-const UNIT_THEME: Record<UnitName, string> = {
-  LIGHT_INFANTRY:     "Luptator cu topor",
-  DEFENDER_INFANTRY:  "Luptator cu spada",
-  ANTI_TANK_INFANTRY: "Lancier",
-  SNIPER:             "Arcas",
-  SPECIAL_FORCES:     "Arcas calare",
-  RAIDER:             "Cavalerie usoara",
-  TANK:               "Cavalerie grea",
-  MISSILE_LAUNCHER:   "Berbec",
-  DRONE:              "Catapulta",
-  GOVERNOR:           "Governor",
-};
-
-const UNIT_ORDER: UnitName[] = [
-  "LIGHT_INFANTRY", "DEFENDER_INFANTRY", "ANTI_TANK_INFANTRY",
-  "SNIPER", "SPECIAL_FORCES", "RAIDER", "TANK", "MISSILE_LAUNCHER", "DRONE",
-];
 
 interface Props {
   city: CityOverview;
@@ -65,8 +35,11 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
   const hqLevel = getBuildingLevel(city, "HEADQUARTERS");
   const mbLevel = getBuildingLevel(city, "MILITARY_BASE");
   const population    = computePopulation(city);
+  const pendingPop    = city.recruitmentOrders.reduce(
+    (sum, o) => sum + o.quantity * (UNITS[o.unitName]?.population ?? 1), 0
+  );
   const maxPopulation = getMaxPopulation(getBuildingLevel(city, "HOUSING"));
-  const availablePop  = maxPopulation - population;
+  const availablePop  = maxPopulation - population - pendingPop;
 
   function isUnlocked(name: UnitName): boolean {
     if (mbLevel === 0) return false;
@@ -121,11 +94,11 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-widest text-[#8b949e] border-b border-[#30363d]">
-                <th className="text-left py-2 pl-2 font-normal w-8"></th>
+                <th className="text-left py-2 pl-2 font-normal w-14"></th>
                 <th className="text-left py-2 font-normal">Unit</th>
-                <th className="text-right py-2 font-normal">Money</th>
-                <th className="text-right py-2 font-normal">Energy</th>
-                <th className="text-right py-2 font-normal">Ammo</th>
+                <th className="text-right py-2 font-normal text-[#7ee787]">Money</th>
+                <th className="text-right py-2 font-normal text-[#79c0ff]">Energy</th>
+                <th className="text-right py-2 font-normal text-[#e3b341]">Ammo</th>
                 <th className="text-right py-2 font-normal">Pop</th>
                 <th className="text-right py-2 font-normal">Time</th>
                 <th className="text-center py-2 pr-2 font-normal">Recruit</th>
@@ -150,33 +123,51 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                       <img
                         src={`/images/units/${name.toLowerCase()}.jpg`}
                         alt={UNIT_DISPLAY[name]}
-                        className="w-8 h-8 object-contain rounded cursor-pointer hover:brightness-125 transition-[filter]"
+                        className="w-12 h-12 object-cover rounded cursor-pointer hover:brightness-125 transition-[filter]"
                         onClick={() => openUnit(name)}
                       />
                     </td>
-                    <td className="py-2">
+                    <td className="py-2 pl-2">
                       <div className="text-[#c9d1d9] text-xs">{UNIT_DISPLAY[name]}</div>
-                      <div className="text-[10px] text-[#484f58]">{UNIT_THEME[name]}</div>
                       {!unlocked && (
                         <div className="text-[10px] text-[#f85149] mt-0.5">{lockedReason(name)}</div>
                       )}
                     </td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : moneyOk  ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{fmt(cfg.costMoney)}</td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : energyOk ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{fmt(cfg.costEnergy)}</td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : ammoOk   ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{fmt(cfg.costAmmo)}</td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : popOk    ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{cfg.population}</td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : "text-[#8b949e]"}`}>{fmtDuration(timeSec)}</td>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : moneyOk  ? "text-[#7ee787]" : "text-[#f85149]"}`}>
+                      {fmt(cfg.costMoney)}
+                      {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.costMoney * qty)}</div>}
+                    </td>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}`}>
+                      {fmt(cfg.costEnergy)}
+                      {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.costEnergy * qty)}</div>}
+                    </td>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : ammoOk   ? "text-[#e3b341]" : "text-[#f85149]"}`}>
+                      {fmt(cfg.costAmmo)}
+                      {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.costAmmo * qty)}</div>}
+                    </td>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : popOk    ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>
+                      {cfg.population}
+                      {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.population * qty)}</div>}
+                    </td>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : "text-[#8b949e]"}`}>
+                      {fmtDuration(timeSec)}
+                      {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">{fmtDuration(timeSec * qty)}</div>}
+                    </td>
                     <td className="py-2 pr-2 text-center">
                       {unlocked ? (
                         <div className="flex items-center justify-center gap-1">
                           <input
-                            type="number"
-                            min={1}
+                            type="text"
+                            inputMode="numeric"
                             value={qty}
-                            onChange={(e) => setQuantities((prev) => ({
-                              ...prev,
-                              [name]: Math.max(1, parseInt(e.target.value) || 1),
-                            }))}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^0-9]/g, "");
+                              const num = parseInt(raw);
+                              setQuantities((prev) => ({
+                                ...prev,
+                                [name]: raw === "" ? 1 : Math.max(1, num),
+                              }));
+                            }}
                             className="w-14 bg-[#0d1117] border border-[#30363d] rounded text-xs text-[#c9d1d9] px-1.5 py-1 text-center focus:outline-none focus:border-[#58a6ff]"
                           />
                           <button
@@ -221,7 +212,11 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                       <span className="text-xs text-[#8b949e] shrink-0">{fmtDuration(totalSec)}</span>
                       <span className="text-xs text-[#d29922] font-mono w-20 text-right shrink-0">{countdown}</span>
                       <button
-                        onClick={() => cancelMutation.mutate(order.id)}
+                        onClick={() => {
+                          if (window.confirm("You will lose 25% of the resources. Are you sure you want to continue?")) {
+                            cancelMutation.mutate(order.id);
+                          }
+                        }}
                         disabled={cancelMutation.isPending}
                         className="text-[10px] text-[#484f58] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
                       >

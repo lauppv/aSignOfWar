@@ -3,7 +3,7 @@ import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
 import { commandQueue } from "../config/queue";
 import { calculateBattle } from "../services/battle.service";
-import { getTravelTimeSec } from "../config/game.config";
+import { getTravelTimeSec, UNITS } from "../config/game.config";
 import { syncResources } from "../services/city.service";
 import { UnitName } from "@prisma/client";
 
@@ -65,7 +65,7 @@ async function processSupportArrival(command: any) {
         create: {
           cityId:   command.toCityId,
           name:     name as UnitName,
-          category: (await tx.unit.findFirst({ where: { name } }))?.category ?? "INFANTRY",
+          category: UNITS[name as UnitName].category,
           quantity,
         },
       });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { upgradeBuilding } from "../api/city.ts";
+import { upgradeBuilding, cancelBuildingOrder } from "../api/city.ts";
 import {
   BUILDINGS,
   getBuildingLevel,
@@ -13,33 +13,8 @@ import {
   getAirDefenseBonus,
   fmtDuration,
 } from "../lib/gameConfig.ts";
+import { BUILDING_DISPLAY, BUILDING_DESCRIPTION } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
-
-// ── Config per clădire ────────────���───────────────────────────────────────────
-
-const BUILDING_DISPLAY: Record<BuildingName, string> = {
-  HEADQUARTERS:    "Headquarters",
-  BANK:            "Bank",
-  POWER_PLANT:     "Power Plant",
-  WEAPONS_FACTORY: "Weapons Factory",
-  HOUSING:         "Housing",
-  WAREHOUSE:       "Warehouse",
-  MILITARY_BASE:   "Military Base",
-  HARBOR:          "Harbor",
-  AIR_DEFENSE:     "Air Defense",
-};
-
-const BUILDING_DESCRIPTION: Record<BuildingName, string> = {
-  HEADQUARTERS:    "The nerve center of your city. Reduces construction time and unlocks new buildings and units.",
-  BANK:            "Generates money over time. Upgrade to increase hourly production.",
-  POWER_PLANT:     "Generates energy over time. Upgrade to increase hourly production.",
-  WEAPONS_FACTORY: "Generates ammo over time. Upgrade to increase hourly production.",
-  HOUSING:         "Houses your population. Upgrade to allow larger armies.",
-  WAREHOUSE:       "Stores your resources. Upgrade to increase storage capacity for all resource types.",
-  MILITARY_BASE:   "Enables unit recruitment and reduces training time at higher levels.",
-  HARBOR:          "Enables resource transfers to allied cities. Upgrade to increase transfer capacity.",
-  AIR_DEFENSE:     "Protects your city against aerial attacks. Upgrade to increase defensive bonus.",
-};
 
 interface StatRow { label: string; current: string | number; next: string | number; }
 
@@ -114,6 +89,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const queryClient = useQueryClient();
   const invalidate  = () => queryClient.invalidateQueries({ queryKey: ["city"] });
   const upgradeMutation = useMutation({ mutationFn: upgradeBuilding, onSuccess: invalidate });
+  const cancelMutation  = useMutation({ mutationFn: cancelBuildingOrder, onSuccess: invalidate });
 
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -126,28 +102,25 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const level    = building?.level ?? 0;
   const hqLevel  = getBuildingLevel(city, "HEADQUARTERS");
 
-  const isMaxLevel  = level >= cfg.maxLevel;
-  const activeOrder = city.buildingUpgradeOrders.find((o) => o.buildingName === name);
-  const isPending   = !!activeOrder;
+  const pendingOrders = city.buildingUpgradeOrders.filter((o) => o.buildingName === name);
+  const effectiveLevel = level + pendingOrders.length;
+  const isMaxLevel  = effectiveLevel >= cfg.maxLevel;
   const needsHQ     = (cfg.requiresHQ ?? 0) > hqLevel;
-  const cost        = getBuildingUpgradeCost(name, level);
+  const cost        = getBuildingUpgradeCost(name, effectiveLevel);
   const canAfford   = city.money >= cost.money && city.energy >= cost.energy && city.ammo >= cost.ammo;
-  const timeSec     = getBuildingUpgradeTime(name, level, hqLevel);
+  const timeSec     = getBuildingUpgradeTime(name, effectiveLevel, hqLevel);
 
   const stats = getStats(name, level, hqLevel);
+
+  function handleCancel(orderId: string) {
+    if (window.confirm("You will lose 25% of the resources. Are you sure you want to continue?")) {
+      cancelMutation.mutate(orderId);
+    }
+  }
 
   let upgradeNode: React.ReactNode;
   if (isMaxLevel) {
     upgradeNode = <span className="text-[#3fb950] text-sm font-medium">Maximum level reached</span>;
-  } else if (isPending && activeOrder) {
-    const diff = new Date(activeOrder.finishAt).getTime() - Date.now();
-    const s    = Math.max(0, Math.floor(diff / 1000));
-    upgradeNode = (
-      <div className="flex items-center gap-3 text-sm">
-        <span className="text-[#d29922]">Upgrading to lvl {level + 1}</span>
-        <span className="text-[#d29922] font-mono">{s === 0 ? "finishing..." : fmtDuration(s)}</span>
-      </div>
-    );
   } else if (needsHQ) {
     upgradeNode = <span className="text-[#f85149] text-sm">Requires HQ level {cfg.requiresHQ}</span>;
   } else {
@@ -156,17 +129,17 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
         <table className="border-collapse text-xs">
           <thead>
             <tr className="text-[10px] uppercase tracking-widest text-[#484f58] border-b border-[#21262d]">
-              <th className="text-right py-1 pr-4 font-normal">Money</th>
-              <th className="text-right py-1 pr-4 font-normal">Energy</th>
-              <th className="text-right py-1 pr-4 font-normal">Ammo</th>
+              <th className="text-right py-1 pr-4 font-normal text-[#7ee787]">Money</th>
+              <th className="text-right py-1 pr-4 font-normal text-[#79c0ff]">Energy</th>
+              <th className="text-right py-1 pr-4 font-normal text-[#e3b341]">Ammo</th>
               <th className="text-right py-1 font-normal">Time</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className={`py-1 pr-4 text-right ${city.money  >= cost.money  ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{fmt(cost.money)}</td>
-              <td className={`py-1 pr-4 text-right ${city.energy >= cost.energy ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{fmt(cost.energy)}</td>
-              <td className={`py-1 pr-4 text-right ${city.ammo   >= cost.ammo   ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>{fmt(cost.ammo)}</td>
+              <td className={`py-1 pr-4 text-right ${city.money  >= cost.money  ? "text-[#7ee787]" : "text-[#f85149]"}`}>{fmt(cost.money)}</td>
+              <td className={`py-1 pr-4 text-right ${city.energy >= cost.energy ? "text-[#79c0ff]" : "text-[#f85149]"}`}>{fmt(cost.energy)}</td>
+              <td className={`py-1 pr-4 text-right ${city.ammo   >= cost.ammo   ? "text-[#e3b341]" : "text-[#f85149]"}`}>{fmt(cost.ammo)}</td>
               <td className="py-1 text-right text-[#8b949e]">{fmtDuration(timeSec)}</td>
             </tr>
           </tbody>
@@ -176,7 +149,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
           disabled={!canAfford || !building || upgradeMutation.isPending}
           className="self-start px-4 py-1.5 rounded text-sm font-medium cursor-pointer bg-[#238636] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2ea043]"
         >
-          Upgrade to lvl {level + 1}
+          Upgrade to lvl {effectiveLevel + 1}
         </button>
       </div>
     );
@@ -216,7 +189,6 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
           <div className="flex items-baseline gap-3">
             <span className="text-4xl font-bold text-[#e6b800]">{level}</span>
             <span className="text-[#484f58] text-lg">/ {cfg.maxLevel}</span>
-            <span className="text-xs text-[#8b949e] uppercase tracking-widest">current level</span>
           </div>
 
           {/* Stats table */}
@@ -247,6 +219,39 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
             <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mb-2">Upgrade</div>
             {upgradeNode}
           </div>
+
+          {/* Pending orders for this building */}
+          {pendingOrders.length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mb-2">Queue</div>
+              <div className="flex flex-col gap-1.5">
+                {pendingOrders.map((order, i) => {
+                  const totalSec  = Math.round((new Date(order.finishAt).getTime() - new Date(order.startAt).getTime()) / 1000);
+                  const diff      = new Date(order.finishAt).getTime() - Date.now();
+                  const s         = Math.max(0, Math.floor(diff / 1000));
+                  const countdown = s === 0 ? "finishing..." : fmtDuration(s);
+
+                  return (
+                    <div key={order.id} className="flex items-center gap-3 px-3 py-2 bg-[#161b22] border border-[#30363d] rounded">
+                      <span className="text-[#484f58] text-xs w-4 shrink-0">{i + 1}.</span>
+                      <span className="flex-1 text-sm text-[#c9d1d9]">
+                        Lvl {level + i + 1}
+                      </span>
+                      <span className="text-xs text-[#8b949e] shrink-0">{fmtDuration(totalSec)}</span>
+                      <span className="text-xs text-[#d29922] font-mono w-20 text-right shrink-0">{countdown}</span>
+                      <button
+                        onClick={() => handleCancel(order.id)}
+                        disabled={cancelMutation.isPending}
+                        className="text-[10px] text-[#484f58] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

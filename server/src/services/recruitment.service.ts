@@ -54,19 +54,22 @@ export const startRecruitment = async (
   const cost    = { money: cfg.costMoney * quantity, energy: cfg.costEnergy * quantity, ammo: cfg.costAmmo * quantity };
   const timeSec = quantity * getRecruitmentTime(unitName, mb.level);
 
-  // Inlantuire dupa ultimul order din coada orasului
-  const lastOrder = await prisma.recruitmentOrder.findFirst({
-    where: { cityId },
-    orderBy: { finishAt: "desc" },
-  });
-
-  const now      = new Date();
-  const startAt  = lastOrder ? new Date(Math.max(now.getTime(), lastOrder.finishAt.getTime())) : now;
-  const finishAt = new Date(startAt.getTime() + timeSec * 1000);
-  const delay    = finishAt.getTime() - now.getTime();
-
   let orderId!: string;
+  let startAt!: Date;
+  let finishAt!: Date;
+
+  // lastOrder si calculul startAt/finishAt sunt in interiorul tranzactiei
+  // pentru a evita race conditions intre request-uri simultane
   await prisma.$transaction(async (tx) => {
+    const lastOrder = await tx.recruitmentOrder.findFirst({
+      where: { cityId },
+      orderBy: { finishAt: "desc" },
+    });
+
+    const now = new Date();
+    startAt = lastOrder ? new Date(Math.max(now.getTime(), lastOrder.finishAt.getTime())) : now;
+    finishAt = new Date(startAt.getTime() + timeSec * 1000);
+
     const updated = await tx.city.updateMany({
       where: {
         id:     cityId,
@@ -88,6 +91,8 @@ export const startRecruitment = async (
     orderId = order.id;
   });
 
+  const delay = finishAt.getTime() - Date.now();
+
   try {
     const job = await recruitmentQueue.add("recruit", { cityId, unitName, quantity, orderId }, { delay });
     await prisma.recruitmentOrder.update({
@@ -106,4 +111,45 @@ export const startRecruitment = async (
   }
 
   return { unitName, quantity, startAt, finishAt, cost, timeSec };
+};
+
+export const cancelRecruitment = async (orderId: string, userId: string) => {
+  const order = await prisma.recruitmentOrder.findUnique({
+    where: { id: orderId },
+    include: { city: true },
+  });
+
+  if (!order)                        throw new Error("ORDER_NOT_FOUND");
+  if (order.city.ownerId !== userId) throw new Error("UNAUTHORIZED");
+
+  const cfg = UNITS[order.unitName];
+  const cost = {
+    money:  cfg.costMoney  * order.quantity,
+    energy: cfg.costEnergy * order.quantity,
+    ammo:   cfg.costAmmo   * order.quantity,
+  };
+  const refund = {
+    money:  Math.floor(cost.money  * 0.75),
+    energy: Math.floor(cost.energy * 0.75),
+    ammo:   Math.floor(cost.ammo   * 0.75),
+  };
+
+  if (order.jobId) {
+    const job = await recruitmentQueue.getJob(order.jobId);
+    if (job) await job.remove();
+  }
+
+  await prisma.$transaction([
+    prisma.recruitmentOrder.delete({ where: { id: orderId } }),
+    prisma.city.update({
+      where: { id: order.cityId },
+      data: {
+        money:  { increment: refund.money },
+        energy: { increment: refund.energy },
+        ammo:   { increment: refund.ammo },
+      },
+    }),
+  ]);
+
+  return { refund };
 };

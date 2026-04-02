@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
-import { startUpgrade } from "../../services/building.service";
+import { startUpgrade, cancelUpgrade } from "../../services/building.service";
 
 export const upgradeBuilding = async (req: AuthRequest, res: Response) => {
   try {
@@ -32,6 +32,21 @@ export const upgradeBuilding = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ mesaj: `Necesita Headquarters nivel ${level}` });
     }
 
+    throw err;
+  }
+};
+
+export const cancelBuildingOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = req.params.orderId as string;
+    const result = await cancelUpgrade(orderId, req.userId!);
+    return res.json(result);
+  } catch (err: unknown) {
+    if (!(err instanceof Error)) {
+      return res.status(500).json({ mesaj: "Eroare necunoscuta" });
+    }
+    if (err.message === "ORDER_NOT_FOUND") return res.status(404).json({ mesaj: "Comanda nu exista" });
+    if (err.message === "UNAUTHORIZED")    return res.status(403).json({ mesaj: "Nu ai acces" });
     throw err;
   }
 };

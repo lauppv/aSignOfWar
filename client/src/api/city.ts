@@ -18,4 +18,4 @@ export const recruitUnits = (
   api.post<void>(`/cities/${cityId}/recruit`, { unitName, quantity });
 
 export const cancelRecruitmentOrder = (orderId: string): Promise<void> =>
-  api.delete<void>(`/recruitment/orders/${orderId}`);
+  api.delete<void>(`/cities/recruitment/orders/${orderId}`);

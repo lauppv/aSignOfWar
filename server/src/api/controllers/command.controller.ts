@@ -6,7 +6,7 @@ import { CommandType, UnitName } from "@prisma/client";
 export const sendCommandHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId     = req.userId!;
-    const fromCityId = req.params.cityId;
+    const fromCityId = req.params.cityId as string;
     const { type, targetCityId, units = {}, resources = {} } = req.body;
 
     if (!["ATTACK", "SUPPORT", "RESOURCES"].includes(type)) {
@@ -46,7 +46,7 @@ export const sendCommandHandler = async (req: AuthRequest, res: Response, next: 
 export const getCommandsHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const cityId = req.params.cityId;
+    const cityId = req.params.cityId as string;
     const result = await getCommandsForCity(cityId, userId);
     res.json(result);
   } catch (err: any) {

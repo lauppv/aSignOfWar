@@ -1,18 +1,6 @@
 import type { Unit } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
-
-const UNIT_DISPLAY: Record<string, string> = {
-  LIGHT_INFANTRY:     "Light Infantry",
-  DEFENDER_INFANTRY:  "Defender Infantry",
-  ANTI_TANK_INFANTRY: "Anti-Tank Infantry",
-  SNIPER:             "Sniper",
-  SPECIAL_FORCES:     "Special Forces",
-  RAIDER:             "Raider",
-  TANK:               "Tank",
-  MISSILE_LAUNCHER:   "Missile Launcher",
-  DRONE:              "Drone",
-  GOVERNOR:           "Governor",
-};
+import { UNIT_DISPLAY } from "../lib/labels.ts";
 
 interface Props {
   unit: Unit;

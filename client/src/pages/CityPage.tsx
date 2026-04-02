@@ -133,7 +133,10 @@ export default function CityPage() {
         <div className="flex-1 flex flex-col bg-[#161b22] border-r border-[#30363d] overflow-hidden">
 
           {/* Air Defense */}
-          <div className="h-1/4 min-h-[130px] p-2.5 border-b border-[#30363d] flex flex-col gap-1.5 shrink-0">
+          <div
+            className="h-1/4 min-h-[130px] p-2.5 border-b border-[#30363d] flex flex-col gap-1.5 shrink-0 cursor-pointer hover:bg-[#1c2129] transition-colors"
+            onClick={() => openView("building", { name: "AIR_DEFENSE" })}
+          >
             <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Air Defense</span>
             <img
               src="/images/buildings/air_defense.jpg"
@@ -209,7 +212,10 @@ export default function CityPage() {
       </div>
     </div>
 
-    {showBuildings    && <BuildingsView    city={city} onClose={closeView} />}
+    {showBuildings    && <BuildingsView    city={city} onClose={closeView} onBuildingClick={(name) => {
+      if (name === "MILITARY_BASE") openView("military_base");
+      else openView("building", { name });
+    }} />}
     {showMilitaryBase && <MilitaryBaseView city={city} onClose={closeView} />}
     {detailBuilding   && <BuildingDetailView name={detailBuilding} city={city} onClose={closeView} />}
   </>

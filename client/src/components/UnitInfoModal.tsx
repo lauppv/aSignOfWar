@@ -1,37 +1,17 @@
 import type { UnitName } from "../types/index.ts";
 import { UNITS } from "../lib/gameConfig.ts";
-
-const UNIT_DISPLAY: Record<UnitName, string> = {
-  LIGHT_INFANTRY:     "Light Infantry",
-  DEFENDER_INFANTRY:  "Defender Infantry",
-  ANTI_TANK_INFANTRY: "Anti-Tank Infantry",
-  SNIPER:             "Sniper",
-  SPECIAL_FORCES:     "Special Forces",
-  RAIDER:             "Raider",
-  TANK:               "Tank",
-  MISSILE_LAUNCHER:   "Missile Launcher",
-  DRONE:              "Drone",
-  GOVERNOR:           "Governor",
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  INFANTRY:   "Infantry",
-  RANGE:      "Range",
-  MECHANIZED: "Mechanized",
-  SIEGE:      "Siege",
-  CONQUER:    "Conquer",
-};
+import { UNIT_DISPLAY, UNIT_DESCRIPTION, CATEGORY_LABEL } from "../lib/labels.ts";
 
 interface Props {
   name: UnitName;
   onClose: () => void;
 }
 
-function Row({ label, value }: { label: string; value: string | number }) {
+function Row({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div className="flex justify-between text-xs py-0.5 border-b border-[#21262d]">
-      <span className="text-[#8b949e]">{label}</span>
-      <span className="text-[#c9d1d9] font-medium">{value}</span>
+      <span className="text-[#8b949e]" style={color ? { color } : undefined}>{label}</span>
+      <span className="text-[#c9d1d9] font-medium" style={color ? { color } : undefined}>{value}</span>
     </div>
   );
 }
@@ -61,6 +41,7 @@ export default function UnitInfoModal({ name, onClose }: Props) {
           <div className="mt-1.5 text-center">
             <div className="text-sm font-semibold text-[#e6b800]">{displayName}</div>
             <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mt-0.5">{CATEGORY_LABEL[cfg.category]}</div>
+            <div className="text-[11px] text-[#8b949e] mt-1.5 leading-relaxed italic">{UNIT_DESCRIPTION[name]}</div>
           </div>
         </div>
 
@@ -86,9 +67,9 @@ export default function UnitInfoModal({ name, onClose }: Props) {
           {/* Cost */}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mb-1">Cost</div>
-            <Row label="Money"      value={cfg.costMoney} />
-            <Row label="Energy"     value={cfg.costEnergy} />
-            <Row label="Ammo"       value={cfg.costAmmo} />
+            <Row label="Money"      value={cfg.costMoney}  color="#7ee787" />
+            <Row label="Energy"     value={cfg.costEnergy} color="#79c0ff" />
+            <Row label="Ammo"       value={cfg.costAmmo}   color="#e3b341" />
             <Row label="Population" value={cfg.population} />
           </div>
 
