@@ -21,27 +21,36 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 1. Clone the repo and install dependencies:
 
 ```bash
-cd server
-npm install
+cd server && npm install
+cd ../client && npm install
 ```
 
-2. Copy and configure environment variables:
+2. Copy and configure environment variables (`.env` trebuie să fie în `server/`):
 
 ```bash
-cp .env.example .env
+cp server/.env.example server/.env
 ```
+
+Edit `server/.env` and fill in `DATABASE_URL`, `JWT_SECRET`, etc.
 
 3. Run database migrations:
 
 ```bash
+cd server
 npx prisma migrate dev
 ```
 
-4. Start the development server:
+4. Start the development server and client (two terminals):
 
 ```bash
-npm run dev
+# Terminal 1 - server
+cd server && npm run dev
+
+# Terminal 2 - client
+cd client && npm run dev
 ```
+
+Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 
 ## Environment Variables
 
