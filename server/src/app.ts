@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
 import env from "./config/env";
 import authRoutes from "./api/routes/auth.routes";
 import buildingRoutes from "./api/routes/building.routes";
@@ -7,11 +8,16 @@ import recruitmentRoutes from "./api/routes/recruitment.routes";
 import commandRoutes from "./api/routes/command.routes";
 import { registerBuildingWorker } from "./workers/building.worker";
 import { registerRecruitmentWorker } from "./workers/recruitment.worker";
-import { registerResourceWorker } from "./workers/resource.worker";
 import { registerCommandWorker } from "./workers/command.worker";
 
 const app = express();
 
+app.use(cors({
+  origin: env.nodeEnv === "production"
+    ? process.env.CLIENT_URL        // in productie, seteaza CLIENT_URL in .env
+    : "http://localhost:5173",       // in development, clientul Vite
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
@@ -29,7 +35,6 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 registerBuildingWorker();
 registerRecruitmentWorker();
-registerResourceWorker();
 registerCommandWorker();
 
 app.listen(env.port, () => {

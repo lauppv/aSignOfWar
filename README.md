@@ -8,7 +8,8 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **Database:** PostgreSQL + Prisma ORM
 - **Queue/Jobs:** Redis + BullMQ
 - **Auth:** JWT + bcrypt
-- **Validation:** Zod
+- **Validation:** Zod (request body validation on all endpoints)
+- **CORS:** Configured for development (localhost:5173) and production (CLIENT_URL env var)
 
 ## Prerequisites
 
@@ -63,11 +64,12 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 | `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
 | `NODE_ENV` | `development` or `production` | - |
 | `GAME_SPEED` | Game speed multiplier (1 = normal) | `1` |
+| `CLIENT_URL` | Frontend URL (production only) | - |
 
 ## Scripts
 
 ```bash
-npm run dev      # Start in development mode (tsx)
+npm run dev      # Start in development mode (tsx watch, auto-reload)
 npm run build    # Compile TypeScript
 npm start        # Run compiled build
 ```
@@ -122,7 +124,7 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 - **Energy** — produced by POWER_PLANT
 - **Ammo** — produced by WEAPONS_FACTORY
 
-Production rates increase per building level. Resources are synced every 5 seconds via a background worker.
+Production rates increase per building level. Resources are synced lazily before any operation that reads or modifies them (no background worker needed).
 
 ### Units
 
@@ -172,25 +174,27 @@ Background jobs run via BullMQ + Redis:
 
 - `building-upgrade` — completes building upgrades after the required time
 - `unit-recruitment` — completes unit recruitment after the required time
-- `resource-tick` — syncs resource production every 5 seconds
 - `command-travel` — processes command arrivals and return trips
 
 ## Project Structure
 
 ```
 aSignOfWar/
+├── shared/
+│   └── gameConfig.ts          # Single source of truth for all game data
 ├── server/
 │   ├── src/
 │   │   ├── api/
 │   │   │   ├── controllers/   # Request handlers
-│   │   │   └── routes/        # Route definitions
-│   │   ├── config/            # DB, Redis, game config, queues
-│   │   ├── middleware/        # Auth middleware
+│   │   │   ├── routes/        # Route definitions
+│   │   │   └── schemas.ts     # Zod validation schemas
+│   │   ├── config/            # DB, Redis, game config wrapper, queues
+│   │   ├── middleware/        # Auth + validation middleware
 │   │   ├── services/          # Business logic
 │   │   ├── workers/           # Background job processors
 │   │   └── app.ts             # Entry point
 │   └── prisma/
 │       └── schema.prisma      # Database schema
-├── client/                    # Frontend (WIP)
-└── plan.txt                   # Game design document
+├── client/                    # Frontend (React + Vite + TailwindCSS)
+└── plan.txt                   # Game design document (RO)
 ```

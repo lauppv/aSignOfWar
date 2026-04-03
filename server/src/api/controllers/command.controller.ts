@@ -1,31 +1,15 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { sendCommand, getCommandsForCity } from "../../services/command.service";
 import { AuthRequest } from "../../middleware/auth";
-import { CommandType, UnitName } from "@prisma/client";
 
 export const sendCommandHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    // Body deja validat de Zod (sendCommandSchema)
     const userId     = req.userId!;
     const fromCityId = req.params.cityId as string;
-    const { type, targetCityId, units = {}, resources = {} } = req.body;
+    const { type, targetCityId, units, resources } = req.body;
 
-    if (!["ATTACK", "SUPPORT", "RESOURCES"].includes(type)) {
-      return res.status(400).json({ error: "INVALID_TYPE" });
-    }
-
-    const result = await sendCommand(
-      fromCityId,
-      targetCityId,
-      type as CommandType,
-      userId,
-      units as Partial<Record<UnitName, number>>,
-      {
-        money:  Number(resources.money  ?? 0),
-        energy: Number(resources.energy ?? 0),
-        ammo:   Number(resources.ammo   ?? 0),
-      }
-    );
-
+    const result = await sendCommand(fromCityId, targetCityId, type, userId, units, resources);
     res.status(201).json(result);
   } catch (err: any) {
     const code = err.message;
@@ -38,6 +22,7 @@ export const sendCommandHandler = async (req: AuthRequest, res: Response, next: 
     if (code === "HARBOR_REQUIRED")            return res.status(400).json({ error: code });
     if (code === "EXCEEDS_HARBOR_CAPACITY")    return res.status(400).json({ error: code });
     if (code === "INSUFFICIENT_RESOURCES")     return res.status(400).json({ error: code });
+    if (code === "NEGATIVE_RESOURCES")         return res.status(400).json({ error: code });
     if (code?.startsWith("INSUFFICIENT_UNITS")) return res.status(400).json({ error: code });
     next(err);
   }

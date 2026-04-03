@@ -1,17 +1,11 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import { startRecruitment, cancelRecruitment } from "../../services/recruitment.service";
-import { UnitName } from "@prisma/client";
 
 export const recruitUnits = async (req: AuthRequest, res: Response) => {
   try {
-    const cityId   = req.params.cityId as string;
-    const unitName = req.body.unitName as UnitName;
-    const quantity = Number(req.body.quantity);
-
-    if (!unitName || !Object.values(UnitName).includes(unitName)) {
-      return res.status(400).json({ mesaj: "Unitate invalida" });
-    }
+    const cityId = req.params.cityId as string;
+    const { unitName, quantity } = req.body;
 
     const result = await startRecruitment(cityId, unitName, quantity, req.userId!);
     return res.json(result);

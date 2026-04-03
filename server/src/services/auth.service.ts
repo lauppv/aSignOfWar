@@ -10,13 +10,14 @@ export const registerUser = async (
   password: string,
   cityName: string
 ) => {
-  const existent = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] },
-  });
+  const [byUsername, byEmail] = await Promise.all([
+    prisma.user.findUnique({ where: { username } }),
+    prisma.user.findUnique({ where: { email } }),
+  ]);
 
-  if (existent) {
-    throw new Error("EMAIL_OR_USERNAME_TAKEN");
-  }
+  if (byUsername && byEmail) throw new Error("USERNAME_AND_EMAIL_TAKEN");
+  if (byUsername)            throw new Error("USERNAME_TAKEN");
+  if (byEmail)              throw new Error("EMAIL_TAKEN");
 
   const hash = await bcrypt.hash(password, 10);
 

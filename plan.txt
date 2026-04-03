@@ -61,7 +61,7 @@ Tipuri de unitati:
 
 Toate unitatile se recruteaza din Baza militara
 
-Pentru MVP nu exista harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista un camp cu Command unde vei putea selecta tipul comenzii (militar(attack, suport) sau resurse) si numele jucatorului tinta. Daca jucatorul exista, arata-i orasele si selectezi orasul tinta. In functie de tipul comenzii, componenta va contine informatii diferite:
+Pentru punem si harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista un camp cu Command unde vei putea selecta tipul comenzii (militar(attack, suport) sau resurse) si numele jucatorului tinta. Daca jucatorul exista, arata-i orasele si selectezi orasul tinta. In functie de tipul comenzii, componenta va contine informatii diferite:
 1) attack/suport:
     nume oras
     nume proprietar
@@ -391,7 +391,7 @@ Un jucator poate da oricate comenzi de constructie si recrutare, atata timp cat 
 Exista optiune de anulare recrutare si comanda de constructie, dar acest lucru va face ca doar 75% din resurse sa se intoarca in depozit, deci 25% se pierd
 
 
-Va exista si un Simulator de batalii, dar nu ca cladire
+Va exista si un Simulator de batalii, dar nu ca cladire, ci jos in footer, la fel ca harta, rapoarte, mesaje etc
                                                               
                                                         
                                                                               
