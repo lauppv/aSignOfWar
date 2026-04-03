@@ -14,6 +14,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    // daca vom avea mai multe context providers, vom face un context/AppProviders.tsx
+    // care sa le includa pe toate, pentru a nu avea un nesting prea adanc in acest fisier
+
+    // mergem pe principiul YAGNI - You Aren't Gonna Need It, adica nu facem lucruri care nu sunt necesare acum
+    // poate nici nu vom avea nevoie de context pentru cladiri, notificari, etc
     <UnitInfoProvider>
     <BrowserRouter>
       <Routes>

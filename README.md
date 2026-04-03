@@ -132,7 +132,7 @@ Production rates increase per building level. Resources are synced every 5 secon
 |------|----------|-------------|-------------|
 | LIGHT_INFANTRY | Infantry | - | - |
 | DEFENDER_INFANTRY | Infantry | 5 | - |
-| ANTI_TANK_INFANTRY | Infantry | - | - |
+| HEAVY_INFANTRY | Infantry | - | - |
 | SNIPER | Range | 10 | 10 |
 | SPECIAL_FORCES | Range | 15 | 10 |
 | RAIDER | Mechanized | 10 | - |

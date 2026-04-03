@@ -1,7 +1,7 @@
 Copie Triburile in epoca contemporana. Doar acest fisier este in RO. Codul sursa si websiteul vor fi in EN pentru consistenta
 
 Fiecare jucator incepe cu un singur oras si:
-1) 10 Anti-tank infantry
+1) 10 Heavy
 2) 10 Light infantry
 3) 1000 din fiecare resursa
 4) Headquarters Level 1
@@ -42,7 +42,7 @@ Unitati(cu perpendiculara pe Triburile) + deblocare (Level Headquarters):
     Raider (cavalerie usoara) - Headquarters Level 10
     Special forces (arcas calare) - Headquarters Level 15 + Military base Level 10
 2) De defense:
-    Anti-tank infantry (lancier) - nu necesita Headquarters
+    Heavy infantry (lancier) - nu necesita Headquarters
     Defender infantry (luptator cu spada) - Headquarters Level 5
     Sniper (arcas) - Headquarters Level 10 + Military base Level 10
 3) Mix:
@@ -52,7 +52,7 @@ Unitati(cu perpendiculara pe Triburile) + deblocare (Level Headquarters):
     Drone (catapulta) - Headquarters Level 20 + Military base Level 20
 
 Tipuri de unitati:
-    1) Infantry: Light infantry, Defender infantry, Anti-tank infantry
+    1) Infantry: Light infantry, Defender infantry, Heavy infantry
     2) Range: Sniper, Special forces
     3) Mechanized: Raider, Tank
     4) Siege: Missile launcher, Drone
@@ -111,7 +111,7 @@ Defender infantry (luptator cu spada)
   defense vs Mechanized: 15
   defense vs Range: 40
  
-Anti-tank infantry (lancier)
+Heavy infantry (lancier)
   type: Infantry
   rol: anti-Mechanized
   cost: 50 Money, 30 energie, 10 Ammo
@@ -392,11 +392,8 @@ Exista optiune de anulare recrutare si comanda de constructie, dar acest lucru v
 
 
 Va exista si un Simulator de batalii, dar nu ca cladire
-
-facem iar cateva simulari. Toate simularile au zid 0 si luck 0. Noi nu avem 
- luck in joc                                                                  
-Aici poti sa vezi ca arcasii si arcasii calare mor la fel de multi, deci se   
-ia pe tipul unitatii                                                          
+                                                              
+                                                        
                                                                               
                                                                        
                                                                               
