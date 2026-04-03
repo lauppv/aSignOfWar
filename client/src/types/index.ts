@@ -1,29 +1,8 @@
 // Types matching backend Prisma response shapes
+// BuildingName, UnitName, UnitCategory vin din sursa unica de adevar (shared/)
 
-export type BuildingName =
-  | "HEADQUARTERS"
-  | "BANK"
-  | "POWER_PLANT"
-  | "WEAPONS_FACTORY"
-  | "HOUSING"
-  | "WAREHOUSE"
-  | "MILITARY_BASE"
-  | "HARBOR"
-  | "AIR_DEFENSE";
-
-export type UnitName =
-  | "LIGHT_INFANTRY"
-  | "DEFENDER_INFANTRY"
-  | "HEAVY_INFANTRY"
-  | "SNIPER"
-  | "SPECIAL_FORCES"
-  | "RAIDER"
-  | "TANK"
-  | "MISSILE_LAUNCHER"
-  | "DRONE"
-  | "GOVERNOR";
-
-export type UnitCategory = "INFANTRY" | "RANGE" | "MECHANIZED" | "SIEGE" | "CONQUER";
+import type { BuildingName, UnitName, UnitCategory } from "@shared/gameConfig.ts";
+export type { BuildingName, UnitName, UnitCategory };
 
 export interface Building {
   id: string;
