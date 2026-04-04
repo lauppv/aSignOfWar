@@ -35,9 +35,10 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
   const hqLevel = getBuildingLevel(city, "HEADQUARTERS");
   const mbLevel = getBuildingLevel(city, "MILITARY_BASE");
   const population    = computePopulation(city);
-  const pendingPop    = city.recruitmentOrders.reduce(
-    (sum, o) => sum + o.quantity * (UNITS[o.unitName]?.population ?? 1), 0
-  );
+  const now = Date.now();
+  const pendingPop    = city.recruitmentOrders
+    .filter((o) => new Date(o.finishAt).getTime() > now)
+    .reduce((sum, o) => sum + o.quantity * (UNITS[o.unitName]?.population ?? 1), 0);
   const maxPopulation = getMaxPopulation(getBuildingLevel(city, "HOUSING"));
   const availablePop  = maxPopulation - population - pendingPop;
 
@@ -187,11 +188,11 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
           </table>
 
           {/* Recruitment Queue */}
-          {city.recruitmentOrders.length > 0 && (
+          {city.recruitmentOrders.some((o) => new Date(o.finishAt).getTime() > Date.now()) && (
             <div className="mt-6">
               <div className="text-[10px] uppercase tracking-widest text-[#8b949e] mb-2">Recruitment Queue</div>
               <div className="flex flex-col gap-1.5">
-                {city.recruitmentOrders.map((order, i) => {
+                {city.recruitmentOrders.filter((o) => new Date(o.finishAt).getTime() > Date.now()).map((order, i) => {
                   const totalSec  = Math.round((new Date(order.finishAt).getTime() - new Date(order.startAt).getTime()) / 1000);
                   const diff      = new Date(order.finishAt).getTime() - Date.now();
                   const s         = Math.max(0, Math.floor(diff / 1000));

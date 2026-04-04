@@ -1,5 +1,5 @@
 // Sursa unica de adevar pentru toate datele statice ale jocului
-// Importat de server SI client — nu pune aici nimic specific unui mediu (env, Prisma, React)
+// Importat de server SI client 
 
 // ─── Tipuri ──────────────────────────────────────────────────────────────────
 

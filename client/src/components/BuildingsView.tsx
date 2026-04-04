@@ -218,13 +218,17 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
           </table>
 
           {/* Construction Queue */}
-          {city.buildingUpgradeOrders.length > 0 && (
+          {city.buildingUpgradeOrders.some((o) => new Date(o.finishAt).getTime() > Date.now()) && (
             <div className="mt-6">
               <div className="text-[10px] uppercase tracking-widest text-[#8b949e] mb-2">Construction Queue</div>
               <div className="flex flex-col gap-1.5">
                 {(() => {
+                  const now = Date.now();
+                  const activeOrders = city.buildingUpgradeOrders.filter(
+                    (o) => new Date(o.finishAt).getTime() > now
+                  );
                   const seenCount: Partial<Record<BuildingName, number>> = {};
-                  return city.buildingUpgradeOrders.map((order, i) => {
+                  return activeOrders.map((order, i) => {
                   const baseLevel = city.buildings.find((b) => b.name === order.buildingName)?.level ?? 0;
                   const offset = seenCount[order.buildingName] ?? 0;
                   seenCount[order.buildingName] = offset + 1;

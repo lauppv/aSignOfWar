@@ -102,7 +102,10 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const level    = building?.level ?? 0;
   const hqLevel  = getBuildingLevel(city, "HEADQUARTERS");
 
-  const pendingOrders = city.buildingUpgradeOrders.filter((o) => o.buildingName === name);
+  const now = Date.now();
+  const pendingOrders = city.buildingUpgradeOrders.filter(
+    (o) => o.buildingName === name && new Date(o.finishAt).getTime() > now
+  );
   const effectiveLevel = level + pendingOrders.length;
   const isMaxLevel  = effectiveLevel >= cfg.maxLevel;
   const needsHQ     = (cfg.requiresHQ ?? 0) > hqLevel;

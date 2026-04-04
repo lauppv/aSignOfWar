@@ -125,6 +125,13 @@ export const cancelUpgrade = async (orderId: string, userId: string) => {
     if (job) await job.remove();
   }
 
+  // Gaseste toate order-urile care vin DUPA cel anulat (trebuie recalculate)
+  const laterOrders = await prisma.buildingUpgradeOrder.findMany({
+    where: { cityId: order.cityId, startAt: { gte: order.startAt }, id: { not: orderId } },
+    orderBy: { startAt: "asc" },
+  });
+
+  // Sterge order-ul anulat si returneaza resursele
   await prisma.$transaction([
     prisma.buildingUpgradeOrder.delete({ where: { id: orderId } }),
     prisma.city.update({
@@ -136,6 +143,50 @@ export const cancelUpgrade = async (orderId: string, userId: string) => {
       },
     }),
   ]);
+
+  // Recalculeaza startAt/finishAt pentru order-urile ulterioare
+  if (laterOrders.length > 0) {
+    // Gaseste ultimul order din INAINTE de cel anulat (daca exista)
+    const previousOrder = await prisma.buildingUpgradeOrder.findFirst({
+      where: { cityId: order.cityId, finishAt: { lte: order.startAt } },
+      orderBy: { finishAt: "desc" },
+    });
+
+    const now = Date.now();
+    let cursor = previousOrder
+      ? Math.max(now, previousOrder.finishAt.getTime())
+      : now;
+
+    for (const lo of laterOrders) {
+      const duration = lo.finishAt.getTime() - lo.startAt.getTime();
+      const newStart  = new Date(cursor);
+      const newFinish = new Date(cursor + duration);
+
+      await prisma.buildingUpgradeOrder.update({
+        where: { id: lo.id },
+        data:  { startAt: newStart, finishAt: newFinish },
+      });
+
+      // Reschedule BullMQ job
+      if (lo.jobId) {
+        const oldJob = await buildingQueue.getJob(lo.jobId);
+        if (oldJob) await oldJob.remove();
+      }
+      const bld = await prisma.building.findFirst({
+        where: { cityId: order.cityId, name: lo.buildingName },
+      });
+      if (bld) {
+        const newDelay = Math.max(0, newFinish.getTime() - Date.now());
+        const newJob = await buildingQueue.add("upgrade", { buildingId: bld.id, orderId: lo.id }, { delay: newDelay });
+        await prisma.buildingUpgradeOrder.update({
+          where: { id: lo.id },
+          data:  { jobId: String(newJob.id) },
+        });
+      }
+
+      cursor = newFinish.getTime();
+    }
+  }
 
   return { refund };
 };
