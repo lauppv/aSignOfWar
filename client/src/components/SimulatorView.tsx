@@ -71,7 +71,7 @@ export default function SimulatorView({ onClose }: Props) {
 
       {/* Results (Tribal Wars style) */}
       {result && (
-        <div className="shrink-0 border-b border-[#30363d] bg-[#161b22] px-4 py-3">
+        <div className="shrink-0 border-b border-[#30363d] bg-[#161b22] px-4 py-3 max-w-[800px] mx-auto">
           {/* Winner banner */}
           <div className={`text-center text-sm font-bold py-1.5 rounded mb-3 ${result.attackerWon ? "bg-[#1a3d1a] text-[#3fb950]" : "bg-[#3d1a1a] text-[#f85149]"}`}>
             {result.attackerWon ? "ATTACKER WINS" : "DEFENDER WINS"}
@@ -153,14 +153,14 @@ export default function SimulatorView({ onClose }: Props) {
       )}
 
       {/* Input section */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 max-w-[800px] mx-auto">
         {/* Defender city settings */}
         <div className="flex gap-4 mb-3 items-center">
           <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Defender city:</span>
           <label className="flex items-center gap-1.5 text-xs text-[#c9d1d9]">
             Air Defense Lvl
             <input
-              type="number" min={0} max={20} value={airDefenseLevel}
+              type="text" inputMode="numeric" min={0} max={20} value={airDefenseLevel}
               onChange={e => setAirDefenseLevel(Math.min(20, Math.max(0, parseInt(e.target.value) || 0)))}
               className="w-14 bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-right text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
             />
@@ -168,7 +168,7 @@ export default function SimulatorView({ onClose }: Props) {
           <label className="flex items-center gap-1.5 text-xs text-[#7ee787]">
             Money
             <input
-              type="number" min={0} value={defMoney}
+              type="text" inputMode="numeric" min={0} value={defMoney}
               onChange={e => setDefMoney(Math.max(0, parseInt(e.target.value) || 0))}
               className="w-20 bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-right text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
             />
@@ -176,7 +176,7 @@ export default function SimulatorView({ onClose }: Props) {
           <label className="flex items-center gap-1.5 text-xs text-[#79c0ff]">
             Energy
             <input
-              type="number" min={0} value={defEnergy}
+              type="text" inputMode="numeric" min={0} value={defEnergy}
               onChange={e => setDefEnergy(Math.max(0, parseInt(e.target.value) || 0))}
               className="w-20 bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-right text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
             />
@@ -184,7 +184,7 @@ export default function SimulatorView({ onClose }: Props) {
           <label className="flex items-center gap-1.5 text-xs text-[#e3b341]">
             Ammo
             <input
-              type="number" min={0} value={defAmmo}
+              type="text" inputMode="numeric" min={0} value={defAmmo}
               onChange={e => setDefAmmo(Math.max(0, parseInt(e.target.value) || 0))}
               className="w-20 bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-right text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
             />
@@ -219,7 +219,7 @@ export default function SimulatorView({ onClose }: Props) {
                 </td>
                 <td className="py-1.5 text-center">
                   <input
-                    type="number" min={0} value={attacker[name] || ""}
+                    type="text" inputMode="numeric" min={0} value={attacker[name] || ""}
                     onChange={e => setUnit("atk", name, e.target.value)}
                     placeholder="0"
                     className="w-24 bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-center text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
@@ -227,7 +227,7 @@ export default function SimulatorView({ onClose }: Props) {
                 </td>
                 <td className="py-1.5 text-center">
                   <input
-                    type="number" min={0} value={defender[name] || ""}
+                    type="text" inputMode="numeric" min={0} value={defender[name] || ""}
                     onChange={e => setUnit("def", name, e.target.value)}
                     placeholder="0"
                     className="w-24 bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-center text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
