@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { commandQueue } from "../config/queue";
-import { UNITS, getTravelTimeSec, getHarborCapacity } from "../config/game.config";
+import { UNITS, getTravelTimeSec, getHarborCapacity } from "../../../shared/gameConfig";
+import env from "../config/env";
 import { CommandType, UnitName } from "@prisma/client";
 import { syncResources } from "./city.service";
 
@@ -52,7 +53,7 @@ export const sendCommand = async (
   await syncResources(fromCityId);
 
   const now       = new Date();
-  const arrivalAt = new Date(now.getTime() + getTravelTimeSec() * 1000);
+  const arrivalAt = new Date(now.getTime() + getTravelTimeSec(env.gameSpeed) * 1000);
   let commandId!: string;
 
   await prisma.$transaction(async (tx) => {

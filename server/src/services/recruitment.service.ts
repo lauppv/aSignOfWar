@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { recruitmentQueue } from "../config/queue";
-import { UNITS, getRecruitmentTime, getHousingCapacity } from "../config/game.config";
+import { UNITS, getRecruitmentTime, getHousingCapacity } from "../../../shared/gameConfig";
+import env from "../config/env";
 import { UnitName } from "@prisma/client";
 import { syncResources } from "./city.service";
 
@@ -52,7 +53,7 @@ export const startRecruitment = async (
   await syncResources(cityId);
 
   const cost    = { money: cfg.costMoney * quantity, energy: cfg.costEnergy * quantity, ammo: cfg.costAmmo * quantity };
-  const timeSec = quantity * getRecruitmentTime(unitName, mb.level);
+  const timeSec = quantity * getRecruitmentTime(unitName, mb.level, env.gameSpeed);
 
   let orderId!: string;
   let startAt!: Date;

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { recruitUnits, cancelRecruitmentOrder } from "../api/city.ts";
-import { UNITS, getBuildingLevel, getRecruitmentTime, fmtDuration, computePopulation, getMaxPopulation } from "../lib/gameConfig.ts";
+import { UNITS, getRecruitmentTime, getHousingCapacity as getMaxPopulation } from "@shared/gameConfig.ts";
+import { getBuildingLevel, fmtDuration, computePopulation } from "../lib/cityHelpers.ts";
 import { UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import type { CityOverview, UnitName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";

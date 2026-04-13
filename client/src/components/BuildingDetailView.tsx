@@ -3,16 +3,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { upgradeBuilding, cancelBuildingOrder } from "../api/city.ts";
 import {
   BUILDINGS,
-  getBuildingLevel,
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
   getResourceProduction,
   getWarehouseCapacity,
-  getMaxPopulation,
+  getHousingCapacity as getMaxPopulation,
   getHarborCapacity,
   getAirDefenseBonus,
-  fmtDuration,
-} from "../lib/gameConfig.ts";
+} from "@shared/gameConfig.ts";
+import { getBuildingLevel, fmtDuration } from "../lib/cityHelpers.ts";
 import { BUILDING_DISPLAY, BUILDING_DESCRIPTION } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
 

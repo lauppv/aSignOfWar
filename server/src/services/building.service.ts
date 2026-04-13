@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { buildingQueue } from "../config/queue";
-import { getBuildingUpgradeCost, getBuildingUpgradeTime, BUILDINGS } from "../config/game.config";
+import { getBuildingUpgradeCost, getBuildingUpgradeTime, BUILDINGS } from "../../../shared/gameConfig";
+import env from "../config/env";
 import { syncResources } from "./city.service";
 
 export const startUpgrade = async (buildingId: string, userId: string) => {
@@ -28,7 +29,7 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
   await syncResources(building.city.id);
 
   const cost    = getBuildingUpgradeCost(building.name, effectiveLevel);
-  const timeSec = getBuildingUpgradeTime(building.name, effectiveLevel, hq.level);
+  const timeSec = getBuildingUpgradeTime(building.name, effectiveLevel, hq.level, env.gameSpeed);
 
   let orderId!: string;
   let startAt!: Date;

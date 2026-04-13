@@ -4,19 +4,19 @@ import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
 import { logout } from "../api/auth.ts";
 import {
-  computePopulation,
-  getBuildingLevel,
-  getMaxPopulation,
+  getHousingCapacity as getMaxPopulation,
   getWarehouseCapacity,
   getAirDefenseBonus,
   getResourceProduction,
-} from "../lib/gameConfig.ts";
+} from "@shared/gameConfig.ts";
+import { computePopulation, getBuildingLevel } from "../lib/cityHelpers.ts";
 import ResourceBar from "../components/ResourceBar.tsx";
 import UnitCard from "../components/UnitCard.tsx";
 import CityMap from "../components/CityMap.tsx";
 import BuildingsView from "../components/BuildingsView.tsx";
 import MilitaryBaseView from "../components/MilitaryBaseView.tsx";
 import BuildingDetailView from "../components/BuildingDetailView.tsx";
+import SimulatorView from "../components/SimulatorView.tsx";
 import type { BuildingName } from "../types/index.ts";
 import type { OutgoingCommand, IncomingCommand } from "../types/index.ts";
 
@@ -54,6 +54,7 @@ export default function CityPage() {
   const showBuildings   = view === "buildings";
   const showMilitaryBase = view === "military_base";
   const detailBuilding  = view === "building" ? (searchParams.get("name") as BuildingName | null) : null;
+  const showSimulator   = view === "simulator";
 
   function openView(v: string, extra?: Record<string, string>) {
     setSearchParams({ view: v, ...extra });
@@ -118,9 +119,12 @@ export default function CityPage() {
         population={population}
         maxPopulation={maxPopulation}
         onLogout={handleLogout}
+        onSimulator={() => openView("simulator")}
       />
 
-      {showBuildings ? (
+      {showSimulator ? (
+        <SimulatorView onClose={closeView} />
+      ) : showBuildings ? (
         <BuildingsView city={city} onClose={closeView} onBuildingClick={(name) => {
           if (name === "MILITARY_BASE") openView("military_base");
           else openView("building", { name });

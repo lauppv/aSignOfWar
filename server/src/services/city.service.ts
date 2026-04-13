@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { Prisma } from "@prisma/client";
-import { getResourceProduction, getWarehouseCapacity } from "../config/game.config";
+import { getResourceProduction, getWarehouseCapacity } from "../../../shared/gameConfig";
+import env from "../config/env";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -28,9 +29,9 @@ export const syncResources = async (cityId: string): Promise<void> => {
   await prisma.city.update({
     where: { id: cityId },
     data: {
-      money:              Math.min(cap, city.money  + getResourceProduction(bank.level)        * elapsedHours),
-      energy:             Math.min(cap, city.energy + getResourceProduction(powerPlant.level)  * elapsedHours),
-      ammo:               Math.min(cap, city.ammo   + getResourceProduction(weapFactory.level) * elapsedHours),
+      money:              Math.min(cap, city.money  + getResourceProduction(bank.level, env.gameSpeed)        * elapsedHours),
+      energy:             Math.min(cap, city.energy + getResourceProduction(powerPlant.level, env.gameSpeed)  * elapsedHours),
+      ammo:               Math.min(cap, city.ammo   + getResourceProduction(weapFactory.level, env.gameSpeed) * elapsedHours),
       lastResourceUpdate: now,
     },
   });

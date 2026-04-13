@@ -1,34 +1,8 @@
-// Client-side game config — importa totul din sursa unica de adevar (shared/)
-// Adauga doar helpers specifice UI-ului
+// Helpers specifice UI-ului (nu config — config-ul e in shared/gameConfig.ts)
 
 import type { UnitName } from "@shared/gameConfig.ts";
-
-// Re-exporta tot din shared
-export {
-  BUILDINGS,
-  UNITS,
-  getBuildingUpgradeCost,
-  getBuildingUpgradeTime,
-  getRecruitmentTime,
-  getHousingCapacity as getMaxPopulation,
-  getWarehouseCapacity,
-  getAirDefenseBonus,
-  getHarborCapacity,
-  getResourceProduction,
-} from "@shared/gameConfig.ts";
-
-export type {
-  BuildingName,
-  UnitName,
-  UnitCategory,
-  BuildingConfig,
-  UnitConfig,
-} from "@shared/gameConfig.ts";
-
-// ─── Helpers specifice UI-ului ───────────────────────────────────────────────
-
-import type { CityOverview } from "../types/index.ts";
 import { UNITS } from "@shared/gameConfig.ts";
+import type { CityOverview } from "../types/index.ts";
 
 export const UNIT_POPULATION: Record<UnitName, number> = Object.fromEntries(
   Object.entries(UNITS).map(([name, cfg]) => [name, cfg.population])

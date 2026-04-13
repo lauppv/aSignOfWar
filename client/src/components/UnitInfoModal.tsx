@@ -1,5 +1,5 @@
 import type { UnitName } from "../types/index.ts";
-import { UNITS } from "../lib/gameConfig.ts";
+import { UNITS } from "@shared/gameConfig.ts";
 import { UNIT_DISPLAY, UNIT_DESCRIPTION, CATEGORY_LABEL } from "../lib/labels.ts";
 
 interface Props {

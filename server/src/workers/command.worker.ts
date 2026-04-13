@@ -3,7 +3,8 @@ import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
 import { commandQueue } from "../config/queue";
 import { calculateBattle } from "../services/battle.service";
-import { getTravelTimeSec, UNITS } from "../config/game.config";
+import { getTravelTimeSec, UNITS } from "../../../shared/gameConfig";
+import env from "../config/env";
 import { syncResources } from "../services/city.service";
 import { UnitName } from "@prisma/client";
 
@@ -157,7 +158,7 @@ async function processAttackArrival(command: any) {
   // Programeaza intoarcerea daca au supravietuit unitati
   const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
   if (hasSurvivors) {
-    const returnDelay = getTravelTimeSec() * 1000;
+    const returnDelay = getTravelTimeSec(env.gameSpeed) * 1000;
     await commandQueue.add("return", { commandId: command.id }, { delay: returnDelay });
   }
 }

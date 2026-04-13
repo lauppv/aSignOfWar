@@ -2,7 +2,7 @@ import { Worker } from "bullmq";
 import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
 import { UnitName } from "@prisma/client";
-import { UNITS } from "../config/game.config";
+import { UNITS } from "../../../shared/gameConfig";
 
 export const registerRecruitmentWorker = () => {
   new Worker<{ cityId: string; unitName: UnitName; quantity: number; orderId: string }>(
