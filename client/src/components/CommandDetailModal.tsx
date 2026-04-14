@@ -43,6 +43,7 @@ export default function CommandDetailModal({ cmd, onClose }: Props) {
     ? "⛨ stationed"
     : isReturning ? "↩ returning" : (isOut ? "▶ outgoing" : "◀ incoming");
   const activeUnits = cmd.units.filter(u => u.quantity > 0);
+  const hiddenEnemyUnits = !isOut && (cmd.type === "ATTACK" || cmd.type === "SPY");
   const hasResources = cmd.resourceMoney + cmd.resourceEnergy + cmd.resourceAmmo > 0;
   const showLoot = cmd.type === "ATTACK" && isReturning && hasResources;
 
@@ -107,7 +108,14 @@ export default function CommandDetailModal({ cmd, onClose }: Props) {
           ) : (
             <div className="mt-1 pt-2 border-t border-[#30363d] flex flex-col gap-1">
               <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1">Units</div>
-              {activeUnits.length === 0 ? (
+              {hiddenEnemyUnits ? (
+                <div className="flex items-center gap-2 bg-[#0d1117] border border-[#21262d] rounded px-2 py-2">
+                  <span className="text-sm">❓</span>
+                  <span className="text-[11px] text-[#b1bac4] italic">
+                    Unknown enemy force — scouts couldn't count them
+                  </span>
+                </div>
+              ) : activeUnits.length === 0 ? (
                 <span className="text-[11px] text-[#7d8590]">No units</span>
               ) : (
                 <div className="flex flex-col gap-1 max-h-[260px] overflow-y-auto pr-1">

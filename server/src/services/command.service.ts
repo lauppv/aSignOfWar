@@ -280,5 +280,11 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
     }),
   ]);
 
-  return { outgoing, incoming };
+  // Aparatorul NU trebuie sa stie cu ce trupe e atacat/spionat — stergem units
+  // din comenzile ATTACK/SPY incoming. SUPPORT/RESOURCES raman vizibile.
+  const sanitizedIncoming = incoming.map(c =>
+    c.type === "ATTACK" || c.type === "SPY" ? { ...c, units: [] } : c
+  );
+
+  return { outgoing, incoming: sanitizedIncoming };
 };

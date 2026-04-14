@@ -242,9 +242,6 @@ export default function CityPage() {
               )}
               {mergedCommands.map((cmd) => {
                 const isOut = cmd.direction === "outgoing";
-                const otherCity = isOut
-                  ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity
-                  : (cmd as IncomingCommand & { direction: "incoming" }).fromCity;
                 const colors = CMD_COLORS[cmd.type];
                 const isIncomingAttack = !isOut && cmd.type === "ATTACK";
                 const isReturning = cmd.status === "RETURNING";
@@ -257,7 +254,7 @@ export default function CityPage() {
                   <div
                     key={cmd.id}
                     onClick={() => setSelectedCmd(cmd)}
-                    className="p-2 rounded flex flex-col gap-1 shrink-0 cursor-pointer hover:brightness-125"
+                    className="p-2 rounded flex items-center gap-2 shrink-0 cursor-pointer hover:brightness-125"
                     style={{
                       background: isIncomingAttack ? "#2a0e0e" : "#0d1117",
                       borderLeft:  isOut ? `4px solid ${colors.border}` : undefined,
@@ -265,72 +262,38 @@ export default function CityPage() {
                       boxShadow: isIncomingAttack ? "0 0 10px rgba(248,81,73,0.35)" : undefined,
                     }}
                   >
-                    <div className="flex justify-between items-center gap-1">
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
-                        style={{ background: colors.badgeBg, color: colors.badgeText }}
-                      >
-                        {cmd.type}
-                      </span>
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0"
-                        style={{
-                          background: isReturning ? "#2a2a1c" : (isOut ? "#1c2a3a" : "#3a1c1c"),
-                          color:      isReturning ? "#d2a8ff" : (isOut ? "#79c0ff" : "#f85149"),
-                        }}
-                      >
-                        {cmd.status === "ARRIVED" ? "⛨ stationed" : isReturning ? "↩ returning" : (isOut ? "▶ outgoing" : "◀ incoming")}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center gap-2">
-                      {isOut ? (
-                        <div className="text-[11px] truncate min-w-0 flex-1">
-                          {isReturning ? (
-                            <>
-                              <span className="text-[#d2a8ff] font-semibold">← {otherCity.name}</span>
-                              <span className="text-[#b1bac4]"> returning</span>
-                              <span className="text-[#7d8590]"> ({(otherCity.owner?.username ?? "Ghost city")})</span>
-                            </>
-                          ) : cmd.status === "ARRIVED" ? (
-                            <>
-                              <span className="text-[#b1bac4]">stationed at </span>
-                              <span className="text-[#3fb950] font-semibold">{otherCity.name}</span>
-                              <span className="text-[#7d8590]"> ({(otherCity.owner?.username ?? "Ghost city")})</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-[#b1bac4]">to </span>
-                              <span className="text-[#79c0ff] font-semibold">→ {otherCity.name}</span>
-                              <span className="text-[#7d8590]"> ({(otherCity.owner?.username ?? "Ghost city")})</span>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] truncate min-w-0 flex-1">
-                          <span className="text-[#f85149] font-semibold">{otherCity.name} ←</span>
-                          <span className="text-[#b1bac4]"> from</span>
-                          <span className="text-[#7d8590]"> ({(otherCity.owner?.username ?? "Ghost city")})</span>
-                        </div>
-                      )}
-
-                      {isOut && cmd.status === "TRAVELING" && canCancel(cmd as OutgoingCommand) && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCancelTarget(cmd as OutgoingCommand);
-                          }}
-                          disabled={cancelMutation.isPending}
-                          className="shrink-0 text-[9px] uppercase tracking-wide border border-[#30363d] text-[#b1bac4] rounded px-1.5 py-0.5 hover:border-[#f85149] hover:text-[#f85149] disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-
-                    <span className="text-[10px] text-[#7d8590]">
-                      {cmd.status === "ARRIVED" ? "⛨ stationed in target" : `⏱ ${fmtArrival(cmd.arrivalAt)}`}
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
+                      style={{ background: colors.badgeBg, color: colors.badgeText }}
+                    >
+                      {cmd.type}
                     </span>
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0"
+                      style={{
+                        background: isReturning ? "#2a2a1c" : (isOut ? "#1c2a3a" : "#3a1c1c"),
+                        color:      isReturning ? "#d2a8ff" : (isOut ? "#79c0ff" : "#f85149"),
+                      }}
+                    >
+                      {cmd.status === "ARRIVED" ? "⛨ stationed" : isReturning ? "↩ returning" : (isOut ? "▶ outgoing" : "◀ incoming")}
+                    </span>
+
+                    <span className="text-[10px] text-[#7d8590] font-mono flex-1 text-right">
+                      {cmd.status === "ARRIVED" ? "stationed" : `⏱ ${fmtArrival(cmd.arrivalAt)}`}
+                    </span>
+
+                    {isOut && cmd.status === "TRAVELING" && canCancel(cmd as OutgoingCommand) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCancelTarget(cmd as OutgoingCommand);
+                        }}
+                        disabled={cancelMutation.isPending}
+                        className="shrink-0 text-[9px] uppercase tracking-wide border border-[#30363d] text-[#b1bac4] rounded px-1.5 py-0.5 hover:border-[#f85149] hover:text-[#f85149] disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
+                    )}
                   </div>
                 );
               })}
