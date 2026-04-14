@@ -5,7 +5,9 @@ import CommandDetailModal from "../components/CommandDetailModal.tsx";
 import { cancelCommand } from "../api/command.ts";
 import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
+import { getReports } from "../api/report.ts";
 import { logout } from "../api/auth.ts";
+import { getCurrentUserId } from "../api/client.ts";
 import {
   getHousingCapacity as getMaxPopulation,
   getWarehouseCapacity,
@@ -33,6 +35,7 @@ const CMD_COLORS = {
   ATTACK:    { border: "#f85149", badgeBg: "#3d1a1a", badgeText: "#f85149" },
   SUPPORT:   { border: "#3fb950", badgeBg: "#1a3d1a", badgeText: "#3fb950" },
   RESOURCES: { border: "#d29922", badgeBg: "#3d2e0a", badgeText: "#d29922" },
+  SPY:       { border: "#a371f7", badgeBg: "#2e1a3d", badgeText: "#a371f7" },
 };
 
 const CANCEL_WINDOW_MS = 5 * 60 * 1000;
@@ -100,6 +103,31 @@ export default function CityPage() {
     refetchInterval: 5000,
   });
 
+  const { data: reports } = useQuery({
+    queryKey: ["reports"],
+    queryFn: getReports,
+    refetchInterval: 10000,
+  });
+
+  const seenReportsKey = `seenReports:${getCurrentUserId() ?? "anon"}`;
+  const [seenReportIds, setSeenReportIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(seenReportsKey);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const unreadReports = (reports ?? []).filter((r) => !seenReportIds.has(r.id)).length;
+
+  function openReports() {
+    const allIds = (reports ?? []).map((r) => r.id);
+    const next = new Set<string>(allIds);
+    localStorage.setItem(seenReportsKey, JSON.stringify(Array.from(next)));
+    setSeenReportIds(next);
+    openView("reports");
+  }
+
   function handleLogout() {
     logout();
     navigate("/login");
@@ -150,8 +178,9 @@ export default function CityPage() {
         maxPopulation={maxPopulation}
         onLogout={handleLogout}
         onSimulator={() => openView("simulator")}
-        onReports={() => openView("reports")}
+        onReports={openReports}
         onMap={() => navigate("/map")}
+        unreadReports={unreadReports}
       />
 
       {showSimulator ? (
@@ -174,20 +203,34 @@ export default function CityPage() {
           {/* LEFT: Air defense + Commands */}
           <div className="flex-1 flex flex-col bg-[#161b22] border-r border-[#30363d] overflow-hidden">
 
-            {/* Air defense */}
-            <div
-              className="h-1/4 min-h-[130px] p-2.5 border-b border-[#30363d] flex flex-col gap-1.5 shrink-0 cursor-pointer hover:bg-[#1c2129] transition-colors"
-              onClick={() => openView("building", { name: "AIR_DEFENSE" })}
-            >
-              <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">Air defense</span>
-              <img
-                src="/images/buildings/air_defense.jpg"
-                alt="Air defense"
-                className="w-full flex-1 min-h-0 object-contain rounded"
-              />
-              <div className="flex justify-between text-xs">
-                <span className="text-[#c9d1d9]">Lvl {airDefenseLevel}</span>
-                <span className="text-[#3fb950] font-semibold">+{airDefenseBonus}% def</span>
+            {/* Air defense + Governor/Hacker row */}
+            <div className="h-1/4 min-h-[130px] border-b border-[#30363d] flex shrink-0">
+
+              {/* Air defense (left) */}
+              <div
+                className="flex-1 p-2.5 border-r border-[#30363d] flex flex-col gap-1.5 cursor-pointer hover:bg-[#1c2129] transition-colors min-w-0"
+                onClick={() => openView("building", { name: "AIR_DEFENSE" })}
+              >
+                <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">Air defense</span>
+                <img
+                  src="/images/buildings/air_defense.jpg"
+                  alt="Air defense"
+                  className="w-full flex-1 min-h-0 object-contain rounded"
+                />
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#c9d1d9]">Lvl {airDefenseLevel}</span>
+                  <span className="text-[#3fb950] font-semibold">+{airDefenseBonus}% def</span>
+                </div>
+              </div>
+
+              {/* Governor + Hacker (right, stacked) */}
+              <div className="flex-1 flex flex-col min-w-0 p-2 gap-2 items-center justify-center">
+                <div className="w-auto h-[calc(50%-0.25rem)] aspect-square">
+                  <UnitCard name="GOVERNOR" total={unitTotals.get("GOVERNOR") ?? 0} />
+                </div>
+                <div className="w-auto h-[calc(50%-0.25rem)] aspect-square">
+                  <UnitCard name="HACKER" total={unitTotals.get("HACKER") ?? 0} />
+                </div>
               </div>
             </div>
 
@@ -308,7 +351,7 @@ export default function CityPage() {
           <div className="flex-1 bg-[#161b22] border-l border-[#30363d] overflow-y-auto p-2.5 flex flex-col gap-2">
             <span className="text-[10px] uppercase tracking-widest text-[#b1bac4] shrink-0">Units in city</span>
             <div className="grid grid-cols-3 gap-1.5">
-              {UNIT_ORDER.map((name) => (
+              {UNIT_ORDER.filter((name) => name !== "HACKER").map((name) => (
                 <UnitCard key={name} name={name} total={unitTotals.get(name) ?? 0} />
               ))}
             </div>

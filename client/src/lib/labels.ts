@@ -57,6 +57,7 @@ export const UNIT_DISPLAY: Record<UnitName, string> = {
   MISSILE_LAUNCHER:   "Missile launcher",
   DRONE:              "Drone",
   GOVERNOR:           "Governor",
+  HACKER:             "Hacker",
 };
 
 export const UNIT_DESCRIPTION: Record<UnitName, string> = {
@@ -70,6 +71,7 @@ export const UNIT_DESCRIPTION: Record<UnitName, string> = {
   MISSILE_LAUNCHER:   "Long-range devastation on wheels. Missile launchers reduce enemy fortifications to rubble from a safe distance, softening defenses before your troops storm in.",
   DRONE:              "Unmanned aerial killers controlled from miles away. They rain death from above with surgical precision, bypassing ground defenses entirely. The future of warfare, hovering overhead.",
   GOVERNOR:           "A commanding figure of absolute authority. Governors don't fight — they conquer. Send one to a defeated city and it falls under your banner permanently. The ultimate instrument of empire.",
+  HACKER:             "A ghost in the wires. Hackers slip past guards and ignore every soldier in the target city — their only enemy is another hacker. Send more than the enemy fields and you crack the network wide open; the losing side's spies leave as ashes in a server room while the defender's keep their posts.",
 };
 
 export const CATEGORY_LABEL: Record<UnitCategory, string> = {
@@ -78,9 +80,18 @@ export const CATEGORY_LABEL: Record<UnitCategory, string> = {
   MECHANIZED: "Mechanized",
   SIEGE:      "Siege",
   CONQUER:    "Conquer",
+  SPY:        "Spy",
 };
 
+// Unitatile care apar in lista de recrutare a Military Base
 export const UNIT_ORDER: UnitName[] = [
+  "LIGHT_INFANTRY", "DEFENDER_INFANTRY", "HEAVY_INFANTRY",
+  "SNIPER", "SPECIAL_FORCES", "RAIDER", "TANK", "MISSILE_LAUNCHER", "DRONE",
+  "HACKER",
+];
+
+// Unitatile care pot participa la o lupta normala (fara Governor, fara Hacker)
+export const BATTLE_UNIT_ORDER: UnitName[] = [
   "LIGHT_INFANTRY", "DEFENDER_INFANTRY", "HEAVY_INFANTRY",
   "SNIPER", "SPECIAL_FORCES", "RAIDER", "TANK", "MISSILE_LAUNCHER", "DRONE",
 ];

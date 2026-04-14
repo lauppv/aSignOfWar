@@ -34,6 +34,7 @@ async function processArrival(commandId: string) {
   if (command.type === "RESOURCES") return processResourceArrival(command);
   if (command.type === "SUPPORT")   return processSupportArrival(command);
   if (command.type === "ATTACK")    return processAttackArrival(command);
+  if (command.type === "SPY")       return processSpyArrival(command);
 }
 
 // ─── Resurse: adauga in orasul destinatie ────────────────────────────────────
@@ -219,6 +220,101 @@ async function processAttackArrival(command: any) {
 
   // Programeaza intoarcerea daca au supravietuit unitati
   const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
+  if (hasSurvivors) {
+    await commandQueue.add("return", { commandId: command.id }, { delay: returnDelayMs });
+  }
+}
+
+// ─── Spionaj: hacker vs hacker ────────────────────────────────────────────────
+// Mecanism:
+//   - atacatorul trimite N hackeri, orasul tinta are D hackeri (native + stationate).
+//   - daca N > D: supravietuiesc (N - D) hackeri atacatori, D raman in aparare intacti.
+//     Se genereaza un raport cu buildings + units din orasul tinta (snapshot).
+//   - daca N <= D: toti hackerii atacatori mor, defenderul ramane intact, niciun snapshot.
+//
+// Hackerii defenderului NU mor niciodata (plan.txt).
+// Resursele, zidurile, loyalty — neatinse.
+
+async function processSpyArrival(command: any) {
+  const toCity = await prisma.city.findUnique({
+    where:   { id: command.toCityId },
+    include: { units: true, buildings: { orderBy: { name: "asc" } } },
+  });
+  if (!toCity) return;
+
+  const attackerHackers = command.units
+    .filter((u: any) => u.name === "HACKER")
+    .reduce((s: number, u: any) => s + u.quantity, 0);
+
+  // Hackerii defenderului: cei din oras + cei stationati ca SUPPORT
+  const nativeDefenders = toCity.units
+    .filter(u => u.name === "HACKER")
+    .reduce((s, u) => s + u.quantity, 0);
+
+  const stationedSupports = await prisma.command.findMany({
+    where:   { toCityId: command.toCityId, type: "SUPPORT", status: "ARRIVED" },
+    include: { units: true },
+  });
+  const supportDefenders = stationedSupports.reduce((s, c) => {
+    for (const u of c.units) if (u.name === "HACKER") s += u.quantity;
+    return s;
+  }, 0);
+
+  const defenderHackers = nativeDefenders + supportDefenders;
+
+  const success   = attackerHackers > defenderHackers;
+  const survivors = success ? attackerHackers - defenderHackers : 0;
+
+  // Snapshot al orasului spionat (doar la succes)
+  let snapshot: { buildings: { name: string; level: number }[]; units: { name: UnitName; quantity: number }[] } | null = null;
+  if (success) {
+    // Units = native + toate stack-urile stationate de SUPPORT
+    const unitTotals = new Map<UnitName, number>();
+    for (const u of toCity.units) {
+      if (u.quantity > 0) unitTotals.set(u.name as UnitName, (unitTotals.get(u.name as UnitName) ?? 0) + u.quantity);
+    }
+    for (const c of stationedSupports) {
+      for (const u of c.units) {
+        if (u.quantity > 0) unitTotals.set(u.name as UnitName, (unitTotals.get(u.name as UnitName) ?? 0) + u.quantity);
+      }
+    }
+    snapshot = {
+      buildings: toCity.buildings.map(b => ({ name: b.name, level: b.level })),
+      units:     Array.from(unitTotals.entries()).map(([name, quantity]) => ({ name, quantity })),
+    };
+  }
+
+  const returnDelayMs   = getTravelTimeSec(env.gameSpeed) * 1000;
+  const returnArrivalAt = new Date(Date.now() + returnDelayMs);
+  const hasSurvivors    = survivors > 0;
+
+  await prisma.$transaction(async (tx) => {
+    // Actualizeaza unitatile comenzii cu supravietuitorii
+    await tx.commandUnit.updateMany({
+      where: { commandId: command.id, name: "HACKER" },
+      data:  { quantity: survivors },
+    });
+
+    await tx.command.update({
+      where: { id: command.id },
+      data: {
+        status:    hasSurvivors ? "RETURNING" : "COMPLETED",
+        arrivalAt: hasSurvivors ? returnArrivalAt : command.arrivalAt,
+        // Spionatul nu afla niciodata ca a fost spionat.
+        reportHiddenByDefender: true,
+        report: {
+          spyReport:       true,
+          success,
+          attackerHackers,
+          defenderHackers,
+          attackerSurvivors: survivors,
+          snapshot, // null daca succes === false
+          battleAt:          new Date().toISOString(),
+        } as any,
+      },
+    });
+  });
+
   if (hasSurvivors) {
     await commandQueue.add("return", { commandId: command.id }, { delay: returnDelayMs });
   }

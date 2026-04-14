@@ -12,7 +12,8 @@ export const getReportsForUser = async (userId: string) => {
         {
           OR: [
             { type: "ATTACK", report: { not: Prisma.JsonNull } },
-            { type: "SUPPORT",   status: { in: ["ARRIVED", "COMPLETED"] } },
+            { type: "SPY",    report: { not: Prisma.JsonNull } },
+            { type: "SUPPORT",   status: { in: ["ARRIVED", "RETURNING", "COMPLETED"] } },
             { type: "RESOURCES", status: "COMPLETED" },
           ],
         },
@@ -74,7 +75,8 @@ export const deleteReportForUser = async (commandId: string, userId: string) => 
 
   const isReportable =
     (cmd.type === "ATTACK" && cmd.report !== null) ||
-    (cmd.type === "SUPPORT"   && (cmd.status === "ARRIVED" || cmd.status === "COMPLETED")) ||
+    (cmd.type === "SPY"    && cmd.report !== null) ||
+    (cmd.type === "SUPPORT"   && (cmd.status === "ARRIVED" || cmd.status === "RETURNING" || cmd.status === "COMPLETED")) ||
     (cmd.type === "RESOURCES" && cmd.status === "COMPLETED");
   if (!isReportable) throw new Error("Report not found");
 
@@ -95,7 +97,8 @@ export const deleteAllReportsForUser = async (userId: string) => {
   const reportableWhere: Prisma.CommandWhereInput = {
     OR: [
       { type: "ATTACK", report: { not: Prisma.JsonNull } },
-      { type: "SUPPORT",   status: "COMPLETED" },
+      { type: "SPY",    report: { not: Prisma.JsonNull } },
+      { type: "SUPPORT",   status: { in: ["ARRIVED", "RETURNING", "COMPLETED"] } },
       { type: "RESOURCES", status: "COMPLETED" },
     ],
   };

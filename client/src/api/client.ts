@@ -12,6 +12,20 @@ export function clearToken(): void {
   localStorage.removeItem("token");
 }
 
+export function getCurrentUserId(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const seg = token.split(".")[1];
+    const b64 = seg.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? b64 : b64 + "=".repeat(4 - (b64.length % 4));
+    const payload = JSON.parse(atob(pad));
+    return payload.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}

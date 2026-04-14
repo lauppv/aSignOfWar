@@ -39,7 +39,7 @@ export interface CommandUnit {
 
 export interface OutgoingCommand {
   id: string;
-  type: "ATTACK" | "SUPPORT" | "RESOURCES";
+  type: "ATTACK" | "SUPPORT" | "RESOURCES" | "SPY";
   status: string;
   departureAt: string;
   arrivalAt: string;
@@ -52,7 +52,7 @@ export interface OutgoingCommand {
 
 export interface IncomingCommand {
   id: string;
-  type: "ATTACK" | "SUPPORT" | "RESOURCES";
+  type: "ATTACK" | "SUPPORT" | "RESOURCES" | "SPY";
   status: string;
   arrivalAt: string;
   units: CommandUnit[];
@@ -118,7 +118,25 @@ export interface BattleReportData {
   battleAt: string;
 }
 
-export type CommandReportType = "ATTACK" | "SUPPORT" | "RESOURCES";
+export type CommandReportType = "ATTACK" | "SUPPORT" | "RESOURCES" | "SPY";
+
+export interface WithdrawalReportData {
+  withdrawal: true;
+  withdrawnAt: string;
+}
+
+export interface SpyReportData {
+  spyReport: true;
+  success: boolean;
+  attackerHackers: number;
+  defenderHackers: number;
+  attackerSurvivors: number;
+  snapshot: {
+    buildings: { name: BuildingName; level: number }[];
+    units:     BattleUnitCount[];
+  } | null;
+  battleAt: string;
+}
 
 export interface BattleReport {
   id: string;
@@ -132,5 +150,5 @@ export interface BattleReport {
   units: BattleUnitCount[];
   fromCity: { id: string; name: string; x: number; y: number; owner: { username: string } | null };
   toCity:   { id: string; name: string; x: number; y: number; owner: { username: string } | null };
-  report: BattleReportData | null;
+  report: BattleReportData | SpyReportData | WithdrawalReportData | null;
 }

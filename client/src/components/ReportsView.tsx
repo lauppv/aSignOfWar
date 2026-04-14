@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getReports, deleteReport } from "../api/report.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
-import type { BattleReport, BattleUnitCount, CommandReportType, UnitName } from "../types/index.ts";
-import { UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
+import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
+import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 
 const ALL_UNITS: UnitName[] = [...UNIT_ORDER, "GOVERNOR"] as UnitName[];
 
@@ -15,29 +15,55 @@ interface Props {
 
 // ─── Category helpers ────────────────────────────────────────────────────────
 
-type Category = "victory" | "loss" | "resources" | "support";
+type Category = "victory" | "loss" | "resources" | "support" | "withdrawal" | "spy_success" | "spy_failed";
+
+function isSpyReport(r: BattleReport["report"]): r is SpyReportData {
+  return !!r && (r as SpyReportData).spyReport === true;
+}
+
+function isWithdrawalReport(r: BattleReport["report"]): r is WithdrawalReportData {
+  return !!r && (r as WithdrawalReportData).withdrawal === true;
+}
+
+function reportTimestamp(r: BattleReport): string | undefined {
+  if (isWithdrawalReport(r.report)) return r.report.withdrawnAt;
+  if (isSpyReport(r.report))        return r.report.battleAt;
+  if (r.report && "battleAt" in r.report) return r.report.battleAt;
+  return undefined;
+}
 
 function categoryOf(r: BattleReport): Category {
   if (r.type === "RESOURCES") return "resources";
-  if (r.type === "SUPPORT")   return "support";
+  if (r.type === "SUPPORT")   return isWithdrawalReport(r.report) ? "withdrawal" : "support";
+  if (r.type === "SPY") {
+    const spy = isSpyReport(r.report) ? r.report : null;
+    const attackerWon = spy?.success ?? false;
+    const isOut = r.direction === "outgoing";
+    const userWon = isOut ? attackerWon : !attackerWon;
+    return userWon ? "spy_success" : "spy_failed";
+  }
   // ATTACK — perspective-aware
-  const attackerWon = r.report?.attackerWon ?? false;
+  const attackerWon = (r.report as BattleReportData | null)?.attackerWon ?? false;
   const isOut = r.direction === "outgoing";
   const userWon = isOut ? attackerWon : !attackerWon;
   return userWon ? "victory" : "loss";
 }
 
 const CATEGORY_META: Record<Category, { label: string; fg: string; bg: string; border: string }> = {
-  victory:   { label: "Victory",   fg: "#3fb950", bg: "#1a3d1a", border: "#3fb950" },
-  loss:      { label: "Loss",      fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
-  resources: { label: "Resources", fg: "#e3b341", bg: "#3d2e0a", border: "#e3b341" },
-  support:   { label: "Support",   fg: "#79c0ff", bg: "#0e1f3d", border: "#79c0ff" },
+  victory:     { label: "Victory",     fg: "#3fb950", bg: "#1a3d1a", border: "#3fb950" },
+  loss:        { label: "Loss",        fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
+  resources:   { label: "Resources",   fg: "#e3b341", bg: "#3d2e0a", border: "#e3b341" },
+  support:     { label: "Support",     fg: "#79c0ff", bg: "#0e1f3d", border: "#79c0ff" },
+  withdrawal:  { label: "Withdrawal",  fg: "#d2a8ff", bg: "#2a1f3d", border: "#d2a8ff" },
+  spy_success: { label: "Spy success", fg: "#a371f7", bg: "#2e1a3d", border: "#a371f7" },
+  spy_failed:  { label: "Spy failed",  fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
 };
 
 const VERB_BY_TYPE: Record<CommandReportType, string> = {
   ATTACK:    "attacks",
   SUPPORT:   "supports",
   RESOURCES: "sends resources to",
+  SPY:       "spies on",
 };
 
 function fmtTimeAgo(iso: string): string {
@@ -218,8 +244,34 @@ function ReportRow({ report: r, active, checked, onClick, onToggleChecked }: {
   const isOut   = r.direction === "outgoing";
   const cat     = categoryOf(r);
   const meta    = CATEGORY_META[cat];
-  const verb    = VERB_BY_TYPE[r.type];
-  const subject = `${r.fromCity.name} (${r.fromCity.x}, ${r.fromCity.y})`;
+
+  const fromName  = `${r.fromCity.name} (${r.fromCity.x}, ${r.fromCity.y})`;
+  const toName    = `${r.toCity.name} (${r.toCity.x}, ${r.toCity.y})`;
+  const fromOwner = r.fromCity.owner?.username ?? "A ghost city";
+
+  let message: React.ReactNode;
+  if (r.type === "SUPPORT" && isWithdrawalReport(r.report)) {
+    message = isOut ? (
+      <>Your units from <span className="font-semibold">{toName}</span> are on their way home.</>
+    ) : (
+      <><span className="font-semibold">{fromOwner}</span> withdrew their support from your city <span className="font-semibold">{r.toCity.name}</span>.</>
+    );
+  } else if (r.type === "SUPPORT") {
+    message = isOut ? (
+      <>Your units are supporting <span className="font-semibold">{toName}</span>.</>
+    ) : (
+      <><span className="font-semibold">{fromName}</span> is supporting your city <span className="font-semibold">{r.toCity.name}</span>.</>
+    );
+  } else {
+    const verb = VERB_BY_TYPE[r.type];
+    message = (
+      <>
+        <span className="font-semibold">{fromName}</span>
+        {" "}{verb}{" "}
+        <span className="font-semibold">{r.toCity.name}</span>.
+      </>
+    );
+  }
 
   return (
     <div
@@ -240,9 +292,7 @@ function ReportRow({ report: r, active, checked, onClick, onToggleChecked }: {
           </span>
         </div>
         <div className="text-[#c9d1d9] text-[11px] leading-tight">
-          <span className="font-semibold">{subject}</span>
-          {" "}{verb}{" "}
-          <span className="font-semibold">{r.toCity.name}</span>.
+          {message}
         </div>
         <div>
           <span className="text-[11px] text-[#b1bac4] uppercase tracking-widest">
@@ -329,19 +379,24 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
           </div>
         </div>
         <div className="text-[10px] text-[#7d8590] text-right">
-          <div>{new Date(r.report?.battleAt ?? r.arrivalAt).toLocaleString()}</div>
+          <div>{new Date(reportTimestamp(r) ?? r.arrivalAt).toLocaleString()}</div>
           <div className="uppercase tracking-widest mt-0.5">{r.direction}</div>
         </div>
       </div>
 
-      {r.type === "ATTACK"    && r.report && <AttackDetail report={r.report} />}
-      {r.type === "SUPPORT"   && <SupportDetail units={r.units} />}
+      {r.type === "ATTACK"    && r.report && !isSpyReport(r.report) && !isWithdrawalReport(r.report) && <AttackDetail report={r.report as BattleReportData} />}
+      {r.type === "SUPPORT"   && (
+        isWithdrawalReport(r.report)
+          ? <WithdrawalDetail units={r.units} direction={r.direction} />
+          : <SupportDetail units={r.units} />
+      )}
       {r.type === "RESOURCES" && <ResourcesDetail money={r.resourceMoney} energy={r.resourceEnergy} ammo={r.resourceAmmo} />}
+      {r.type === "SPY"       && isSpyReport(r.report) && <SpyDetail report={r.report} />}
     </div>
   );
 }
 
-function AttackDetail({ report: data }: { report: NonNullable<BattleReport["report"]> }) {
+function AttackDetail({ report: data }: { report: BattleReportData }) {
   const { openUnit } = useUnitInfo();
   const atkInit = asMap(data.attackerInitial);
   const atkSurv = asMap(data.attackerSurvivors);
@@ -418,6 +473,39 @@ function AttackDetail({ report: data }: { report: NonNullable<BattleReport["repo
         </div>
       )}
     </>
+  );
+}
+
+function WithdrawalDetail({ units, direction }: { units: BattleUnitCount[]; direction: "outgoing" | "incoming" }) {
+  const { openUnit } = useUnitInfo();
+  const present = units.filter(u => u.quantity > 0);
+  const heading = direction === "outgoing" ? "Your units returning home" : "Units that left your city";
+  return (
+    <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+      <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">{heading}</div>
+      {present.length === 0 ? (
+        <div className="text-[#7d8590] text-[11px]">No units</div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {present.map(u => (
+            <div
+              key={u.name}
+              onClick={() => openUnit(u.name)}
+              className="flex items-center gap-1.5 bg-[#0d1117] border border-[#21262d] rounded px-2 py-1 cursor-pointer hover:bg-[#161b22] hover:border-[#484f58] transition-colors"
+            >
+              <img
+                src={`/images/units/${u.name.toLowerCase()}.jpg`}
+                alt={UNIT_DISPLAY[u.name]}
+                className="w-6 h-6 object-contain rounded"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+              <span className="text-[#c9d1d9]">{UNIT_DISPLAY[u.name]}</span>
+              <span className="text-[#d2a8ff] font-mono">×{u.quantity}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -507,6 +595,97 @@ function BattleRow({ label, labelColor, sublabel, units, values, initial, kind, 
         );
       })}
     </tr>
+  );
+}
+
+function SpyDetail({ report: data }: { report: SpyReportData }) {
+  const { openUnit } = useUnitInfo();
+
+  const statBox = (
+    <div className="grid grid-cols-3 gap-2">
+      <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
+        <span className="text-[9px] uppercase tracking-widest text-[#a371f7]">Sent hackers</span>
+        <span className="text-[#c9d1d9] font-mono">{data.attackerHackers.toLocaleString()}</span>
+      </div>
+      <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
+        <span className="text-[9px] uppercase tracking-widest text-[#f85149]">Enemy hackers</span>
+        <span className="text-[#c9d1d9] font-mono">{data.defenderHackers.toLocaleString()}</span>
+      </div>
+      <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
+        <span className="text-[9px] uppercase tracking-widest text-[#3fb950]">Survivors</span>
+        <span className="text-[#c9d1d9] font-mono">{data.attackerSurvivors.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+
+  if (!data.success || !data.snapshot) {
+    return (
+      <>
+        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Infiltration failed</div>
+          <div className="text-[11px] text-[#b1bac4] mb-2">
+            The target had at least as many hackers as were sent. All attacking hackers were destroyed and no intel was retrieved.
+          </div>
+          {statBox}
+        </div>
+      </>
+    );
+  }
+
+  const { buildings, units } = data.snapshot;
+  const buildingByName = new Map(buildings.map(b => [b.name, b.level]));
+  const activeUnits = units.filter(u => u.quantity > 0);
+
+  return (
+    <>
+      <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+        <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Infiltration successful</div>
+        {statBox}
+      </div>
+
+      <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+        <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Buildings</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {BUILDING_ORDER.map(name => {
+            const lvl = buildingByName.get(name) ?? 0;
+            return (
+              <div key={name} className="flex items-center justify-between bg-[#0d1117] border border-[#21262d] rounded px-2 py-1">
+                <span className="text-[#c9d1d9] truncate">{BUILDING_DISPLAY[name]}</span>
+                <span className={`font-mono ${lvl > 0 ? "text-[#e6b800]" : "text-[#7d8590]"}`}>
+                  {lvl > 0 ? lvl : "—"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+        <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Units in target city</div>
+        {activeUnits.length === 0 ? (
+          <div className="text-[#7d8590] text-[11px]">No units defending.</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {activeUnits.map(u => (
+              <div
+                key={u.name}
+                onClick={() => openUnit(u.name)}
+                className="flex items-center gap-1.5 bg-[#0d1117] border border-[#21262d] rounded px-2 py-1 cursor-pointer hover:border-[#484f58]"
+              >
+                <img
+                  src={`/images/units/${u.name.toLowerCase()}.jpg`}
+                  alt={UNIT_DISPLAY[u.name]}
+                  className="w-6 h-6 object-contain rounded"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+                <span className="text-[#c9d1d9]">{UNIT_DISPLAY[u.name]}</span>
+                <span className="text-[#e6b800] font-mono">×{u.quantity.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

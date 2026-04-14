@@ -118,29 +118,37 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
         )}
 
         {!isOwn && myCity && (
-          <div className="flex gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
+          <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => openForm("ATTACK")}
+                className="flex-1 text-[10px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-1 hover:bg-[#3d1a1a]"
+              >
+                Attack
+              </button>
+              {!isGhost && (
+                <>
+                  <button
+                    onClick={() => openForm("SUPPORT")}
+                    className="flex-1 text-[10px] uppercase tracking-wide border border-[#3fb950] text-[#3fb950] rounded py-1 hover:bg-[#1a3d1a]"
+                  >
+                    Support
+                  </button>
+                  <button
+                    onClick={() => openForm("RESOURCES")}
+                    className="flex-1 text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
+                  >
+                    Send
+                  </button>
+                </>
+              )}
+            </div>
             <button
-              onClick={() => openForm("ATTACK")}
-              className="flex-1 text-[10px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-1 hover:bg-[#3d1a1a]"
+              onClick={() => openForm("SPY")}
+              className="text-[10px] uppercase tracking-wide border border-[#a371f7] text-[#a371f7] rounded py-1 hover:bg-[#2e1a3d]"
             >
-              Attack
+              Spy
             </button>
-            {!isGhost && (
-              <>
-                <button
-                  onClick={() => openForm("SUPPORT")}
-                  className="flex-1 text-[10px] uppercase tracking-wide border border-[#3fb950] text-[#3fb950] rounded py-1 hover:bg-[#1a3d1a]"
-                >
-                  Support
-                </button>
-                <button
-                  onClick={() => openForm("RESOURCES")}
-                  className="flex-1 text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
-                >
-                  Send
-                </button>
-              </>
-            )}
           </div>
         )}
       </Wrapper>
@@ -148,11 +156,13 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   }
 
   // ─── FORM MODE ───────────────────────────────────────────────────────────────
-  const availableUnits = myCity?.units.filter(u => u.quantity > 0) ?? [];
+  const availableUnits = (myCity?.units.filter(u => u.quantity > 0) ?? [])
+    .filter(u => type === "SPY" ? u.name === "HACKER" : u.name !== "HACKER");
   const typeColors: Record<CommandType, { fg: string; bg: string; border: string }> = {
     ATTACK:    { fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
     SUPPORT:   { fg: "#3fb950", bg: "#1a3d1a", border: "#3fb950" },
     RESOURCES: { fg: "#d29922", bg: "#3d2e0a", border: "#d29922" },
+    SPY:       { fg: "#a371f7", bg: "#2e1a3d", border: "#a371f7" },
   };
   const tc = typeColors[type];
 
@@ -163,6 +173,9 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
       if (resourceTotal <= 0) return false;
       if (resourceTotal > harborCap) return false;
       return true;
+    }
+    if (type === "SPY") {
+      return (unitCounts.HACKER ?? 0) > 0;
     }
     return Object.values(unitCounts).some(v => (v ?? 0) > 0);
   })();
@@ -268,6 +281,7 @@ const ORDER_META: Record<CommandType, { label: string; fg: string; border: strin
   ATTACK:    { label: "Attack",    fg: "#f85149", border: "#3d1a1a" },
   SUPPORT:   { label: "Support",   fg: "#3fb950", border: "#1a3d1a" },
   RESOURCES: { label: "Resources", fg: "#d29922", border: "#3d2e0a" },
+  SPY:       { label: "Spy",       fg: "#a371f7", border: "#2e1a3d" },
 };
 
 function fmtEta(cmd: OutgoingCommand): string {

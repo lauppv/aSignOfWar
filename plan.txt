@@ -394,6 +394,20 @@ Exista optiune de anulare recrutare si comanda de constructie, dar acest lucru v
 Va exista si un Simulator de batalii, dar nu ca cladire, ci jos in footer, la fel ca harta, rapoarte, mesaje etc
                                                               
                                                         
+Pentru a spiona se trimis hackeri. Aceasta este o comanda diferita de cea de attack numita spy. 
+Mecanismul e hacker vs hacker. Un hacker ignora unitatile de aparare din orasul tinta. Batalia e hacker vs hacker.
+Daca orasul tinta are 100 hackers, e nevoie de cel putin 101 hackers pentru a se putea spiona orasul. Din cei 101 hackers atacatori, va supravietui 1. Asadar e nevoie de cel putin un hacker in viata pentru a putea spiona cu succes. Hackerii din aparare NU vor muri.                              
                                                                               
-                                                                       
-                                                                              
+Hacker (Spion)
+  type: Spy
+  rol: spionaj (hacker vs hacker, ignora unitatile de aparare)
+  cost: 50 Money, 50 energie, 20 Ammo
+  population: 2
+  speed: 9
+  carry: 0
+  baseRecruitmentTime: 180 sec
+  attack: 0
+  defense vs Infantry: 2
+  defense vs Mechanized: 1
+  defense vs Range: 2
+

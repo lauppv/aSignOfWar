@@ -44,6 +44,10 @@ export function calculateBattle(
   defenderEnergy: number,
   defenderAmmo: number
 ): BattleResult {
+  // 0. Filtram hackerii — nu participa la bataliile normale (mecanica separata SPY)
+  attackerUnits = attackerUnits.filter(u => UNITS[u.name].category !== "SPY");
+  defenderUnits = defenderUnits.filter(u => UNITS[u.name].category !== "SPY");
+
   // 1. Damage zid (inainte de lupta)
   const mlCount    = attackerUnits.find(u => u.name === "MISSILE_LAUNCHER")?.quantity ?? 0;
   const droneCount = attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0;

@@ -1,7 +1,7 @@
 import { api } from "./client.ts";
 import type { CityCommands, UnitName } from "../types/index.ts";
 
-export type CommandType = "ATTACK" | "SUPPORT" | "RESOURCES";
+export type CommandType = "ATTACK" | "SUPPORT" | "RESOURCES" | "SPY";
 
 export interface SendCommandBody {
   type: CommandType;

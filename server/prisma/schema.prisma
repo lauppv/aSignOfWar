@@ -32,6 +32,7 @@ enum UnitName {
   MISSILE_LAUNCHER
   DRONE
   GOVERNOR
+  HACKER
 }
 
 enum UnitCategory {
@@ -40,12 +41,14 @@ enum UnitCategory {
   MECHANIZED
   SIEGE
   CONQUER
+  SPY
 }
 
 enum CommandType {
   ATTACK
   SUPPORT
   RESOURCES
+  SPY
 }
 
 enum CommandStatus {

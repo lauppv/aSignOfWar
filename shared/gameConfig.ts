@@ -24,9 +24,10 @@ export type UnitName =
   | "TANK"
   | "MISSILE_LAUNCHER"
   | "DRONE"
-  | "GOVERNOR";
+  | "GOVERNOR"
+  | "HACKER";
 
-export type UnitCategory = "INFANTRY" | "RANGE" | "MECHANIZED" | "SIEGE" | "CONQUER";
+export type UnitCategory = "INFANTRY" | "RANGE" | "MECHANIZED" | "SIEGE" | "CONQUER" | "SPY";
 
 // ─── Building config ─────────────────────────────────────────────────────────
 
@@ -173,6 +174,12 @@ export const UNITS: Record<UnitName, UnitConfig> = {
     population: 100, speed: 18, carry: 0, baseRecruitmentTime: 3600,
     attack: 0, defenseVsInfantry: 0, defenseVsMechanized: 0, defenseVsRange: 0,
     requiresHQ: 30,
+  },
+  HACKER: {
+    category: "SPY", costMoney: 50, costEnergy: 50, costAmmo: 20,
+    population: 2, speed: 9, carry: 0, baseRecruitmentTime: 180,
+    attack: 0, defenseVsInfantry: 2, defenseVsMechanized: 1, defenseVsRange: 2,
+    requiresHQ: 10,
   },
 };
 

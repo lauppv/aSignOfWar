@@ -17,6 +17,9 @@ export const sendCommandHandler = async (req: AuthRequest, res: Response, next: 
     if (code === "TARGET_CITY_NOT_FOUND")      return res.status(404).json({ error: code });
     if (code === "UNAUTHORIZED")               return res.status(403).json({ error: code });
     if (code === "CANNOT_ATTACK_OWN_CITY")     return res.status(400).json({ error: code });
+    if (code === "CANNOT_SPY_OWN_CITY")        return res.status(400).json({ error: code });
+    if (code === "SPY_REQUIRES_HACKERS_ONLY")  return res.status(400).json({ error: code });
+    if (code === "HACKERS_CANNOT_JOIN_BATTLE") return res.status(400).json({ error: code });
     if (code === "NO_UNITS")                   return res.status(400).json({ error: code });
     if (code === "NO_RESOURCES")               return res.status(400).json({ error: code });
     if (code === "HARBOR_REQUIRED")            return res.status(400).json({ error: code });

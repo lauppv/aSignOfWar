@@ -24,6 +24,7 @@ export const sendCommand = async (
   if (!toCity)               throw new Error("TARGET_CITY_NOT_FOUND");
   if (fromCity.ownerId !== userId) throw new Error("UNAUTHORIZED");
   if (type === "ATTACK" && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_ATTACK_OWN_CITY");
+  if (type === "SPY"    && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_SPY_OWN_CITY");
 
   const units = Object.entries(unitCounts)
     .filter(([, qty]) => qty && qty > 0)
@@ -38,6 +39,18 @@ export const sendCommand = async (
         throw new Error(`INSUFFICIENT_UNITS:${name}`);
       }
     }
+  }
+
+  // SPY: acceptam doar hackeri
+  if (type === "SPY") {
+    const nonHacker = units.find(u => u.name !== "HACKER");
+    if (nonHacker) throw new Error("SPY_REQUIRES_HACKERS_ONLY");
+    const totalHackers = units.reduce((s, u) => s + u.quantity, 0);
+    if (totalHackers < 1) throw new Error("NO_UNITS");
+  }
+  // ATTACK/SUPPORT: hackerii nu pot fi trimisi (nu participa la bataliile normale)
+  if (type === "ATTACK" || type === "SUPPORT") {
+    if (units.some(u => u.name === "HACKER")) throw new Error("HACKERS_CANNOT_JOIN_BATTLE");
   }
 
   // Validare resurse (RESOURCES)
@@ -161,11 +174,16 @@ export const withdrawStationedSupport = async (
 
   if (unitCounts === "all") {
     const ids: string[] = [];
+    const withdrawnAt = new Date().toISOString();
     await prisma.$transaction(async (tx) => {
       for (const c of stationed) {
         await tx.command.update({
           where: { id: c.id },
-          data:  { status: "RETURNING", arrivalAt: returnArrival },
+          data:  {
+            status:    "RETURNING",
+            arrivalAt: returnArrival,
+            report:    { withdrawal: true, withdrawnAt } as any,
+          },
         });
         ids.push(c.id);
       }
@@ -200,9 +218,18 @@ export const withdrawStationedSupport = async (
         withdrawn.set(cu.name as UnitName, (withdrawn.get(cu.name as UnitName) ?? 0) + take);
       }
       // Daca toate unitatile comenzii stationate au devenit 0, marcheaza COMPLETED
+      // si o ascundem din rapoarte — valoarea de notificare e pe noua comanda
+      // RETURNING creata mai jos, care poarta flag-ul de withdrawal.
       const refreshed = await tx.commandUnit.findMany({ where: { commandId: cmd.id } });
       if (refreshed.every(u => u.quantity === 0)) {
-        await tx.command.update({ where: { id: cmd.id }, data: { status: "COMPLETED" } });
+        await tx.command.update({
+          where: { id: cmd.id },
+          data:  {
+            status:                 "COMPLETED",
+            reportHiddenByAttacker: true,
+            reportHiddenByDefender: true,
+          },
+        });
       }
     }
 
@@ -219,6 +246,7 @@ export const withdrawStationedSupport = async (
         fromCityId,
         toCityId:   targetCityId,
         arrivalAt:  returnArrival,
+        report:     { withdrawal: true, withdrawnAt: new Date().toISOString() } as any,
         units: {
           create: Array.from(withdrawn.entries()).map(([name, quantity]) => ({ name, quantity })),
         },

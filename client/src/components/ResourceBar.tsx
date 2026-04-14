@@ -13,13 +13,14 @@ interface Props {
   onSimulator?: () => void;
   onReports?: () => void;
   onMap?: () => void;
+  unreadReports?: number;
 }
 
 function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export default function ResourceBar({ cityName, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap }: Props) {
+export default function ResourceBar({ cityName, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, unreadReports = 0 }: Props) {
   return (
     <div className="flex gap-6 px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0 text-sm text-[#c9d1d9]" style={{ fontVariantNumeric: "tabular-nums" }}>
       <span className="text-[#e6b800] font-semibold tracking-wider shrink-0">{cityName}</span>
@@ -60,9 +61,14 @@ export default function ResourceBar({ cityName, money, energy, ammo, capacity, m
       {onReports && (
         <button
           onClick={onReports}
-          className="text-xs text-[#f0883e] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#f0883e] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
+          className="relative text-xs text-[#f0883e] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#f0883e] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
         >
           Reports
+          {unreadReports > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#f85149] text-white text-[10px] font-bold leading-[16px] text-center shadow">
+              {unreadReports > 99 ? "99+" : unreadReports}
+            </span>
+          )}
         </button>
       )}
       {onLogout && (

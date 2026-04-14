@@ -15,6 +15,7 @@ const TYPE_META = {
   ATTACK:    { label: "Attack",    fg: "#f85149", bg: "#3d1a1a" },
   SUPPORT:   { label: "Support",   fg: "#3fb950", bg: "#1a3d1a" },
   RESOURCES: { label: "Resources", fg: "#d29922", bg: "#3d2e0a" },
+  SPY:       { label: "Spy",       fg: "#a371f7", bg: "#2e1a3d" },
 } as const;
 
 function fmtArrival(iso: string): string {
