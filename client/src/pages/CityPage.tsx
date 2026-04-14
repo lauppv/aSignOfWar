@@ -15,6 +15,7 @@ import {
 import { computePopulation, getBuildingLevel } from "../lib/cityHelpers.ts";
 import ResourceBar from "../components/ResourceBar.tsx";
 import UnitCard from "../components/UnitCard.tsx";
+import { UNIT_ORDER } from "../lib/labels.ts";
 import CityMap from "../components/CityMap.tsx";
 import BuildingsView from "../components/BuildingsView.tsx";
 import MilitaryBaseView from "../components/MilitaryBaseView.tsx";
@@ -121,20 +122,9 @@ export default function CityPage() {
   const warehouseCapacity = getWarehouseCapacity(getBuildingLevel(city, "WAREHOUSE"));
   const airDefenseLevel   = getBuildingLevel(city, "AIR_DEFENSE");
   const airDefenseBonus   = getAirDefenseBonus(airDefenseLevel);
-  const supportMap = new Map<string, number>(
-    (city.supportUnits ?? []).map(u => [u.name, u.quantity])
-  );
-  const nativeNames = new Set(city.units.map(u => u.name));
-  const displayUnits: { name: UnitName; own: number; support: number }[] = [
-    ...city.units.map(u => ({
-      name: u.name,
-      own: u.quantity,
-      support: supportMap.get(u.name) ?? 0,
-    })),
-    ...(city.supportUnits ?? [])
-      .filter(u => !nativeNames.has(u.name))
-      .map(u => ({ name: u.name, own: 0, support: u.quantity })),
-  ].filter(u => u.own + u.support > 0);
+  const unitTotals = new Map<UnitName, number>();
+  for (const u of city.units)                   unitTotals.set(u.name, (unitTotals.get(u.name) ?? 0) + u.quantity);
+  for (const u of city.supportUnits ?? [])      unitTotals.set(u.name, (unitTotals.get(u.name) ?? 0) + u.quantity);
 
   // City view arata doar comenzi in desfasurare (TRAVELING/RETURNING).
   // Sprijinul stationat (ARRIVED) se vede in map → city action panel si in rapoarte.
@@ -315,14 +305,13 @@ export default function CityPage() {
           />
 
           {/* RIGHT: Units */}
-          <div className="flex-1 bg-[#161b22] border-l border-[#30363d] overflow-y-auto p-2.5 flex flex-col gap-1.5">
+          <div className="flex-1 bg-[#161b22] border-l border-[#30363d] overflow-y-auto p-2.5 flex flex-col gap-2">
             <span className="text-[10px] uppercase tracking-widest text-[#b1bac4] shrink-0">Units in city</span>
-            {displayUnits.length === 0 && (
-              <span className="text-[11px] text-[#7d8590] text-center mt-2">No units</span>
-            )}
-            {displayUnits.map((u) => (
-              <UnitCard key={u.name} name={u.name} own={u.own} support={u.support} />
-            ))}
+            <div className="grid grid-cols-3 gap-1.5">
+              {UNIT_ORDER.map((name) => (
+                <UnitCard key={name} name={name} total={unitTotals.get(name) ?? 0} />
+              ))}
+            </div>
           </div>
 
         </div>

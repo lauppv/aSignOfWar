@@ -79,6 +79,7 @@ export interface CityOverview {
   buildings: Building[];
   units: Unit[];
   supportUnits: BattleUnitCount[];
+  totalPopulation: number;
   buildingUpgradeOrders: BuildingUpgradeOrder[];
   recruitmentOrders: RecruitmentOrder[];
 }

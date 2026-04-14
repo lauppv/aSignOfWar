@@ -1,6 +1,6 @@
 import prisma from "../config/db";
 import { Prisma } from "@prisma/client";
-import { getResourceProduction, getWarehouseCapacity } from "../../../shared/gameConfig";
+import { getResourceProduction, getWarehouseCapacity, UNITS } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { pickFreeSlot } from "./map.service";
 
@@ -78,7 +78,23 @@ export const getCityOverview = async (userId: string) => {
   }
   const supportUnits = Array.from(supportMap.entries()).map(([name, quantity]) => ({ name, quantity }));
 
-  return { ...city, ...updated, supportUnits };
+  // Population = toate unitatile proprii inca in viata, oriunde s-ar afla:
+  // acasa + in drum/stationate in comenzi pornite din acest oras.
+  const ownCommands = await prisma.command.findMany({
+    where:  { fromCityId: city.id, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
+    select: { units: { select: { name: true, quantity: true } } },
+  });
+  let totalPopulation = 0;
+  for (const u of city.units) {
+    totalPopulation += u.quantity * (UNITS[u.name]?.population ?? 1);
+  }
+  for (const c of ownCommands) {
+    for (const u of c.units) {
+      totalPopulation += u.quantity * (UNITS[u.name]?.population ?? 1);
+    }
+  }
+
+  return { ...city, ...updated, supportUnits, totalPopulation };
 };
 
 export const createStarterCity = async (

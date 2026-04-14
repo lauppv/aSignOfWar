@@ -29,3 +29,13 @@ export const cancelCommand = (
   commandId: string
 ): Promise<{ commandId: string; arrivalAt: string }> =>
   api.post(`/cities/${fromCityId}/commands/${commandId}/cancel`, {});
+
+export const withdrawStationedSupport = (
+  fromCityId: string,
+  body: {
+    targetCityId: string;
+    mode: "all" | "partial";
+    units?: Partial<Record<UnitName, number>>;
+  }
+): Promise<{ withdrawnCommandIds: string[]; arrivalAt: string }> =>
+  api.post(`/cities/${fromCityId}/commands/withdraw`, body);

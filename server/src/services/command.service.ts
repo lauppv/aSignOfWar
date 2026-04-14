@@ -132,6 +132,105 @@ export const cancelCommand = async (commandId: string, userId: string) => {
   return { commandId, arrivalAt: newArrivalAt };
 };
 
+// Retrage unitati stationate ca SUPPORT intr-un oras. Doua variante:
+//   - mode "all"  → toate comenzile stationate pleaca inapoi (flip ARRIVED → RETURNING).
+//   - mode partial cu unitCounts → creeaza o comanda noua RETURNING cu unitatile cerute,
+//     scazand din comenzile stationate existente (oldest first).
+export const withdrawStationedSupport = async (
+  fromCityId: string,
+  targetCityId: string,
+  userId: string,
+  unitCounts: Partial<Record<UnitName, number>> | "all"
+) => {
+  const fromCity = await prisma.city.findUnique({
+    where: { id: fromCityId },
+    select: { id: true, ownerId: true },
+  });
+  if (!fromCity)                     throw new Error("CITY_NOT_FOUND");
+  if (fromCity.ownerId !== userId)   throw new Error("UNAUTHORIZED");
+
+  const stationed = await prisma.command.findMany({
+    where:  { fromCityId, toCityId: targetCityId, type: "SUPPORT", status: "ARRIVED" },
+    include: { units: true },
+    orderBy: { arrivalAt: "asc" },
+  });
+  if (stationed.length === 0) throw new Error("NO_STATIONED_UNITS");
+
+  const travelMs      = getTravelTimeSec(env.gameSpeed) * 1000;
+  const returnArrival = new Date(Date.now() + travelMs);
+
+  if (unitCounts === "all") {
+    const ids: string[] = [];
+    await prisma.$transaction(async (tx) => {
+      for (const c of stationed) {
+        await tx.command.update({
+          where: { id: c.id },
+          data:  { status: "RETURNING", arrivalAt: returnArrival },
+        });
+        ids.push(c.id);
+      }
+    });
+    for (const id of ids) {
+      await commandQueue.add("return", { commandId: id }, { delay: travelMs });
+    }
+    return { withdrawnCommandIds: ids, arrivalAt: returnArrival };
+  }
+
+  // Partial: aduna cat sa scoti per unit type
+  const remaining = new Map<UnitName, number>();
+  for (const [name, qty] of Object.entries(unitCounts) as [UnitName, number | undefined][]) {
+    if (qty && qty > 0) remaining.set(name, qty);
+  }
+  if (remaining.size === 0) throw new Error("NO_UNITS");
+
+  const withdrawn = new Map<UnitName, number>();
+  let newCommandId!: string;
+
+  await prisma.$transaction(async (tx) => {
+    for (const cmd of stationed) {
+      for (const cu of cmd.units) {
+        const need = remaining.get(cu.name as UnitName) ?? 0;
+        if (need <= 0 || cu.quantity <= 0) continue;
+        const take = Math.min(need, cu.quantity);
+        await tx.commandUnit.update({
+          where: { id: cu.id },
+          data:  { quantity: cu.quantity - take },
+        });
+        remaining.set(cu.name as UnitName, need - take);
+        withdrawn.set(cu.name as UnitName, (withdrawn.get(cu.name as UnitName) ?? 0) + take);
+      }
+      // Daca toate unitatile comenzii stationate au devenit 0, marcheaza COMPLETED
+      const refreshed = await tx.commandUnit.findMany({ where: { commandId: cmd.id } });
+      if (refreshed.every(u => u.quantity === 0)) {
+        await tx.command.update({ where: { id: cmd.id }, data: { status: "COMPLETED" } });
+      }
+    }
+
+    for (const [, left] of remaining) {
+      if (left > 0) throw new Error("INSUFFICIENT_STATIONED_UNITS");
+    }
+
+    if (withdrawn.size === 0) throw new Error("NO_UNITS_WITHDRAWN");
+
+    const created = await tx.command.create({
+      data: {
+        type:       "SUPPORT",
+        status:     "RETURNING",
+        fromCityId,
+        toCityId:   targetCityId,
+        arrivalAt:  returnArrival,
+        units: {
+          create: Array.from(withdrawn.entries()).map(([name, quantity]) => ({ name, quantity })),
+        },
+      },
+    });
+    newCommandId = created.id;
+  });
+
+  await commandQueue.add("return", { commandId: newCommandId }, { delay: travelMs });
+  return { withdrawnCommandIds: [newCommandId], arrivalAt: returnArrival };
+};
+
 export const getCommandsForCity = async (cityId: string, userId: string) => {
   const city = await prisma.city.findUnique({ where: { id: cityId } });
   if (!city)                   throw new Error("CITY_NOT_FOUND");

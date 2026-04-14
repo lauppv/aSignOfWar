@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { sendCommand, getCommandsForCity, cancelCommand } from "../../services/command.service";
+import { sendCommand, getCommandsForCity, cancelCommand, withdrawStationedSupport } from "../../services/command.service";
 import { AuthRequest } from "../../middleware/auth";
 
 export const sendCommandHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -40,6 +40,34 @@ export const cancelCommandHandler = async (req: AuthRequest, res: Response, next
     if (code === "UNAUTHORIZED")      return res.status(403).json({ error: code });
     if (code === "NOT_CANCELLABLE")      return res.status(400).json({ error: code });
     if (code === "CANCEL_WINDOW_EXPIRED") return res.status(400).json({ error: code });
+    next(err);
+  }
+};
+
+export const withdrawSupportHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId     = req.userId!;
+    const fromCityId = req.params.cityId as string;
+    const { targetCityId, mode, units } = req.body as {
+      targetCityId: string;
+      mode: "all" | "partial";
+      units?: Record<string, number>;
+    };
+    const result = await withdrawStationedSupport(
+      fromCityId,
+      targetCityId,
+      userId,
+      mode === "all" ? "all" : (units ?? {}),
+    );
+    res.json(result);
+  } catch (err: any) {
+    const code = err.message;
+    if (code === "CITY_NOT_FOUND")              return res.status(404).json({ error: code });
+    if (code === "UNAUTHORIZED")                return res.status(403).json({ error: code });
+    if (code === "NO_STATIONED_UNITS")          return res.status(400).json({ error: code });
+    if (code === "NO_UNITS")                    return res.status(400).json({ error: code });
+    if (code === "NO_UNITS_WITHDRAWN")          return res.status(400).json({ error: code });
+    if (code === "INSUFFICIENT_STATIONED_UNITS") return res.status(400).json({ error: code });
     next(err);
   }
 };

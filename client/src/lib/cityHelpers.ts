@@ -8,11 +8,10 @@ export const UNIT_POPULATION: Record<UnitName, number> = Object.fromEntries(
   Object.entries(UNITS).map(([name, cfg]) => [name, cfg.population])
 ) as Record<UnitName, number>;
 
+// Population = toate unitatile proprii inca in viata (acasa + in drum/stationate in
+// comenzi pornite din oras). Serverul calculeaza valoarea in getCityOverview.
 export function computePopulation(city: CityOverview): number {
-  return city.units.reduce(
-    (sum, u) => sum + u.quantity * (UNITS[u.name as UnitName]?.population ?? 1),
-    0
-  );
+  return city.totalPopulation;
 }
 
 export function getBuildingLevel(city: CityOverview, name: CityOverview["buildings"][number]["name"]): number {

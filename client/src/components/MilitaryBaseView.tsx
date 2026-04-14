@@ -35,6 +35,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
 
   const hqLevel = getBuildingLevel(city, "HEADQUARTERS");
   const mbLevel = getBuildingLevel(city, "MILITARY_BASE");
+  const unitCountMap = new Map<UnitName, number>(city.units.map(u => [u.name, u.quantity]));
   const population    = computePopulation(city);
   const now = Date.now();
   const pendingPop    = city.recruitmentOrders
@@ -120,12 +121,22 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                 return (
                   <tr key={name} className={`border-b border-[#21262d] hover:bg-[#161b22] transition-colors ${!unlocked ? "opacity-40" : ""}`}>
                     <td className="py-2 pl-2">
-                      <img
-                        src={`/images/units/${name.toLowerCase()}.jpg`}
-                        alt={UNIT_DISPLAY[name]}
-                        className="w-12 h-12 object-cover rounded cursor-pointer hover:brightness-125 transition-[filter]"
+                      <div
                         onClick={() => openUnit(name)}
-                      />
+                        className="relative w-12 h-12 rounded overflow-hidden cursor-pointer hover:brightness-125 transition-[filter]"
+                      >
+                        <img
+                          src={`/images/units/${name.toLowerCase()}.jpg`}
+                          alt={UNIT_DISPLAY[name]}
+                          className="w-full h-full object-cover"
+                        />
+                        <span
+                          className="absolute bottom-0 right-0 px-1 text-xs font-mono font-bold text-[#c9d1d9] bg-black/70 rounded-tl leading-tight"
+                          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
+                        >
+                          {fmt(unitCountMap.get(name) ?? 0)}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-2 pl-2">
                       <div className="text-[#c9d1d9] text-xs">{UNIT_DISPLAY[name]}</div>

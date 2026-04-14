@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/index.ts";
-import { sendCommand, getCityCommands, type CommandType } from "../api/command.ts";
+import { sendCommand, getCityCommands, withdrawStationedSupport, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import { getHarborCapacity } from "@shared/gameConfig.ts";
 import { UNIT_DISPLAY } from "../lib/labels.ts";
@@ -104,12 +104,16 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
           </div>
         )}
 
-        {!isOwn && stationedHere.length > 0 && (
+        {!isOwn && stationedHere.length > 0 && myCity && (
           <div className="mt-2 pt-2 border-t border-[#30363d]">
             <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1">
               My stationed units
             </div>
-            <StationedUnits commands={stationedHere} />
+            <StationedWithdrawPanel
+              fromCityId={myCity.id}
+              targetCityId={city.id}
+              commands={stationedHere}
+            />
           </div>
         )}
 
@@ -288,8 +292,14 @@ function formatMs(ms: number): string {
   return `${sec}s`;
 }
 
-function StationedUnits({ commands }: { commands: OutgoingCommand[] }) {
+function StationedWithdrawPanel({
+  fromCityId, targetCityId, commands,
+}: { fromCityId: string; targetCityId: string; commands: OutgoingCommand[] }) {
+  const queryClient = useQueryClient();
   const { openUnit } = useUnitInfo();
+  const [qty, setQty] = useState<Partial<Record<UnitName, number>>>({});
+  const [err, setErr] = useState<string | null>(null);
+
   const totals = new Map<UnitName, number>();
   for (const c of commands) {
     for (const u of c.units) {
@@ -297,27 +307,76 @@ function StationedUnits({ commands }: { commands: OutgoingCommand[] }) {
     }
   }
   const entries = Array.from(totals.entries());
+
+  const mutation = useMutation({
+    mutationFn: (body: { mode: "all" | "partial"; units?: Partial<Record<UnitName, number>> }) =>
+      withdrawStationedSupport(fromCityId, { targetCityId, ...body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commands"] });
+      queryClient.invalidateQueries({ queryKey: ["city"] });
+      setQty({});
+      setErr(null);
+    },
+    onError: (e: unknown) => {
+      setErr(e instanceof Error ? e.message : "Failed to withdraw");
+    },
+  });
+
+  const hasPartialSelection = Object.values(qty).some(v => (v ?? 0) > 0);
+
+  function set(name: UnitName, raw: string, max: number) {
+    const num = Number(raw.replace(/\D/g, ""));
+    const clamped = Math.max(0, Math.min(max, num || 0));
+    setQty(prev => ({ ...prev, [name]: clamped }));
+  }
+
   if (entries.length === 0) {
     return <span className="text-[10px] text-[#7d8590]">No units</span>;
   }
+
   return (
-    <div className="flex flex-row flex-wrap gap-1">
-      {entries.map(([name, qty]) => (
-        <div
-          key={name}
-          onClick={(e) => { e.stopPropagation(); openUnit(name); }}
-          className="inline-flex shrink-0 items-center gap-1 bg-[#0d1117] border border-[#1a3d1a] rounded px-1 py-0.5 cursor-pointer hover:brightness-125"
-          title={UNIT_DISPLAY[name]}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
+        {entries.map(([name, available]) => (
+          <div key={name} className="flex items-center gap-2">
+            <img
+              src={`/images/units/${name.toLowerCase()}.jpg`}
+              alt=""
+              onClick={(e) => { e.stopPropagation(); openUnit(name); }}
+              className="w-6 h-6 object-cover rounded shrink-0 cursor-pointer hover:brightness-125"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+            <span className="text-[10px] text-[#7d8590] font-mono w-10 text-right">{available}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={qty[name] || ""}
+              placeholder="0"
+              onChange={(e) => set(name, e.target.value, available)}
+              className="flex-1 bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#c9d1d9] text-[10px] font-mono text-right focus:outline-none focus:border-[#58a6ff] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+          </div>
+        ))}
+      </div>
+
+      {err && <div className="text-[10px] text-[#f85149] break-words">{err}</div>}
+
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => mutation.mutate({ mode: "all" })}
+          disabled={mutation.isPending}
+          className="flex-1 text-[10px] uppercase tracking-wide border border-[#3fb950] text-[#3fb950] rounded py-1 hover:bg-[#1a3d1a] disabled:opacity-40"
         >
-          <img
-            src={`/images/units/${name.toLowerCase()}.jpg`}
-            alt={UNIT_DISPLAY[name]}
-            className="w-5 h-5 object-contain rounded shrink-0"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
-          <span className="text-[10px] text-[#c9d1d9] font-mono">{qty.toLocaleString()}</span>
-        </div>
-      ))}
+          Withdraw all
+        </button>
+        <button
+          onClick={() => mutation.mutate({ mode: "partial", units: qty })}
+          disabled={!hasPartialSelection || mutation.isPending}
+          className="flex-1 text-[10px] uppercase tracking-wide border border-[#58a6ff] text-[#58a6ff] rounded py-1 hover:bg-[#0c2744] disabled:opacity-40"
+        >
+          Withdraw some
+        </button>
+      </div>
     </div>
   );
 }
