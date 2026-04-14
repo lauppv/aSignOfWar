@@ -24,7 +24,6 @@
     "noUncheckedSideEffectImports": true,
 
     /* Shared */
-    "baseUrl": ".",
     "paths": {
       "@shared/*": ["../shared/*"]
     }

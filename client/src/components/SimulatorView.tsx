@@ -60,11 +60,11 @@ export default function SimulatorView({ onClose }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[#30363d] bg-[#161b22] shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">← Back</button>
+          <button onClick={onClose} className="text-xs text-[#b1bac4] hover:text-[#c9d1d9] cursor-pointer">← Back</button>
           <span className="text-sm font-semibold text-[#d2a8ff]">Battle Simulator</span>
         </div>
         <div className="flex gap-2">
-          <button onClick={reset} className="text-xs text-[#8b949e] border border-[#30363d] rounded px-3 py-1 hover:border-[#8b949e] cursor-pointer">Reset</button>
+          <button onClick={reset} className="text-xs text-[#b1bac4] border border-[#30363d] rounded px-3 py-1 hover:border-[#8b949e] cursor-pointer">Reset</button>
           <button onClick={simulate} className="text-xs text-[#0d1117] bg-[#d2a8ff] rounded px-4 py-1 font-semibold hover:bg-[#b87aff] cursor-pointer">Simulate</button>
         </div>
       </div>
@@ -136,7 +136,7 @@ export default function SimulatorView({ onClose }: Props) {
           </div>
 
           {/* Extra info row */}
-          <div className="flex gap-6 mt-3 text-xs text-[#8b949e]">
+          <div className="flex gap-6 mt-3 text-xs text-[#b1bac4]">
             {result.airDefenseLevelsDestroyed > 0 && (
               <span>Air Defense: {airDefenseLevel} → {result.newAirDefenseLevel} <span className="text-[#f85149]">(-{result.airDefenseLevelsDestroyed})</span></span>
             )}
@@ -156,7 +156,7 @@ export default function SimulatorView({ onClose }: Props) {
       <div className="px-4 py-3 max-w-[800px] mx-auto">
         {/* Defender city settings */}
         <div className="flex gap-4 mb-3 items-center">
-          <span className="text-[10px] uppercase tracking-widest text-[#8b949e]">Defender city:</span>
+          <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">Defender city:</span>
           <label className="flex items-center gap-1.5 text-xs text-[#c9d1d9]">
             Air Defense Lvl
             <input
@@ -195,7 +195,7 @@ export default function SimulatorView({ onClose }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[#30363d]">
-              <th className="text-left py-2 font-normal text-[#484f58] text-[10px] uppercase w-[200px]">Unit</th>
+              <th className="text-left py-2 font-normal text-[#7d8590] text-[10px] uppercase w-[200px]">Unit</th>
               <th className="text-center py-2 font-normal text-[#f85149] text-[10px] uppercase">Attacker</th>
               <th className="text-center py-2 font-normal text-[#3fb950] text-[10px] uppercase">Defender</th>
             </tr>
@@ -259,7 +259,7 @@ function ResultRow({ label, labelColor, sublabel, units, allUnits, survivors, is
     <tr className={isLossRow ? "border-b border-[#30363d]" : ""}>
       <td className="py-1 pr-2 text-right whitespace-nowrap">
         {label && <span className="font-semibold text-xs" style={{ color: labelColor }}>{label}</span>}
-        <span className="text-[10px] text-[#484f58] ml-1">{sublabel}:</span>
+        <span className="text-[10px] text-[#7d8590] ml-1">{sublabel}:</span>
       </td>
       {allUnits.map(name => {
         const sent = units[name];
@@ -267,13 +267,13 @@ function ResultRow({ label, labelColor, sublabel, units, allUnits, survivors, is
           const survivor = survivors.find(u => u.name === name);
           const lost = survivor !== undefined ? sent - survivor.quantity : 0;
           return (
-            <td key={name} className={`py-1 text-center font-semibold ${lost > 0 ? "text-[#f85149]" : "text-[#484f58]"}`}>
-              {sent > 0 ? lost.toLocaleString() : "0"}
+            <td key={name} className={`py-1 text-center font-semibold ${lost > 0 ? "text-[#f85149]" : "text-[#7d8590]"}`}>
+              {sent > 0 && lost > 0 ? `-${lost.toLocaleString()}` : "0"}
             </td>
           );
         }
         return (
-          <td key={name} className={`py-1 text-center ${sent > 0 ? "text-[#c9d1d9]" : "text-[#484f58]"}`}>
+          <td key={name} className={`py-1 text-center ${sent > 0 ? "text-[#c9d1d9]" : "text-[#7d8590]"}`}>
             {sent > 0 ? sent.toLocaleString() : "0"}
           </td>
         );

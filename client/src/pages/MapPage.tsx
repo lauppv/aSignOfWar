@@ -42,6 +42,35 @@ export default function MapPage() {
   const [hover, setHover] = useState<{ x: number; y: number; px: number; py: number } | null>(null);
   const [selected, setSelected] = useState<{ city: MapCity; px: number; py: number } | null>(null);
   const [centered, setCentered] = useState(false);
+  const [panelOffset, setPanelOffset] = useState({ dx: 0, dy: 0 });
+  const panelDragRef = useRef<{ startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+
+  useEffect(() => { setPanelOffset({ dx: 0, dy: 0 }); }, [selected?.city.id]);
+
+  function handlePanelHeaderMouseDown(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    panelDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      baseDx: panelOffset.dx,
+      baseDy: panelOffset.dy,
+    };
+    const onMove = (ev: MouseEvent) => {
+      if (!panelDragRef.current) return;
+      setPanelOffset({
+        dx: panelDragRef.current.baseDx + (ev.clientX - panelDragRef.current.startX),
+        dy: panelDragRef.current.baseDy + (ev.clientY - panelDragRef.current.startY),
+      });
+    };
+    const onUp = () => {
+      panelDragRef.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
 
   const { data: map, isLoading, error } = useQuery({
     queryKey: ["map"],
@@ -98,7 +127,7 @@ export default function MapPage() {
   }, [selected]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen text-[#8b949e]">Loading map...</div>;
+    return <div className="flex items-center justify-center h-screen text-[#b1bac4]">Loading map...</div>;
   }
   if (error || !map) {
     return <div className="flex items-center justify-center h-screen text-[#f85149]">Failed to load map.</div>;
@@ -116,7 +145,7 @@ export default function MapPage() {
   return (
     <div className="flex flex-col h-screen bg-[#0d1117] text-[#c9d1d9]">
       <div className="flex items-center justify-between p-3 border-b border-[#30363d] bg-[#161b22] shrink-0">
-        <span className="text-sm uppercase tracking-widest text-[#8b949e]">World map ({map.size}×{map.size})</span>
+        <span className="text-sm uppercase tracking-widest text-[#b1bac4]">World map ({map.size}×{map.size})</span>
         <div className="flex gap-2">
           {myCity && (
             <button
@@ -172,7 +201,7 @@ export default function MapPage() {
             return (
               <div
                 className="absolute z-10 bg-[#161b22] border border-[#30363d] rounded shadow-2xl"
-                style={{ left, top, width: PANEL_W }}
+                style={{ left: left + panelOffset.dx, top: top + panelOffset.dy, width: PANEL_W }}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -182,6 +211,7 @@ export default function MapPage() {
                   headerColor={colorFor(kind)}
                   kindLabel={kind}
                   onClose={() => setSelected(null)}
+                  onHeaderMouseDown={handlePanelHeaderMouseDown}
                 />
               </div>
             );
@@ -231,17 +261,17 @@ export default function MapPage() {
           {hovered ? (
             <span>
               <span className="text-[#c9d1d9] font-semibold">{hovered.name}</span>
-              <span className="text-[#8b949e]">
+              <span className="text-[#b1bac4]">
                 {" · "}
-                {hovered.owner ? hovered.owner.username : "barbarians"}
-                {" · "}[{hovered.x},{hovered.y}]
+                {hovered.owner ? hovered.owner.username : "Ghost city"}
+                {" · "}({hovered.x},{hovered.y})
               </span>
             </span>
           ) : (
-            <span className="text-[#484f58]">Drag to pan · hover a city for details</span>
+            <span className="text-[#7d8590]">Drag to pan · hover a city for details</span>
           )}
         </div>
-        <div className="flex items-center gap-3 text-[#8b949e]">
+        <div className="flex items-center gap-3 text-[#b1bac4]">
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_OWN }} /> mine</span>
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm border border-[#484f58]" style={{ background: COLOR_GHOST }} /> ghost</span>
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_OTHER }} /> other</span>

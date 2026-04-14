@@ -69,12 +69,12 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
               <h2 className="text-base font-semibold text-[#e6b800]">Military Base</h2>
               <button
                 onClick={onClose}
-                className="text-sm text-[#8b949e] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
+                className="text-sm text-[#b1bac4] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
               >
                 ← Back
               </button>
             </div>
-            <p className="text-xs text-[#8b949e] mt-1">
+            <p className="text-xs text-[#b1bac4] mt-1">
               Enables unit recruitment and reduces training time at higher levels.
               Current level: <span className="text-[#c9d1d9]">{mbLevel}</span>
               {" · "}Available population: <span className="text-[#c9d1d9]">{fmt(availablePop)}</span>
@@ -93,7 +93,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
         <div className="flex-1 overflow-y-auto p-4">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-widest text-[#8b949e] border-b border-[#30363d]">
+              <tr className="text-[10px] uppercase tracking-widest text-[#b1bac4] border-b border-[#30363d]">
                 <th className="text-left py-2 pl-2 font-normal w-14"></th>
                 <th className="text-left py-2 font-normal">Unit</th>
                 <th className="text-right py-2 font-normal text-[#7ee787]">Money</th>
@@ -133,23 +133,23 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                         <div className="text-[10px] text-[#f85149] mt-0.5">{lockedReason(name)}</div>
                       )}
                     </td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : moneyOk  ? "text-[#7ee787]" : "text-[#f85149]"}`}>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#7d8590]" : moneyOk  ? "text-[#7ee787]" : "text-[#f85149]"}`}>
                       {fmt(cfg.costMoney)}
                       {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.costMoney * qty)}</div>}
                     </td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}`}>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#7d8590]" : energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}`}>
                       {fmt(cfg.costEnergy)}
                       {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.costEnergy * qty)}</div>}
                     </td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : ammoOk   ? "text-[#e3b341]" : "text-[#f85149]"}`}>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#7d8590]" : ammoOk   ? "text-[#e3b341]" : "text-[#f85149]"}`}>
                       {fmt(cfg.costAmmo)}
                       {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.costAmmo * qty)}</div>}
                     </td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : popOk    ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#7d8590]" : popOk    ? "text-[#c9d1d9]" : "text-[#f85149]"}`}>
                       {cfg.population}
                       {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">= {fmt(cfg.population * qty)}</div>}
                     </td>
-                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#484f58]" : "text-[#8b949e]"}`}>
+                    <td className={`py-2 text-right text-xs ${!unlocked ? "text-[#7d8590]" : "text-[#b1bac4]"}`}>
                       {fmtDuration(timeSec)}
                       {unlocked && qty > 1 && <div className="text-[10px] text-[#58a6ff]">{fmtDuration(timeSec * qty)}</div>}
                     </td>
@@ -179,7 +179,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                           </button>
                         </div>
                       ) : (
-                        <span className="text-[#484f58] text-xs">—</span>
+                        <span className="text-[#7d8590] text-xs">—</span>
                       )}
                     </td>
                   </tr>
@@ -191,7 +191,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
           {/* Recruitment Queue */}
           {city.recruitmentOrders.some((o) => new Date(o.finishAt).getTime() > Date.now()) && (
             <div className="mt-6">
-              <div className="text-[10px] uppercase tracking-widest text-[#8b949e] mb-2">Recruitment Queue</div>
+              <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Recruitment Queue</div>
               <div className="flex flex-col gap-1.5">
                 {city.recruitmentOrders.filter((o) => new Date(o.finishAt).getTime() > Date.now()).map((order, i) => {
                   const totalSec  = Math.round((new Date(order.finishAt).getTime() - new Date(order.startAt).getTime()) / 1000);
@@ -201,15 +201,15 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
 
                   return (
                     <div key={order.id} className="flex items-center gap-3 px-3 py-2 bg-[#161b22] border border-[#30363d] rounded">
-                      <span className="text-[#484f58] text-xs w-4 shrink-0">{i + 1}.</span>
+                      <span className="text-[#7d8590] text-xs w-4 shrink-0">{i + 1}.</span>
                       <img
                         src={`/images/units/${order.unitName.toLowerCase()}.jpg`}
                         className="w-6 h-6 object-contain rounded shrink-0"
                       />
                       <span className="flex-1 text-sm text-[#c9d1d9]">
-                        {UNIT_DISPLAY[order.unitName]} <span className="text-[#8b949e]">×{order.quantity}</span>
+                        {UNIT_DISPLAY[order.unitName]} <span className="text-[#b1bac4]">×{order.quantity}</span>
                       </span>
-                      <span className="text-xs text-[#8b949e] shrink-0">{fmtDuration(totalSec)}</span>
+                      <span className="text-xs text-[#b1bac4] shrink-0">{fmtDuration(totalSec)}</span>
                       <span className="text-xs text-[#d29922] font-mono w-20 text-right shrink-0">{countdown}</span>
                       <button
                         onClick={() => {
@@ -218,7 +218,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                           }
                         }}
                         disabled={cancelMutation.isPending}
-                        className="text-[10px] text-[#484f58] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
+                        className="text-[10px] text-[#7d8590] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
                       >
                         ✕
                       </button>

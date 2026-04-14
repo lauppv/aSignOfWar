@@ -41,12 +41,13 @@ export interface OutgoingCommand {
   id: string;
   type: "ATTACK" | "SUPPORT" | "RESOURCES";
   status: string;
+  departureAt: string;
   arrivalAt: string;
   units: CommandUnit[];
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
-  toCity: { name: string; owner: { username: string } | null };
+  toCity: { id: string; name: string; x: number; y: number; owner: { username: string } | null };
 }
 
 export interface IncomingCommand {
@@ -58,7 +59,7 @@ export interface IncomingCommand {
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
-  fromCity: { name: string; owner: { username: string } | null };
+  fromCity: { name: string; x: number; y: number; owner: { username: string } | null };
 }
 
 export interface CityCommands {
@@ -77,6 +78,7 @@ export interface CityOverview {
   loyalty: number;
   buildings: Building[];
   units: Unit[];
+  supportUnits: BattleUnitCount[];
   buildingUpgradeOrders: BuildingUpgradeOrder[];
   recruitmentOrders: RecruitmentOrder[];
 }
@@ -115,15 +117,19 @@ export interface BattleReportData {
   battleAt: string;
 }
 
+export type CommandReportType = "ATTACK" | "SUPPORT" | "RESOURCES";
+
 export interface BattleReport {
   id: string;
+  type: CommandReportType;
   arrivalAt: string;
   status: string;
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
   direction: "outgoing" | "incoming";
+  units: BattleUnitCount[];
   fromCity: { id: string; name: string; x: number; y: number; owner: { username: string } | null };
   toCity:   { id: string; name: string; x: number; y: number; owner: { username: string } | null };
-  report: BattleReportData;
+  report: BattleReportData | null;
 }

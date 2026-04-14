@@ -64,7 +64,21 @@ export const getCityOverview = async (userId: string) => {
     select: { money: true, energy: true, ammo: true },
   });
 
-  return { ...city, ...updated };
+  // Unitatile de sprijin stationate in orasul nostru — contribuie la afisaj/aparare,
+  // dar nu sunt ale noastre (nu pot fi trimise in comenzi proprii).
+  const stationedSupports = await prisma.command.findMany({
+    where:  { toCityId: city.id, type: "SUPPORT", status: "ARRIVED" },
+    select: { units: { select: { name: true, quantity: true } } },
+  });
+  const supportMap = new Map<string, number>();
+  for (const c of stationedSupports) {
+    for (const u of c.units) {
+      supportMap.set(u.name, (supportMap.get(u.name) ?? 0) + u.quantity);
+    }
+  }
+  const supportUnits = Array.from(supportMap.entries()).map(([name, quantity]) => ({ name, quantity }));
+
+  return { ...city, ...updated, supportUnits };
 };
 
 export const createStarterCity = async (

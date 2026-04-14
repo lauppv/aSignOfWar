@@ -3,7 +3,7 @@ import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
 import { commandQueue } from "../config/queue";
 import { calculateBattle } from "../services/battle.service";
-import { getTravelTimeSec, UNITS } from "../../../shared/gameConfig";
+import { getTravelTimeSec } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { syncResources } from "../services/city.service";
 import { UnitName } from "@prisma/client";
@@ -55,26 +55,14 @@ async function processResourceArrival(command: any) {
   ]);
 }
 
-// ─── Suport: muta unitatile permanent in orasul destinatie ───────────────────
+// ─── Suport: unitatile raman stationate in orasul destinatie (nu sunt transferate) ──
+// Ele contribuie la apararea orasului in caz de atac, dar nu pot fi folosite de
+// proprietarul orasului — doar rechemate acasa de expeditor.
 
 async function processSupportArrival(command: any) {
-  await prisma.$transaction(async (tx) => {
-    for (const { name, quantity } of command.units) {
-      await tx.unit.upsert({
-        where:  { cityId_name: { cityId: command.toCityId, name } },
-        update: { quantity: { increment: quantity } },
-        create: {
-          cityId:   command.toCityId,
-          name:     name as UnitName,
-          category: UNITS[name as UnitName].category,
-          quantity,
-        },
-      });
-    }
-    await tx.command.update({
-      where: { id: command.id },
-      data:  { status: "COMPLETED" },
-    });
+  await prisma.command.update({
+    where: { id: command.id },
+    data:  { status: "ARRIVED" },
   });
 }
 
@@ -89,11 +77,32 @@ async function processAttackArrival(command: any) {
   });
   if (!toCity) return;
 
+  // Sprijinul stationat contribuie la aparare
+  const stationedSupports = await prisma.command.findMany({
+    where:   { toCityId: command.toCityId, type: "SUPPORT", status: "ARRIVED" },
+    include: { units: true },
+  });
+
   const airDefenseBuilding = toCity.buildings.find(b => b.name === "AIR_DEFENSE");
   const airDefenseLevel    = airDefenseBuilding?.level ?? 0;
 
   const attackerUnits  = command.units.map((u: any) => ({ name: u.name as UnitName, quantity: u.quantity }));
-  const defenderUnits  = toCity.units.map(u => ({ name: u.name, quantity: u.quantity }));
+
+  // Agregam apararea: unitatile proprii + toate unitatile trimise ca sprijin
+  const nativeStack  = new Map<UnitName, number>(toCity.units.map(u => [u.name, u.quantity]));
+  const supportStacks = stationedSupports.map(sc => ({
+    commandId: sc.id,
+    units:     new Map<UnitName, number>(sc.units.map(u => [u.name as UnitName, u.quantity])),
+  }));
+
+  const totalByName = new Map<UnitName, number>();
+  for (const [n, q] of nativeStack) totalByName.set(n, (totalByName.get(n) ?? 0) + q);
+  for (const s of supportStacks) {
+    for (const [n, q] of s.units) totalByName.set(n, (totalByName.get(n) ?? 0) + q);
+  }
+  const defenderUnits = Array.from(totalByName.entries())
+    .filter(([, q]) => q > 0)
+    .map(([name, quantity]) => ({ name, quantity }));
 
   const result = calculateBattle(
     attackerUnits,
@@ -104,16 +113,56 @@ async function processAttackArrival(command: any) {
     toCity.ammo
   );
 
+  // Distribuie supravietuitorii proportional intre stack-ul propriu si fiecare sprijin
+  const survivorByName = new Map<UnitName, number>(
+    result.defenderSurvivors.map(u => [u.name as UnitName, u.quantity])
+  );
+  const allStacks = [nativeStack, ...supportStacks.map(s => s.units)];
+  for (const [name, total] of totalByName) {
+    if (total === 0) continue;
+    const survived = survivorByName.get(name) ?? 0;
+    const shares = allStacks.map(m => {
+      const q = m.get(name) ?? 0;
+      const exact = (q * survived) / total;
+      const floor = Math.floor(exact);
+      return { m, q, floor, frac: exact - floor };
+    });
+    let allocated = shares.reduce((s, x) => s + x.floor, 0);
+    let remaining = survived - allocated;
+    shares.sort((a, b) => b.frac - a.frac);
+    for (let i = 0; remaining > 0 && i < shares.length; i++) {
+      if (shares[i].q > shares[i].floor) { shares[i].floor += 1; remaining--; }
+    }
+    for (const s of shares) s.m.set(name, s.floor);
+  }
+
   const returnDelayMs   = getTravelTimeSec(env.gameSpeed) * 1000;
   const returnArrivalAt = new Date(Date.now() + returnDelayMs);
 
   await prisma.$transaction(async (tx) => {
-    // Actualizeaza unitatile aparatorului
-    for (const { name, quantity } of result.defenderSurvivors) {
+    // Actualizeaza unitatile aparatorului (native)
+    for (const [name, quantity] of nativeStack) {
       await tx.unit.updateMany({
         where: { cityId: command.toCityId, name },
         data:  { quantity },
       });
+    }
+
+    // Actualizeaza fiecare comanda de SUPPORT stationata — pierderi distribuite
+    for (const s of supportStacks) {
+      for (const [name, quantity] of s.units) {
+        await tx.commandUnit.updateMany({
+          where: { commandId: s.commandId, name },
+          data:  { quantity },
+        });
+      }
+      const stillAlive = Array.from(s.units.values()).some(q => q > 0);
+      if (!stillAlive) {
+        await tx.command.update({
+          where: { id: s.commandId },
+          data:  { status: "COMPLETED" },
+        });
+      }
     }
 
     // Actualizeaza nivelul Air Defense daca a fost damat

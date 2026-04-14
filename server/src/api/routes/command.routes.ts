@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
-import { sendCommandHandler, getCommandsHandler } from "../controllers/command.controller";
+import { sendCommandHandler, getCommandsHandler, cancelCommandHandler } from "../controllers/command.controller";
 import { validate } from "../../middleware/validate";
 import { sendCommandSchema } from "../schemas";
 
@@ -11,5 +11,8 @@ router.post("/:cityId/commands", authMiddleware, validate(sendCommandSchema), se
 
 // GET  /api/cities/:cityId/commands  — comenzile orasului (outgoing + incoming)
 router.get("/:cityId/commands", authMiddleware, getCommandsHandler);
+
+// POST /api/cities/:cityId/commands/:commandId/cancel  — anuleaza o comanda TRAVELING
+router.post("/:cityId/commands/:commandId/cancel", authMiddleware, cancelCommandHandler);
 
 export default router;

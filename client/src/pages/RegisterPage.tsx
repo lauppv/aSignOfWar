@@ -29,7 +29,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
       <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-8 w-80 flex flex-col gap-4">
         <h1 className="text-center text-xl text-[#e6b800] tracking-widest">aSignOfWar</h1>
-        <h2 className="text-center text-sm text-[#8b949e] font-normal">Register</h2>
+        <h2 className="text-center text-sm text-[#b1bac4] font-normal">Register</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
           <input
             type="text"
@@ -72,7 +72,7 @@ export default function RegisterPage() {
             {loading ? "Loading..." : "Register"}
           </button>
         </form>
-        <p className="text-center text-xs text-[#8b949e]">
+        <p className="text-center text-xs text-[#b1bac4]">
           Already have an account? <Link to="/login" className="text-[#58a6ff]">Login</Link>
         </p>
       </div>

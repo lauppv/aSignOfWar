@@ -27,7 +27,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
       <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-8 w-80 flex flex-col gap-4">
         <h1 className="text-center text-xl text-[#e6b800] tracking-widest">aSignOfWar</h1>
-        <h2 className="text-center text-sm text-[#8b949e] font-normal">Login</h2>
+        <h2 className="text-center text-sm text-[#b1bac4] font-normal">Login</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
           <input
             type="text"
@@ -54,7 +54,7 @@ export default function LoginPage() {
             {loading ? "Loading..." : "Login"}
           </button>
         </form>
-        <p className="text-center text-xs text-[#8b949e]">
+        <p className="text-center text-xs text-[#b1bac4]">
           No account? <Link to="/register" className="text-[#58a6ff]">Register</Link>
         </p>
       </div>

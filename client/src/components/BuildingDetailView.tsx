@@ -130,7 +130,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
       <div className="flex flex-col gap-3">
         <table className="border-collapse text-xs">
           <thead>
-            <tr className="text-[10px] uppercase tracking-widest text-[#484f58] border-b border-[#21262d]">
+            <tr className="text-[10px] uppercase tracking-widest text-[#7d8590] border-b border-[#21262d]">
               <th className="text-right py-1 pr-4 font-normal text-[#7ee787]">Money</th>
               <th className="text-right py-1 pr-4 font-normal text-[#79c0ff]">Energy</th>
               <th className="text-right py-1 pr-4 font-normal text-[#e3b341]">Ammo</th>
@@ -142,7 +142,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
               <td className={`py-1 pr-4 text-right ${city.money  >= cost.money  ? "text-[#7ee787]" : "text-[#f85149]"}`}>{fmt(cost.money)}</td>
               <td className={`py-1 pr-4 text-right ${city.energy >= cost.energy ? "text-[#79c0ff]" : "text-[#f85149]"}`}>{fmt(cost.energy)}</td>
               <td className={`py-1 pr-4 text-right ${city.ammo   >= cost.ammo   ? "text-[#e3b341]" : "text-[#f85149]"}`}>{fmt(cost.ammo)}</td>
-              <td className="py-1 text-right text-[#8b949e]">{fmtDuration(timeSec)}</td>
+              <td className="py-1 text-right text-[#b1bac4]">{fmtDuration(timeSec)}</td>
             </tr>
           </tbody>
         </table>
@@ -166,7 +166,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
               <h2 className="text-base font-semibold text-[#e6b800]">{BUILDING_DISPLAY[name]}</h2>
               <button
                 onClick={onClose}
-                className="text-sm text-[#8b949e] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
+                className="text-sm text-[#b1bac4] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
               >
                 ← Back
               </button>
@@ -188,7 +188,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
           {/* Level badge */}
           <div className="flex items-baseline gap-3">
             <span className="text-4xl font-bold text-[#e6b800]">{level}</span>
-            <span className="text-[#8b949e] text-lg">/ {cfg.maxLevel}</span>
+            <span className="text-[#b1bac4] text-lg">/ {cfg.maxLevel}</span>
           </div>
 
           {/* Stats table */}
@@ -196,7 +196,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
             <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mb-2">Stats</div>
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="text-[10px] uppercase tracking-widest text-[#8b949e] border-b border-[#21262d]">
+                <tr className="text-[10px] uppercase tracking-widest text-[#b1bac4] border-b border-[#21262d]">
                   <th className="text-left py-1.5 font-normal">Stat</th>
                   <th className="text-right py-1.5 font-normal">Now (lvl {level})</th>
                   <th className="text-right py-1.5 font-normal pr-0">Next (lvl {Math.min(level + 1, cfg.maxLevel)})</th>
@@ -233,16 +233,16 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
 
                   return (
                     <div key={order.id} className="flex items-center gap-3 px-3 py-2 bg-[#161b22] border border-[#30363d] rounded">
-                      <span className="text-[#484f58] text-xs w-4 shrink-0">{i + 1}.</span>
+                      <span className="text-[#7d8590] text-xs w-4 shrink-0">{i + 1}.</span>
                       <span className="flex-1 text-sm text-[#c9d1d9]">
                         {level + i} → {level + i + 1}
                       </span>
-                      <span className="text-xs text-[#8b949e] shrink-0">{fmtDuration(totalSec)}</span>
+                      <span className="text-xs text-[#b1bac4] shrink-0">{fmtDuration(totalSec)}</span>
                       <span className="text-xs text-[#d29922] font-mono w-20 text-right shrink-0">{countdown}</span>
                       <button
                         onClick={() => handleCancel(order.id)}
                         disabled={cancelMutation.isPending}
-                        className="text-[10px] text-[#484f58] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
+                        className="text-[10px] text-[#7d8590] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
                       >
                         ✕
                       </button>

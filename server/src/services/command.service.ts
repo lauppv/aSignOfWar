@@ -106,6 +106,32 @@ export const sendCommand = async (
   return { commandId, arrivalAt };
 };
 
+// Anuleaza o comanda TRAVELING: unitatile/resursele se intorc simetric acasa
+// (daca au mers x secunde, se mai intorc exact x secunde pana acasa).
+export const cancelCommand = async (commandId: string, userId: string) => {
+  const command = await prisma.command.findUnique({
+    where:   { id: commandId },
+    include: { fromCity: { select: { ownerId: true } } },
+  });
+  if (!command)                             throw new Error("COMMAND_NOT_FOUND");
+  if (command.fromCity.ownerId !== userId)  throw new Error("UNAUTHORIZED");
+  if (command.status !== "TRAVELING")       throw new Error("NOT_CANCELLABLE");
+
+  const now = new Date();
+  const elapsedMs = Math.max(0, now.getTime() - command.departureAt.getTime());
+  if (elapsedMs > 5 * 60 * 1000)            throw new Error("CANCEL_WINDOW_EXPIRED");
+  const newArrivalAt = new Date(now.getTime() + elapsedMs);
+
+  await prisma.command.update({
+    where: { id: commandId },
+    data:  { status: "RETURNING", arrivalAt: newArrivalAt },
+  });
+
+  await commandQueue.add("return", { commandId }, { delay: elapsedMs });
+
+  return { commandId, arrivalAt: newArrivalAt };
+};
+
 export const getCommandsForCity = async (cityId: string, userId: string) => {
   const city = await prisma.city.findUnique({ where: { id: cityId } });
   if (!city)                   throw new Error("CITY_NOT_FOUND");
@@ -116,13 +142,13 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
   // nu mai e treaba defenderului, e doar un trip de intoarcere al atacatorului.
   const [outgoing, incoming] = await Promise.all([
     prisma.command.findMany({
-      where:   { fromCityId: cityId, status: { in: ["TRAVELING", "RETURNING"] } },
-      include: { units: true, toCity: { select: { name: true, owner: { select: { username: true } } } } },
+      where:   { fromCityId: cityId, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
+      include: { units: true, toCity: { select: { id: true, name: true, x: true, y: true, owner: { select: { username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
     prisma.command.findMany({
       where:   { toCityId: cityId, status: "TRAVELING" },
-      include: { units: true, fromCity: { select: { name: true, owner: { select: { username: true } } } } },
+      include: { units: true, fromCity: { select: { name: true, x: true, y: true, owner: { select: { username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
   ]);

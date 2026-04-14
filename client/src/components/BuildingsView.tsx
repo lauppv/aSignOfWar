@@ -48,12 +48,12 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
               <h2 className="text-base font-semibold text-[#e6b800]">Headquarters</h2>
               <button
                 onClick={onClose}
-                className="text-sm text-[#8b949e] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
+                className="text-sm text-[#b1bac4] border border-[#30363d] rounded px-3 py-1.5 hover:border-[#e6b800] hover:text-[#e6b800] cursor-pointer"
               >
                 ← Back
               </button>
             </div>
-            <p className="text-xs text-[#8b949e] mt-1">{BUILDING_SHORT_DESC["HEADQUARTERS"]}</p>
+            <p className="text-xs text-[#b1bac4] mt-1">{BUILDING_SHORT_DESC["HEADQUARTERS"]}</p>
           </div>
           <div className="flex items-center justify-center p-4 flex-1 min-h-0">
             <img
@@ -76,7 +76,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
 
             return (
               <div className="p-4 pt-0 shrink-0">
-                <div className="text-[10px] uppercase tracking-widest text-[#8b949e] mb-2">Governor</div>
+                <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Governor</div>
                 <div className="flex items-center gap-3 p-3 bg-[#161b22] border border-[#21262d] rounded">
                   <img
                     src="/images/units/governor.jpg"
@@ -87,12 +87,12 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                   />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-[#c9d1d9]">Governor</div>
-                    <div className="text-[10px] text-[#484f58]">Conquer cities · HQ lvl 30 req.</div>
+                    <div className="text-[10px] text-[#7d8590]">Conquer cities · HQ lvl 30 req.</div>
                     <div className="flex gap-2 mt-1 text-xs flex-wrap">
                       <span className={moneyOk  ? "text-[#7ee787]" : "text-[#f85149]"}>{cfg.costMoney.toLocaleString()} M</span>
                       <span className={energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}>{cfg.costEnergy.toLocaleString()} E</span>
                       <span className={ammoOk   ? "text-[#e3b341]" : "text-[#f85149]"}>{cfg.costAmmo.toLocaleString()} A</span>
-                      <span className="text-[#484f58]">{fmtDuration(timeSec)}</span>
+                      <span className="text-[#7d8590]">{fmtDuration(timeSec)}</span>
                     </div>
                     {unlocked ? (
                       <div className="flex items-center gap-2 mt-2">
@@ -129,7 +129,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
         <div className="flex-1 overflow-y-auto p-4">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-widest text-[#8b949e] border-b border-[#30363d]">
+              <tr className="text-[10px] uppercase tracking-widest text-[#b1bac4] border-b border-[#30363d]">
                 <th className="text-left py-2 pl-2 font-normal w-18"></th>
                 <th className="text-left py-2 font-normal">Building</th>
                 <th className="text-center py-2 font-normal">Level</th>
@@ -198,17 +198,17 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                     <td className="py-2 pl-3">
                       <div className="text-[#c9d1d9]">{BUILDING_DISPLAY[name]}</div>
                     </td>
-                    <td className="py-2 text-center text-[#8b949e]">{level}</td>
-                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#484f58]" : moneyOk ? "text-[#7ee787]" : "text-[#f85149]"}`}>
+                    <td className="py-2 text-center text-[#b1bac4]">{level}</td>
+                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#7d8590]" : moneyOk ? "text-[#7ee787]" : "text-[#f85149]"}`}>
                       {isMaxLevel ? "—" : fmt(cost.money)}
                     </td>
-                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#484f58]" : energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}`}>
+                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#7d8590]" : energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}`}>
                       {isMaxLevel ? "—" : fmt(cost.energy)}
                     </td>
-                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#484f58]" : ammoOk ? "text-[#e3b341]" : "text-[#f85149]"}`}>
+                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#7d8590]" : ammoOk ? "text-[#e3b341]" : "text-[#f85149]"}`}>
                       {isMaxLevel ? "—" : fmt(cost.ammo)}
                     </td>
-                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#484f58]" : "text-[#8b949e]"}`}>
+                    <td className={`py-2 text-right text-xs ${isMaxLevel || needsHQ ? "text-[#7d8590]" : "text-[#b1bac4]"}`}>
                       {isMaxLevel ? "—" : fmtDuration(timeSec)}
                     </td>
                     <td className="py-2 pr-2 text-center">{actionNode}</td>
@@ -221,7 +221,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
           {/* Construction Queue */}
           {city.buildingUpgradeOrders.some((o) => new Date(o.finishAt).getTime() > Date.now()) && (
             <div className="mt-6">
-              <div className="text-[10px] uppercase tracking-widest text-[#8b949e] mb-2">Construction Queue</div>
+              <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Construction Queue</div>
               <div className="flex flex-col gap-1.5">
                 {(() => {
                   const now = Date.now();
@@ -243,11 +243,11 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
 
                   return (
                     <div key={order.id} className="flex items-center gap-3 px-3 py-2 bg-[#161b22] border border-[#30363d] rounded">
-                      <span className="text-[#484f58] text-xs w-4 shrink-0">{i + 1}.</span>
+                      <span className="text-[#7d8590] text-xs w-4 shrink-0">{i + 1}.</span>
                       <span className="flex-1 text-sm text-[#c9d1d9]">
-                        {BUILDING_DISPLAY[order.buildingName]} <span className="text-[#8b949e] text-xs">{fromLevel} → {toLevel}</span>
+                        {BUILDING_DISPLAY[order.buildingName]} <span className="text-[#b1bac4] text-xs">{fromLevel} → {toLevel}</span>
                       </span>
-                      <span className="text-xs text-[#8b949e] shrink-0">{fmtDuration(totalSec)}</span>
+                      <span className="text-xs text-[#b1bac4] shrink-0">{fmtDuration(totalSec)}</span>
                       <span className="text-xs text-[#d29922] font-mono w-20 text-right shrink-0">
                         {countdown}
                       </span>
@@ -258,7 +258,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                           }
                         }}
                         disabled={cancelMutation.isPending}
-                        className="text-[10px] text-[#484f58] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
+                        className="text-[10px] text-[#7d8590] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
                       >
                         ✕
                       </button>

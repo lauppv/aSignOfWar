@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { MapCity, CityOverview, UnitName } from "../types/index.ts";
-import { sendCommand, type CommandType } from "../api/command.ts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/index.ts";
+import { sendCommand, getCityCommands, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import { getHarborCapacity } from "@shared/gameConfig.ts";
+import { UNIT_DISPLAY } from "../lib/labels.ts";
+import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 
 interface Props {
   city: MapCity;
@@ -11,11 +13,12 @@ interface Props {
   headerColor: string;
   kindLabel: string;
   onClose: () => void;
+  onHeaderMouseDown?: (e: React.MouseEvent) => void;
 }
 
 type Mode = "info" | "form";
 
-export default function CityActionPanel({ city, myCity, headerColor, kindLabel, onClose }: Props) {
+export default function CityActionPanel({ city, myCity, headerColor, kindLabel, onClose, onHeaderMouseDown }: Props) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("info");
   const [type, setType] = useState<CommandType>("ATTACK");
@@ -26,8 +29,18 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const isOwn   = myCity?.id === city.id;
   const isGhost = !city.owner;
 
-  const ownerLabel = city.owner ? city.owner.username : "barbarians";
+  const ownerLabel = city.owner ? city.owner.username : "Ghost city";
   const dist = myCity ? Math.sqrt((city.x - myCity.x) ** 2 + (city.y - myCity.y) ** 2) : null;
+
+  const { data: commands } = useQuery({
+    queryKey: ["commands", myCity?.id],
+    queryFn: () => getCityCommands(myCity!.id),
+    enabled: !!myCity?.id,
+    refetchInterval: 5000,
+  });
+  const commandsToThisCity = (commands?.outgoing ?? []).filter(c => c.toCity.id === city.id);
+  const ordersInFlight = commandsToThisCity.filter(c => c.status === "TRAVELING" || c.status === "RETURNING");
+  const stationedHere  = commandsToThisCity.filter(c => c.status === "ARRIVED");
 
   const harborLevel  = myCity ? getBuildingLevel(myCity, "HARBOR") : 0;
   const harborCap    = getHarborCapacity(harborLevel);
@@ -72,14 +85,33 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   // ─── INFO MODE ───────────────────────────────────────────────────────────────
   if (mode === "info") {
     return (
-      <Wrapper headerColor={headerColor} title={city.name} onClose={onClose}>
-        <Row label="Coordinates" value={<span className="font-mono">[{city.x}, {city.y}]</span>} />
+      <Wrapper headerColor={headerColor} title={`${city.name} (${city.x}, ${city.y})`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
         <Row label="Owner"       value={ownerLabel} />
-        <Row label="Alliance"    value={<span className="text-[#484f58]">—</span>} />
+        <Row label="Alliance"    value={<span className="text-[#7d8590]">—</span>} />
         {dist !== null && (
           <Row label="Distance" value={<span className="font-mono">{dist.toFixed(1)}</span>} />
         )}
         <Row label="Type" value={<span className="capitalize">{kindLabel}</span>} />
+
+        {!isOwn && ordersInFlight.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-[#30363d]">
+            <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1">
+              My orders ({ordersInFlight.length})
+            </div>
+            <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto pr-1">
+              {ordersInFlight.map(c => <OrderRow key={c.id} cmd={c} />)}
+            </div>
+          </div>
+        )}
+
+        {!isOwn && stationedHere.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-[#30363d]">
+            <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1">
+              My stationed units
+            </div>
+            <StationedUnits commands={stationedHere} />
+          </div>
+        )}
 
         {!isOwn && myCity && (
           <div className="flex gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
@@ -132,11 +164,11 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   })();
 
   return (
-    <Wrapper headerColor={headerColor} title={`${type.toLowerCase()} → ${city.name}`} onClose={onClose}>
-      <div className="text-[10px] text-[#8b949e] mb-2">
+    <Wrapper headerColor={headerColor} title={`${type.toLowerCase()} → ${city.name}`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
+      <div className="text-[10px] text-[#b1bac4] mb-2">
         From <span className="text-[#c9d1d9]">{myCity?.name}</span>
         {" → "}
-        [{city.x}, {city.y}] · {ownerLabel}
+        ({city.x}, {city.y}) · {ownerLabel}
       </div>
 
       {type === "RESOURCES" ? (
@@ -148,7 +180,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
               <ResourceInput label="Money"  color="#7ee787" value={resources.money}  available={Math.floor(myCity?.money  ?? 0)} onChange={(v) => setResource("money",  v, myCity?.money  ?? 0)} />
               <ResourceInput label="Energy" color="#79c0ff" value={resources.energy} available={Math.floor(myCity?.energy ?? 0)} onChange={(v) => setResource("energy", v, myCity?.energy ?? 0)} />
               <ResourceInput label="Ammo"   color="#e3b341" value={resources.ammo}   available={Math.floor(myCity?.ammo   ?? 0)} onChange={(v) => setResource("ammo",   v, myCity?.ammo   ?? 0)} />
-              <div className="text-[10px] text-[#8b949e] flex justify-between mt-1">
+              <div className="text-[10px] text-[#b1bac4] flex justify-between mt-1">
                 <span>Harbor cap (lvl {harborLevel})</span>
                 <span className={resourceTotal > harborCap ? "text-[#f85149]" : "text-[#c9d1d9]"}>
                   {resourceTotal} / {harborCap}
@@ -160,7 +192,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
       ) : (
         <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto pr-1">
           {availableUnits.length === 0 ? (
-            <div className="text-[10px] text-[#8b949e] py-1">No units available</div>
+            <div className="text-[10px] text-[#b1bac4] py-1">No units available</div>
           ) : availableUnits.map(u => (
             <UnitInput
               key={u.id}
@@ -180,7 +212,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
       <div className="flex gap-1.5 mt-3 pt-2 border-t border-[#30363d]">
         <button
           onClick={() => setMode("info")}
-          className="flex-1 text-[10px] uppercase tracking-wide border border-[#30363d] text-[#8b949e] rounded py-1 hover:bg-[#1c2129]"
+          className="flex-1 text-[10px] uppercase tracking-wide border border-[#30363d] text-[#b1bac4] rounded py-1 hover:bg-[#1c2129]"
         >
           Cancel
         </button>
@@ -204,18 +236,21 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
 function Wrapper({
-  headerColor, title, onClose, children,
-}: { headerColor: string; title: string; onClose: () => void; children: React.ReactNode }) {
+  headerColor, title, onClose, onHeaderMouseDown, children,
+}: { headerColor: string; title: string; onClose: () => void; onHeaderMouseDown?: (e: React.MouseEvent) => void; children: React.ReactNode }) {
   return (
     <>
       <div
-        className="flex items-center justify-between px-3 py-2 border-b border-[#30363d]"
-        style={{ background: headerColor, color: "#0d1117" }}
+        className="flex items-center justify-between px-3 py-2 border-b border-[#30363d] select-none"
+        style={{ background: headerColor, color: "#0d1117", cursor: onHeaderMouseDown ? "grab" : undefined }}
+        onMouseDown={onHeaderMouseDown}
       >
         <span className="font-bold truncate text-xs">{title}</span>
         <button
           onClick={onClose}
+          onMouseDown={(e) => e.stopPropagation()}
           className="text-[#0d1117] hover:opacity-70 text-sm leading-none px-1"
+          style={{ cursor: "pointer" }}
         >
           ×
         </button>
@@ -225,10 +260,124 @@ function Wrapper({
   );
 }
 
+const ORDER_META: Record<CommandType, { label: string; fg: string; border: string }> = {
+  ATTACK:    { label: "Attack",    fg: "#f85149", border: "#3d1a1a" },
+  SUPPORT:   { label: "Support",   fg: "#3fb950", border: "#1a3d1a" },
+  RESOURCES: { label: "Resources", fg: "#d29922", border: "#3d2e0a" },
+};
+
+function fmtEta(cmd: OutgoingCommand): string {
+  if (cmd.status === "ARRIVED")   return "stationed";
+  if (cmd.status === "RETURNING") {
+    const ms = new Date(cmd.arrivalAt).getTime() - Date.now();
+    if (ms <= 0) return "arriving home";
+    return "← " + formatMs(ms);
+  }
+  const ms = new Date(cmd.arrivalAt).getTime() - Date.now();
+  if (ms <= 0) return "arriving";
+  return formatMs(ms);
+}
+
+function formatMs(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function StationedUnits({ commands }: { commands: OutgoingCommand[] }) {
+  const { openUnit } = useUnitInfo();
+  const totals = new Map<UnitName, number>();
+  for (const c of commands) {
+    for (const u of c.units) {
+      if (u.quantity > 0) totals.set(u.name, (totals.get(u.name) ?? 0) + u.quantity);
+    }
+  }
+  const entries = Array.from(totals.entries());
+  if (entries.length === 0) {
+    return <span className="text-[10px] text-[#7d8590]">No units</span>;
+  }
+  return (
+    <div className="flex flex-row flex-wrap gap-1">
+      {entries.map(([name, qty]) => (
+        <div
+          key={name}
+          onClick={(e) => { e.stopPropagation(); openUnit(name); }}
+          className="inline-flex shrink-0 items-center gap-1 bg-[#0d1117] border border-[#1a3d1a] rounded px-1 py-0.5 cursor-pointer hover:brightness-125"
+          title={UNIT_DISPLAY[name]}
+        >
+          <img
+            src={`/images/units/${name.toLowerCase()}.jpg`}
+            alt={UNIT_DISPLAY[name]}
+            className="w-5 h-5 object-contain rounded shrink-0"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+          <span className="text-[10px] text-[#c9d1d9] font-mono">{qty.toLocaleString()}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OrderRow({ cmd }: { cmd: OutgoingCommand }) {
+  const { openUnit } = useUnitInfo();
+  const meta = ORDER_META[cmd.type];
+  const activeUnits = cmd.units.filter(u => u.quantity > 0);
+
+  return (
+    <div
+      className="flex flex-col gap-1 rounded px-2 py-1.5 bg-[#0d1117] border"
+      style={{ borderColor: meta.border }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: meta.fg }}>
+          {meta.label}
+        </span>
+        <span className="text-[10px] text-[#b1bac4] font-mono">{fmtEta(cmd)}</span>
+      </div>
+
+      {cmd.type === "RESOURCES" ? (
+        <div className="flex gap-2 text-[10px] font-mono">
+          {cmd.resourceMoney  > 0 && <span className="text-[#7ee787]">{cmd.resourceMoney.toLocaleString()}M</span>}
+          {cmd.resourceEnergy > 0 && <span className="text-[#79c0ff]">{cmd.resourceEnergy.toLocaleString()}E</span>}
+          {cmd.resourceAmmo   > 0 && <span className="text-[#e3b341]">{cmd.resourceAmmo.toLocaleString()}A</span>}
+          {cmd.resourceMoney + cmd.resourceEnergy + cmd.resourceAmmo === 0 && (
+            <span className="text-[#7d8590]">—</span>
+          )}
+        </div>
+      ) : activeUnits.length === 0 ? (
+        <span className="text-[10px] text-[#7d8590]">No units</span>
+      ) : (
+        <div className="flex flex-row flex-wrap gap-1">
+          {activeUnits.map(u => (
+            <div
+              key={u.name}
+              onClick={(e) => { e.stopPropagation(); openUnit(u.name); }}
+              className="inline-flex shrink-0 items-center gap-1 bg-[#161b22] rounded px-1 py-0.5 cursor-pointer hover:brightness-125"
+              title={UNIT_DISPLAY[u.name]}
+            >
+              <img
+                src={`/images/units/${u.name.toLowerCase()}.jpg`}
+                alt={UNIT_DISPLAY[u.name]}
+                className="w-5 h-5 object-contain rounded shrink-0"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+              <span className="text-[10px] text-[#c9d1d9] font-mono">{u.quantity.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between">
-      <span className="text-[#8b949e]">{label}</span>
+      <span className="text-[#b1bac4]">{label}</span>
       <span className="text-[#c9d1d9]">{value}</span>
     </div>
   );
@@ -242,7 +391,7 @@ function UnitInput({ name, available, value, onChange }: {
       <span className="flex-1 text-[#c9d1d9] text-[10px] uppercase truncate">
         {name.toLowerCase().replace(/_/g, " ")}
       </span>
-      <span className="text-[10px] text-[#484f58] font-mono w-10 text-right">{available}</span>
+      <span className="text-[10px] text-[#7d8590] font-mono w-10 text-right">{available}</span>
       <input
         type="text"
         inputMode="numeric"
@@ -253,7 +402,7 @@ function UnitInput({ name, available, value, onChange }: {
       />
       <button
         onClick={() => onChange(available)}
-        className="text-[9px] text-[#8b949e] border border-[#30363d] rounded px-1 py-0.5 hover:bg-[#1c2129]"
+        className="text-[9px] text-[#b1bac4] border border-[#30363d] rounded px-1 py-0.5 hover:bg-[#1c2129]"
       >
         max
       </button>
@@ -267,7 +416,7 @@ function ResourceInput({ label, color, value, available, onChange }: {
   return (
     <div className="flex items-center gap-2">
       <span className="flex-1 text-[10px] uppercase" style={{ color }}>{label}</span>
-      <span className="text-[10px] text-[#484f58] font-mono w-14 text-right">{available}</span>
+      <span className="text-[10px] text-[#7d8590] font-mono w-14 text-right">{available}</span>
       <input
         type="text"
         inputMode="numeric"
@@ -278,7 +427,7 @@ function ResourceInput({ label, color, value, available, onChange }: {
       />
       <button
         onClick={() => onChange(available)}
-        className="text-[9px] text-[#8b949e] border border-[#30363d] rounded px-1 py-0.5 hover:bg-[#1c2129]"
+        className="text-[9px] text-[#b1bac4] border border-[#30363d] rounded px-1 py-0.5 hover:bg-[#1c2129]"
       >
         max
       </button>

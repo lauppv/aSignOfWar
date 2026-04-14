@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { sendCommand, getCommandsForCity } from "../../services/command.service";
+import { sendCommand, getCommandsForCity, cancelCommand } from "../../services/command.service";
 import { AuthRequest } from "../../middleware/auth";
 
 export const sendCommandHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -24,6 +24,22 @@ export const sendCommandHandler = async (req: AuthRequest, res: Response, next: 
     if (code === "INSUFFICIENT_RESOURCES")     return res.status(400).json({ error: code });
     if (code === "NEGATIVE_RESOURCES")         return res.status(400).json({ error: code });
     if (code?.startsWith("INSUFFICIENT_UNITS")) return res.status(400).json({ error: code });
+    next(err);
+  }
+};
+
+export const cancelCommandHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId    = req.userId!;
+    const commandId = req.params.commandId as string;
+    const result = await cancelCommand(commandId, userId);
+    res.json(result);
+  } catch (err: any) {
+    const code = err.message;
+    if (code === "COMMAND_NOT_FOUND") return res.status(404).json({ error: code });
+    if (code === "UNAUTHORIZED")      return res.status(403).json({ error: code });
+    if (code === "NOT_CANCELLABLE")      return res.status(400).json({ error: code });
+    if (code === "CANCEL_WINDOW_EXPIRED") return res.status(400).json({ error: code });
     next(err);
   }
 };

@@ -23,3 +23,9 @@ export const sendCommand = (
   body: SendCommandBody
 ): Promise<SendCommandResult> =>
   api.post<SendCommandResult>(`/cities/${fromCityId}/commands`, body);
+
+export const cancelCommand = (
+  fromCityId: string,
+  commandId: string
+): Promise<{ commandId: string; arrivalAt: string }> =>
+  api.post(`/cities/${fromCityId}/commands/${commandId}/cancel`, {});

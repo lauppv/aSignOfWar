@@ -155,6 +155,11 @@ model Command {
   // raport de lupta (completat dupa sosire, pentru ATTACK)
   report Json?
 
+  // Fiecare parte isi poate "sterge" raportul (ascunde din lista).
+  // Cand ambele sunt true, raportul e invizibil pentru toata lumea.
+  reportHiddenByAttacker Boolean @default(false)
+  reportHiddenByDefender Boolean @default(false)
+
   fromCityId String
   fromCity   City   @relation("CommandFrom", fields: [fromCityId], references: [id])
 

@@ -10,7 +10,7 @@ interface Props {
 function Row({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div className="flex justify-between text-xs py-0.5 border-b border-[#21262d]">
-      <span className="text-[#8b949e]" style={color ? { color } : undefined}>{label}</span>
+      <span className="text-[#b1bac4]" style={color ? { color } : undefined}>{label}</span>
       <span className="text-[#c9d1d9] font-medium" style={color ? { color } : undefined}>{value}</span>
     </div>
   );
@@ -41,7 +41,7 @@ export default function UnitInfoModal({ name, onClose }: Props) {
           <div className="mt-1.5 text-center">
             <div className="text-sm font-semibold text-[#e6b800]">{displayName}</div>
             <div className="text-[10px] uppercase tracking-widest text-[#58a6ff] mt-0.5">{CATEGORY_LABEL[cfg.category]}</div>
-            <div className="text-[11px] text-[#8b949e] mt-1.5 leading-relaxed italic">{UNIT_DESCRIPTION[name]}</div>
+            <div className="text-[11px] text-[#b1bac4] mt-1.5 leading-relaxed italic">{UNIT_DESCRIPTION[name]}</div>
           </div>
         </div>
 
