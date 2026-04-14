@@ -11,13 +11,15 @@ interface Props {
   maxPopulation: number;
   onLogout?: () => void;
   onSimulator?: () => void;
+  onReports?: () => void;
+  onMap?: () => void;
 }
 
 function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export default function ResourceBar({ cityName, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator }: Props) {
+export default function ResourceBar({ cityName, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap }: Props) {
   return (
     <div className="flex gap-6 px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0 text-sm text-[#c9d1d9]" style={{ fontVariantNumeric: "tabular-nums" }}>
       <span className="text-[#e6b800] font-semibold tracking-wider shrink-0">{cityName}</span>
@@ -39,12 +41,28 @@ export default function ResourceBar({ cityName, money, energy, ammo, capacity, m
       <span className="flex items-center gap-1.5 text-[#c9d1d9] shrink-0">
         Storage: {fmt(capacity)}
       </span>
+      {onMap && (
+        <button
+          onClick={onMap}
+          className="text-xs text-[#7ee787] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#7ee787] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
+        >
+          Map
+        </button>
+      )}
       {onSimulator && (
         <button
           onClick={onSimulator}
           className="text-xs text-[#d2a8ff] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#d2a8ff] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
         >
           Simulator
+        </button>
+      )}
+      {onReports && (
+        <button
+          onClick={onReports}
+          className="text-xs text-[#f0883e] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#f0883e] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
+        >
+          Reports
         </button>
       )}
       {onLogout && (

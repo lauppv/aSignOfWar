@@ -111,14 +111,17 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
   if (!city)                   throw new Error("CITY_NOT_FOUND");
   if (city.ownerId !== userId) throw new Error("UNAUTHORIZED");
 
+  // Outgoing: aratam TRAVELING (pleaca) si RETURNING (se intorc acasa).
+  // Incoming: aratam doar TRAVELING — un atac ajuns la noi care s-a intors RETURNING
+  // nu mai e treaba defenderului, e doar un trip de intoarcere al atacatorului.
   const [outgoing, incoming] = await Promise.all([
     prisma.command.findMany({
-      where:   { fromCityId: cityId },
+      where:   { fromCityId: cityId, status: { in: ["TRAVELING", "RETURNING"] } },
       include: { units: true, toCity: { select: { name: true, owner: { select: { username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
     prisma.command.findMany({
-      where:   { toCityId: cityId },
+      where:   { toCityId: cityId, status: "TRAVELING" },
       include: { units: true, fromCity: { select: { name: true, owner: { select: { username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),

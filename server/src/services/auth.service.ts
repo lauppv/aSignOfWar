@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../config/db";
 import env from "../config/env";
 import { createStarterCity } from "./city.service";
+import { createGhostCitiesAround } from "./map.service";
 
 export const registerUser = async (
   username: string,
@@ -25,7 +26,8 @@ export const registerUser = async (
     const newUser = await tx.user.create({
       data: { username, email, password: hash },
     });
-    await createStarterCity(newUser.id, cityName, tx);
+    const starter = await createStarterCity(newUser.id, cityName, tx);
+    await createGhostCitiesAround({ x: starter.x, y: starter.y }, 3, tx);
     return newUser;
   });
 

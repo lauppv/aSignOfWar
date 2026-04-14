@@ -71,6 +71,8 @@ model User {
 model City {
   id        String   @id @default(uuid())
   name      String
+  x         Int
+  y         Int
   loyalty   Float    @default(100.0)
   money     Float    @default(1000.0)
   energy    Float    @default(1000.0)
@@ -79,8 +81,8 @@ model City {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownerId String
-  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
 
   buildings             Building[]
   units                 Unit[]
@@ -88,6 +90,8 @@ model City {
   incomingCommands      Command[]              @relation("CommandTo")
   buildingUpgradeOrders BuildingUpgradeOrder[]
   recruitmentOrders     RecruitmentOrder[]
+
+  @@unique([x, y])
 }
 
 model Building {

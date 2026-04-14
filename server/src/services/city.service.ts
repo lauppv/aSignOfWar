@@ -2,6 +2,7 @@ import prisma from "../config/db";
 import { Prisma } from "@prisma/client";
 import { getResourceProduction, getWarehouseCapacity } from "../../../shared/gameConfig";
 import env from "../config/env";
+import { pickFreeSlot } from "./map.service";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -19,10 +20,16 @@ export const syncResources = async (cityId: string): Promise<void> => {
 
   if (elapsedHours < 1 / 3600) return; // sub 1 secunda, nu merita
 
-  const bank        = city.buildings.find(b => b.name === "BANK")!;
-  const powerPlant  = city.buildings.find(b => b.name === "POWER_PLANT")!;
-  const weapFactory = city.buildings.find(b => b.name === "WEAPONS_FACTORY")!;
-  const warehouse   = city.buildings.find(b => b.name === "WAREHOUSE")!;
+  const bank        = city.buildings.find(b => b.name === "BANK");
+  const powerPlant  = city.buildings.find(b => b.name === "POWER_PLANT");
+  const weapFactory = city.buildings.find(b => b.name === "WEAPONS_FACTORY");
+  const warehouse   = city.buildings.find(b => b.name === "WAREHOUSE");
+
+  // Ghost cities (no owner) lack buildings — nothing to sync.
+  if (!bank || !powerPlant || !weapFactory || !warehouse) {
+    await prisma.city.update({ where: { id: cityId }, data: { lastResourceUpdate: now } });
+    return;
+  }
 
   const cap = getWarehouseCapacity(warehouse.level);
 
@@ -65,9 +72,12 @@ export const createStarterCity = async (
   cityName: string,
   tx: TransactionClient = prisma
 ) => {
+  const { x, y } = await pickFreeSlot(tx);
   return tx.city.create({
     data: {
       name: cityName,
+      x,
+      y,
       ownerId: userId,
       buildings: {
         create: [

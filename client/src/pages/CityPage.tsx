@@ -17,6 +17,7 @@ import BuildingsView from "../components/BuildingsView.tsx";
 import MilitaryBaseView from "../components/MilitaryBaseView.tsx";
 import BuildingDetailView from "../components/BuildingDetailView.tsx";
 import SimulatorView from "../components/SimulatorView.tsx";
+import ReportsView from "../components/ReportsView.tsx";
 import type { BuildingName } from "../types/index.ts";
 import type { OutgoingCommand, IncomingCommand } from "../types/index.ts";
 
@@ -55,6 +56,7 @@ export default function CityPage() {
   const showMilitaryBase = view === "military_base";
   const detailBuilding  = view === "building" ? (searchParams.get("name") as BuildingName | null) : null;
   const showSimulator   = view === "simulator";
+  const showReports     = view === "reports";
 
   function openView(v: string, extra?: Record<string, string>) {
     setSearchParams({ view: v, ...extra });
@@ -120,10 +122,14 @@ export default function CityPage() {
         maxPopulation={maxPopulation}
         onLogout={handleLogout}
         onSimulator={() => openView("simulator")}
+        onReports={() => openView("reports")}
+        onMap={() => navigate("/map")}
       />
 
       {showSimulator ? (
         <SimulatorView onClose={closeView} />
+      ) : showReports ? (
+        <ReportsView onClose={closeView} />
       ) : showBuildings ? (
         <BuildingsView city={city} onClose={closeView} onBuildingClick={(name) => {
           if (name === "MILITARY_BASE") openView("military_base");
@@ -165,30 +171,70 @@ export default function CityPage() {
               )}
               {mergedCommands.map((cmd) => {
                 const isOut = cmd.direction === "outgoing";
-                const cityName = isOut
-                  ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity.name
-                  : (cmd as IncomingCommand & { direction: "incoming" }).fromCity.name;
-                const username = isOut
-                  ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity.owner.username
-                  : (cmd as IncomingCommand & { direction: "incoming" }).fromCity.owner.username;
+                const otherCity = isOut
+                  ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity
+                  : (cmd as IncomingCommand & { direction: "incoming" }).fromCity;
                 const colors = CMD_COLORS[cmd.type];
+                const isIncomingAttack = !isOut && cmd.type === "ATTACK";
+                const isReturning = cmd.status === "RETURNING";
 
+                // Aspect:
+                //  - OUT: bordura stanga (pleaca din orasul tau spre dreapta) + sageata "→ TARGET"
+                //  - IN : bordura dreapta (vine din afara, spre orasul tau) + sageata "FROM ←"
+                //  - INCOMING ATTACK: tinta vizibila — fundal rosu sangeriu + glow
                 return (
                   <div
                     key={cmd.id}
-                    className="p-1.5 rounded bg-[#0d1117] border-l-[3px] flex flex-col gap-0.5 shrink-0"
-                    style={{ borderLeftColor: colors.border }}
+                    className="p-2 rounded flex flex-col gap-1 shrink-0"
+                    style={{
+                      background: isIncomingAttack ? "#2a0e0e" : "#0d1117",
+                      borderLeft:  isOut ? `4px solid ${colors.border}` : undefined,
+                      borderRight: !isOut ? `4px solid ${colors.border}` : undefined,
+                      boxShadow: isIncomingAttack ? "0 0 10px rgba(248,81,73,0.35)" : undefined,
+                    }}
                   >
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center gap-1">
                       <span
-                        className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
+                        className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
                         style={{ background: colors.badgeBg, color: colors.badgeText }}
                       >
                         {cmd.type}
                       </span>
-                      <span className="text-[9px] text-[#484f58]">{isOut ? "▶ OUT" : "◀ IN"}</span>
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0"
+                        style={{
+                          background: isReturning ? "#2a2a1c" : (isOut ? "#1c2a3a" : "#3a1c1c"),
+                          color:      isReturning ? "#d2a8ff" : (isOut ? "#79c0ff" : "#f85149"),
+                        }}
+                      >
+                        {isReturning ? "↩ returning" : (isOut ? "▶ outgoing" : "◀ incoming")}
+                      </span>
                     </div>
-                    <span className="text-[11px] text-[#8b949e] truncate">{cityName} ({username})</span>
+
+                    {isOut ? (
+                      <div className="text-[11px] truncate">
+                        {isReturning ? (
+                          <>
+                            <span className="text-[#d2a8ff] font-semibold">← {otherCity.name}</span>
+                            <span className="text-[#8b949e]"> returning</span>
+                            <span className="text-[#484f58]"> ({(otherCity.owner?.username ?? "barbarians")})</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[#8b949e]">to </span>
+                            <span className="text-[#79c0ff] font-semibold">→ {otherCity.name}</span>
+                            <span className="text-[#484f58]"> ({(otherCity.owner?.username ?? "barbarians")})</span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] truncate">
+                        <span className="text-[#f85149] font-semibold">{otherCity.name} ←</span>
+                        <span className="text-[#8b949e]"> from</span>
+                        <span className="text-[#484f58]"> ({(otherCity.owner?.username ?? "barbarians")})</span>
+                      </div>
+                    )}
+
                     <span className="text-[10px] text-[#484f58]">⏱ {fmtArrival(cmd.arrivalAt)}</span>
                   </div>
                 );

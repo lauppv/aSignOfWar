@@ -6,6 +6,8 @@ import buildingRoutes from "./api/routes/building.routes";
 import cityRoutes from "./api/routes/city.routes";
 import recruitmentRoutes from "./api/routes/recruitment.routes";
 import commandRoutes from "./api/routes/command.routes";
+import mapRoutes from "./api/routes/map.routes";
+import reportRoutes from "./api/routes/report.routes";
 import { registerBuildingWorker } from "./workers/building.worker";
 import { registerRecruitmentWorker } from "./workers/recruitment.worker";
 import { registerCommandWorker } from "./workers/command.worker";
@@ -25,6 +27,8 @@ app.use("/api/buildings", buildingRoutes);
 app.use("/api/cities", cityRoutes);
 app.use("/api/cities", recruitmentRoutes);
 app.use("/api/cities", commandRoutes);
+app.use("/api/map", mapRoutes);
+app.use("/api/reports", reportRoutes);
 
 // Middleware global de erori — prinde orice eroare neasteptata din controllere
 // Fara el, Express ar return un HTML urat cu tot stack trace-ul vizibil

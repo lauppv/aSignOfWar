@@ -104,6 +104,9 @@ async function processAttackArrival(command: any) {
     toCity.ammo
   );
 
+  const returnDelayMs   = getTravelTimeSec(env.gameSpeed) * 1000;
+  const returnArrivalAt = new Date(Date.now() + returnDelayMs);
+
   await prisma.$transaction(async (tx) => {
     // Actualizeaza unitatile aparatorului
     for (const { name, quantity } of result.defenderSurvivors) {
@@ -142,15 +145,25 @@ async function processAttackArrival(command: any) {
 
     const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
 
-    // Salveaza raportul de lupta
+    // Salveaza raportul de lupta. Daca exista supravietuitori, mutam arrivalAt
+    // la momentul cand ajung inapoi acasa — altfel timer-ul ramane in trecut.
+    // Salvam si starea initiala a luptei (atacator/aparator + AD lvl) — altfel
+    // o pierdem dupa update-urile de mai sus si nu mai putem afisa pierderile.
     await tx.command.update({
       where: { id: command.id },
       data: {
         status:        hasSurvivors ? "RETURNING" : "COMPLETED",
+        arrivalAt:     hasSurvivors ? returnArrivalAt : command.arrivalAt,
         resourceMoney:  result.stolenMoney,
         resourceEnergy: result.stolenEnergy,
         resourceAmmo:   result.stolenAmmo,
-        report: result as any,
+        report: {
+          ...result,
+          attackerInitial:        attackerUnits,
+          defenderInitial:        defenderUnits,
+          airDefenseInitialLevel: airDefenseLevel,
+          battleAt:               new Date().toISOString(),
+        } as any,
       },
     });
   });
@@ -158,8 +171,7 @@ async function processAttackArrival(command: any) {
   // Programeaza intoarcerea daca au supravietuit unitati
   const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
   if (hasSurvivors) {
-    const returnDelay = getTravelTimeSec(env.gameSpeed) * 1000;
-    await commandQueue.add("return", { commandId: command.id }, { delay: returnDelay });
+    await commandQueue.add("return", { commandId: command.id }, { delay: returnDelayMs });
   }
 }
 

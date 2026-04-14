@@ -61,7 +61,7 @@ Tipuri de unitati:
 
 Toate unitatile se recruteaza din Baza militara
 
-Pentru punem si harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista un camp cu Command unde vei putea selecta tipul comenzii (militar(attack, suport) sau resurse) si numele jucatorului tinta. Daca jucatorul exista, arata-i orasele si selectezi orasul tinta. In functie de tipul comenzii, componenta va contine informatii diferite:
+Vom avea si harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista un camp cu Command unde vei putea selecta tipul comenzii (militar(attack, suport) sau resurse) si numele jucatorului tinta. Daca jucatorul exista, arata-i orasele si selectezi orasul tinta. In functie de tipul comenzii, componenta va contine informatii diferite:
 1) attack/suport:
     nume oras
     nume proprietar

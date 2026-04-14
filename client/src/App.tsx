@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
 import CityPage from "./pages/CityPage.tsx";
+import MapPage from "./pages/MapPage.tsx";
 import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
 
 function isLoggedIn(): boolean {
@@ -29,6 +30,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/map"
+          element={
+            <ProtectedRoute>
+              <MapPage />
             </ProtectedRoute>
           }
         />

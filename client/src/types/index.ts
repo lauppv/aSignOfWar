@@ -46,7 +46,7 @@ export interface OutgoingCommand {
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
-  toCity: { name: string; owner: { username: string } };
+  toCity: { name: string; owner: { username: string } | null };
 }
 
 export interface IncomingCommand {
@@ -58,7 +58,7 @@ export interface IncomingCommand {
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
-  fromCity: { name: string; owner: { username: string } };
+  fromCity: { name: string; owner: { username: string } | null };
 }
 
 export interface CityCommands {
@@ -69,6 +69,8 @@ export interface CityCommands {
 export interface CityOverview {
   id: string;
   name: string;
+  x: number;
+  y: number;
   money: number;
   energy: number;
   ammo: number;
@@ -77,4 +79,51 @@ export interface CityOverview {
   units: Unit[];
   buildingUpgradeOrders: BuildingUpgradeOrder[];
   recruitmentOrders: RecruitmentOrder[];
+}
+
+export interface MapCity {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  owner: { username: string } | null;
+}
+
+export interface WorldMap {
+  size: number;
+  cities: MapCity[];
+}
+
+export interface BattleUnitCount {
+  name: UnitName;
+  quantity: number;
+}
+
+export interface BattleReportData {
+  attackerWon: boolean;
+  attackerInitial: BattleUnitCount[];
+  attackerSurvivors: BattleUnitCount[];
+  defenderInitial: BattleUnitCount[];
+  defenderSurvivors: BattleUnitCount[];
+  airDefenseInitialLevel: number;
+  newAirDefenseLevel: number;
+  airDefenseLevelsDestroyed: number;
+  stolenMoney: number;
+  stolenEnergy: number;
+  stolenAmmo: number;
+  loyaltyDamage: number;
+  battleAt: string;
+}
+
+export interface BattleReport {
+  id: string;
+  arrivalAt: string;
+  status: string;
+  resourceMoney: number;
+  resourceEnergy: number;
+  resourceAmmo: number;
+  direction: "outgoing" | "incoming";
+  fromCity: { id: string; name: string; x: number; y: number; owner: { username: string } | null };
+  toCity:   { id: string; name: string; x: number; y: number; owner: { username: string } | null };
+  report: BattleReportData;
 }

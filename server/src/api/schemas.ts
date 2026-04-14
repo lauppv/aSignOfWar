@@ -27,7 +27,7 @@ export const recruitSchema = z.object({
 
 // ─── Commands ────────────────────────────────────────────────────────────────
 
-const unitCountsSchema = z.record(
+const unitCountsSchema = z.partialRecord(
   z.enum([
     "LIGHT_INFANTRY", "DEFENDER_INFANTRY", "HEAVY_INFANTRY",
     "SNIPER", "SPECIAL_FORCES", "RAIDER", "TANK",
