@@ -82,6 +82,7 @@ export interface CityOverview {
   totalPopulation: number;
   buildingUpgradeOrders: BuildingUpgradeOrder[];
   recruitmentOrders: RecruitmentOrder[];
+  ownedCities: { id: string; name: string; x: number; y: number }[];
 }
 
 export interface MapCity {

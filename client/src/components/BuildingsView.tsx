@@ -27,7 +27,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
   const upgradeMutation = useMutation({ mutationFn: upgradeBuilding, onSuccess: invalidate });
   const cancelMutation  = useMutation({ mutationFn: cancelBuildingOrder, onSuccess: invalidate });
   const renameMutation = useMutation({
-    mutationFn: (name: string) => renameMyCity(name),
+    mutationFn: (name: string) => renameMyCity(name, city.id),
     onSuccess: invalidate,
   });
 

@@ -12,6 +12,20 @@ export function clearToken(): void {
   localStorage.removeItem("token");
 }
 
+const ACTIVE_CITY_KEY = "activeCityId";
+
+export function getActiveCityId(): string | null {
+  return localStorage.getItem(ACTIVE_CITY_KEY);
+}
+
+export function setActiveCityId(id: string): void {
+  localStorage.setItem(ACTIVE_CITY_KEY, id);
+}
+
+export function clearActiveCityId(): void {
+  localStorage.removeItem(ACTIVE_CITY_KEY);
+}
+
 export function getCurrentUserId(): string | null {
   const token = getToken();
   if (!token) return null;

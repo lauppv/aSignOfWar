@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { getMap } from "../api/map.ts";
 import { getMyCity } from "../api/city.ts";
+import { getActiveCityId, setActiveCityId } from "../api/client.ts";
 import type { MapCity } from "../types/index.ts";
 import CityActionPanel from "../components/CityActionPanel.tsx";
 
@@ -17,8 +18,8 @@ const COLOR_OTHER    = "#7a1f2b"; // visiniu
 
 type CityKind = "own" | "ghost" | "alliance" | "other";
 
-function classify(c: MapCity, myCityId?: string): CityKind {
-  if (myCityId && c.id === myCityId) return "own";
+function classify(c: MapCity, ownedIds: Set<string>): CityKind {
+  if (ownedIds.has(c.id)) return "own";
   if (!c.owner) return "ghost";
   // TODO: cand avem alianta, return "alliance" daca c.owner.allianceId === myAllianceId
   return "other";
@@ -43,6 +44,8 @@ function spriteFor(points: number): string {
 
 export default function MapPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [activeCityId, setActiveCityIdState] = useState<string | undefined>(() => getActiveCityId() ?? undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -87,9 +90,19 @@ export default function MapPage() {
   });
 
   const { data: myCity } = useQuery({
-    queryKey: ["city"],
-    queryFn: getMyCity,
+    queryKey: ["city", activeCityId ?? "default"],
+    queryFn: () => getMyCity(activeCityId),
   });
+
+  function handleSelectCity(cityId: string) {
+    setActiveCityId(cityId);
+    setActiveCityIdState(cityId);
+    queryClient.invalidateQueries({ queryKey: ["city"] });
+    queryClient.invalidateQueries({ queryKey: ["commands"] });
+    setSelected(null);
+  }
+
+  const ownedCityIds = new Set(myCity?.ownedCities?.map((c) => c.id) ?? []);
 
   // Centreaza viewport-ul pe orasul propriu la primul load
   useEffect(() => {
@@ -168,7 +181,7 @@ export default function MapPage() {
             </button>
           )}
           <button
-            onClick={() => navigate("/city")}
+            onClick={() => navigate(myCity?.id ? `/city?cityId=${encodeURIComponent(myCity.id)}` : "/city")}
             className="text-xs border border-[#30363d] rounded px-3 py-1 hover:bg-[#1c2129]"
           >
             ← Back to city
@@ -196,7 +209,7 @@ export default function MapPage() {
         >
           {selected && (() => {
             const c = selected.city;
-            const kind = classify(c, myCity?.id);
+            const kind = classify(c, ownedCityIds);
 
             const PANEL_W = 260;
             const PANEL_H = 320;
@@ -220,13 +233,16 @@ export default function MapPage() {
                   kindLabel={kind}
                   onClose={() => setSelected(null)}
                   onHeaderMouseDown={handlePanelHeaderMouseDown}
+                  isOwnedByMe={ownedCityIds.has(c.id)}
+                  onSelectCity={handleSelectCity}
+                  onEnterCity={(cityId) => navigate(`/city?cityId=${encodeURIComponent(cityId)}`)}
                 />
               </div>
             );
           })()}
 
           {map.cities.map((c) => {
-            const kind   = classify(c, myCity?.id);
+            const kind   = classify(c, ownedCityIds);
             const accent = colorFor(kind);
             const sprite = spriteFor(c.points);
             return (

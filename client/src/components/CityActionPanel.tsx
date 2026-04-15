@@ -14,11 +14,14 @@ interface Props {
   kindLabel: string;
   onClose: () => void;
   onHeaderMouseDown?: (e: React.MouseEvent) => void;
+  isOwnedByMe?: boolean;
+  onSelectCity?: (cityId: string) => void;
+  onEnterCity?: (cityId: string) => void;
 }
 
 type Mode = "info" | "form";
 
-export default function CityActionPanel({ city, myCity, headerColor, kindLabel, onClose, onHeaderMouseDown }: Props) {
+export default function CityActionPanel({ city, myCity, headerColor, kindLabel, onClose, onHeaderMouseDown, isOwnedByMe, onSelectCity, onEnterCity }: Props) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("info");
   const [type, setType] = useState<CommandType>("ATTACK");
@@ -26,7 +29,8 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const [resources, setResources] = useState({ money: 0, energy: 0, ammo: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isOwn   = myCity?.id === city.id;
+  const isOwn     = myCity?.id === city.id;
+  const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
 
   const ownerLabel = city.owner ? city.owner.username : "Ghost city";
   const dist = myCity ? Math.sqrt((city.x - myCity.x) ** 2 + (city.y - myCity.y) ** 2) : null;
@@ -117,7 +121,30 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
           </div>
         )}
 
-        {!isOwn && myCity && (
+        {canSwitch && (
+          <div className="grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
+            {onSelectCity && (
+              <button
+                onClick={() => onSelectCity(city.id)}
+                className="text-[10px] uppercase tracking-wide border border-[#e6b800] text-[#e6b800] rounded py-1 hover:bg-[#2e2710]"
+                title="Mark as active city without leaving the map"
+              >
+                Select
+              </button>
+            )}
+            {onEnterCity && (
+              <button
+                onClick={() => onEnterCity(city.id)}
+                className="text-[10px] uppercase tracking-wide border border-[#e6b800] text-[#0d1117] bg-[#e6b800] rounded py-1 hover:bg-[#fff3bf]"
+                title="Open this city"
+              >
+                Enter
+              </button>
+            )}
+          </div>
+        )}
+
+        {!isOwn && !isOwnedByMe && myCity && (
           <div className="grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
             <button
               onClick={() => openForm("ATTACK")}
@@ -142,6 +169,23 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
               className="text-[10px] uppercase tracking-wide border border-[#a371f7] text-[#a371f7] rounded py-1 hover:bg-[#2e1a3d]"
             >
               Spy
+            </button>
+          </div>
+        )}
+
+        {!isOwn && isOwnedByMe && myCity && (
+          <div className="grid grid-cols-2 gap-1.5 mt-2">
+            <button
+              onClick={() => openForm("SUPPORT")}
+              className="text-[10px] uppercase tracking-wide border border-[#58a6ff] text-[#58a6ff] rounded py-1 hover:bg-[#0c2744]"
+            >
+              Support
+            </button>
+            <button
+              onClick={() => openForm("RESOURCES")}
+              className="text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
+            >
+              Resources
             </button>
           </div>
         )}

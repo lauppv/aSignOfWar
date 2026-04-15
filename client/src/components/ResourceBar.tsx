@@ -17,15 +17,20 @@ interface Props {
   onReports?: () => void;
   onMap?: () => void;
   unreadReports?: number;
+  ownedCities?: { id: string; name: string; x: number; y: number }[];
+  activeCityId?: string;
+  onSwitchCity?: (cityId: string) => void;
 }
 
 function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, unreadReports = 0 }: Props) {
+export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, unreadReports = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [cityMenuOpen, setCityMenuOpen] = useState(false);
+  const cityMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -45,10 +50,60 @@ export default function ResourceBar({ cityName, cityPoints, money, energy, ammo,
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!cityMenuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (cityMenuRef.current && !cityMenuRef.current.contains(e.target as Node)) {
+        setCityMenuOpen(false);
+      }
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setCityMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [cityMenuOpen]);
+
+  const hasMultipleCities = (ownedCities?.length ?? 0) > 1;
+
   return (
     <div className="flex gap-6 px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0 text-sm text-[#c9d1d9]" style={{ fontVariantNumeric: "tabular-nums" }}>
       <span className="flex items-center gap-2 shrink-0">
         <span className="text-[#e6b800] font-semibold tracking-wider">{cityName}</span>
+        {hasMultipleCities && onSwitchCity && (
+          <div ref={cityMenuRef} className="relative">
+            <button
+              onClick={() => setCityMenuOpen((v) => !v)}
+              aria-label="Switch city"
+              aria-haspopup="menu"
+              aria-expanded={cityMenuOpen}
+              className="text-[#e6b800] hover:text-[#fff3bf] leading-none cursor-pointer text-xs px-1 border border-[#30363d] rounded hover:border-[#e6b800] transition-colors"
+            >
+              ▾
+            </button>
+            {cityMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 min-w-[180px] bg-[#161b22] border border-[#30363d] rounded shadow-lg z-50 overflow-hidden">
+                {ownedCities!.map((c) => {
+                  const isActive = c.id === activeCityId;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => { setCityMenuOpen(false); if (!isActive) onSwitchCity(c.id); }}
+                      className={`block w-full text-left text-xs px-3 py-2 hover:bg-[#1c2129] cursor-pointer ${isActive ? "text-[#e6b800] font-semibold" : "text-[#c9d1d9]"}`}
+                    >
+                      {isActive ? "● " : ""}{c.name}
+                      <span className="text-[#7d8590] font-mono text-[10px] ml-1">({c.x},{c.y})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         <span className="text-xs text-[#b1bac4]">{fmt(cityPoints)} pts</span>
       </span>
       {onMap && (

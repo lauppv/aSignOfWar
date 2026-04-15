@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CommandDetailModal from "../components/CommandDetailModal.tsx";
@@ -7,7 +7,7 @@ import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
 import { getReports } from "../api/report.ts";
 import { logout } from "../api/auth.ts";
-import { getCurrentUserId } from "../api/client.ts";
+import { getCurrentUserId, getActiveCityId, setActiveCityId } from "../api/client.ts";
 import {
   getHousingCapacity as getMaxPopulation,
   getWarehouseCapacity,
@@ -67,6 +67,18 @@ export default function CityPage() {
     "BANK", "POWER_PLANT", "WEAPONS_FACTORY", "HOUSING", "WAREHOUSE", "HARBOR", "AIR_DEFENSE",
   ];
 
+  const urlCityId       = searchParams.get("cityId");
+  const activeCityId    = urlCityId ?? getActiveCityId() ?? undefined;
+
+  // Daca URL-ul nu are cityId dar avem unul salvat, promoveaza-l in URL ca
+  // link-urile sa fie share-abile si back-button-ul sa functioneze corect.
+  useEffect(() => {
+    if (!urlCityId && activeCityId) {
+      const next = new URLSearchParams(searchParams);
+      next.set("cityId", activeCityId);
+      setSearchParams(next, { replace: true });
+    }
+  }, [urlCityId, activeCityId, searchParams, setSearchParams]);
   const view            = searchParams.get("view");
   const showBuildings   = view === "buildings";
   const showMilitaryBase = view === "military_base";
@@ -82,10 +94,24 @@ export default function CityPage() {
   }
 
   const { data: city, error, isLoading } = useQuery({
-    queryKey: ["city"],
-    queryFn: getMyCity,
+    queryKey: ["city", activeCityId ?? "default"],
+    queryFn: () => getMyCity(activeCityId),
     refetchInterval: 5000,
   });
+
+  // Persista id-ul orasului incarcat efectiv (poate fi diferit de activeCityId
+  // daca acel id era invalid si backend-ul a picat pe default).
+  useEffect(() => {
+    if (city?.id) setActiveCityId(city.id);
+  }, [city?.id]);
+
+  function switchToCity(cityId: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set("cityId", cityId);
+    next.delete("view");
+    next.delete("name");
+    setSearchParams(next);
+  }
 
   const queryClient = useQueryClient();
   const cancelMutation = useMutation({
@@ -169,6 +195,9 @@ export default function CityPage() {
     <div className="flex flex-col h-screen overflow-hidden">
       <ResourceBar
         cityName={city.name}
+        ownedCities={city.ownedCities}
+        activeCityId={city.id}
+        onSwitchCity={switchToCity}
         cityPoints={cityPoints}
         money={city.money}
         energy={city.energy}

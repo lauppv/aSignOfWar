@@ -88,14 +88,30 @@ npm start        # Run compiled build
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/buildings/:buildingId/upgrade` | Yes | Start building upgrade |
+| DELETE | `/api/buildings/orders/:orderId` | Yes | Cancel a pending building upgrade order (75% refund) |
 
 ### Cities
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/cities/mine` | Yes | Get city overview (buildings, units, resources, orders) |
+| GET | `/api/cities/mine?cityId=...` | Yes | Get city overview (buildings, units, resources, orders). `cityId` selects which owned city; defaults to oldest. Response includes `ownedCities[]` |
+| PATCH | `/api/cities/mine/name` | Yes | Rename a city (`{ name, cityId? }`) |
 | POST | `/api/cities/:cityId/recruit` | Yes | Start unit recruitment |
-| DELETE | `/api/recruitment/orders/:orderId` | Yes | Cancel a pending recruitment order |
+| DELETE | `/api/recruitment/orders/:orderId` | Yes | Cancel a pending recruitment order (75% refund) |
+
+### Governor
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/governor` | Yes | Get account-wide governor progress: produced count, current deposits, next cost |
+| POST | `/api/governor/deposit` | Yes | Deposit resources (`money`/`energy`/`ammo`) into the shared governor progress bars from any owned city |
+| POST | `/api/governor/recruit` | Yes | Finalize recruitment once all three bars are full — spawns one GOVERNOR in the city that filled the last bar |
+
+### Config
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/config` | No | Returns `shared/gameConfig` snapshot for the client (buildings, units, speed, travel constants) |
 
 ### Commands
 
@@ -177,7 +193,15 @@ Players can send four types of commands between cities:
 | RESOURCES | Send resources to another city (requires HARBOR) |
 | SPY | Send hackers to gather intel on another city |
 
-All commands have a fixed travel time of 60 seconds (affected by `GAME_SPEED`). After an attack resolves, surviving units return home automatically with any stolen resources. A TRAVELING command can be cancelled within the first 5 minutes of its trip — the units then return home symmetrically (same time elapsed already travelled).
+Travel time is computed per command from the euclidean distance between the two cities and the speed of the slowest unit in the stack (Tribal Wars style):
+
+```
+distance           = sqrt((x2 - x1)² + (y2 - y1)²)     // in map fields
+unit travel (sec)  = distance × slowestSpeed × 60 / GAME_SPEED   // speed is minutes-per-field
+resource travel    = distance × 2 × 60 / GAME_SPEED              // HARBOR merchants are fast and uniform
+```
+
+See `RESOURCE_TRAVEL_MIN_PER_FIELD`, `getFieldDistance`, `getSlowestUnitSpeed`, `getUnitTravelTimeSec` and `getResourceTravelTimeSec` in `shared/gameConfig.ts`. After an attack resolves, surviving units return home with any stolen resources — the return trip is recomputed from the surviving slowest unit, so a wiped-out fast raid returns slower if only tanks survived. A TRAVELING command can be cancelled within the first 5 minutes of its trip — the units then return home symmetrically (same time elapsed already travelled).
 
 #### Spy Mechanic
 
@@ -199,11 +223,13 @@ loss_rate = 1.0                                         [if attacker loses]
 
 The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. AIR_DEFENSE level applies a defense bonus (4%–107%) to all defending units. MISSILE_LAUNCHER and DRONE deal wall damage before combat.
 
-Attacking units that survive return home after another 60 seconds.
+Attacking units that survive return home using the travel formula above.
 
 #### Loyalty & Conquest
 
-Each city starts at 100 loyalty. When an attack clears all defenders and contains at least one surviving GOVERNOR, loyalty is reduced by 20–35% per Governor (random roll). Loyalty is tracked on the `City` row and persists between attacks — repeated governor strikes wear a city down over time. Full ownership transfer at 0 loyalty is the next step on the roadmap; the numeric mechanic is already wired end-to-end (battle calc → worker → DB).
+Each city starts at 100 loyalty. When an attack clears all defenders and contains at least one surviving GOVERNOR, loyalty is reduced by 20–35% per Governor (random roll). Loyalty is tracked on the `City` row and persists between attacks — repeated governor strikes wear a city down over time.
+
+When loyalty drops to 0 or below, ownership transfers to the attacker: one GOVERNOR is consumed, loyalty resets to 100, the city is assigned to the attacker, and any stationed SUPPORT commands from third parties are displaced home (each with its own per-command return travel time). The surviving attacker stack that escorted the Governor does **not** merge into the new city — it stays garrisoned there as an `ARRIVED` SUPPORT command originating from the attacker's source city, so the units contribute to defense but remain under the source city's control and can be withdrawn normally.
 
 ### Reports
 
@@ -232,6 +258,17 @@ Key UI building blocks under `client/src/components/`:
 - `SimulatorView` — offline battle calculator that reuses the shared `battleCalc.ts` formula, so the client can preview a fight without hitting the server
 
 All game data (building costs, unit stats, production curves, battle formula) is imported from `shared/` so the client and server never drift.
+
+### Multiple cities per account
+
+A player's account can own any number of cities (starter city + conquered cities). One city is always marked as "active" on the client — the active id is stored in `localStorage` under `activeCityId` and mirrored into the URL as `?cityId=...` so a page reload keeps the same city selected. The active city drives every city-scoped request (`GET /api/cities/mine`, recruitment, building upgrades, commands).
+
+UI affordances for multi-city accounts:
+
+- `ResourceBar` renders a `▾` dropdown next to the city name when `ownedCities.length > 1`, listing all owned cities with coords and an active marker.
+- On the map, clicking one of your own cities opens `CityActionPanel` with two buttons: **Select** (only switches the active city, stays on the map) and **Enter** (navigates into `/city`). The currently-active city shows neither button.
+- A non-active owned city also gets **Support** / **Resources** buttons so you can reinforce or shuttle resources between your own cities. A city never offers these buttons against itself.
+- Renaming a city uses `PATCH /api/cities/mine/name` with `{ name, cityId }`, so the right city is affected even when the active city is different from the one being renamed.
 
 ### Job Queue
 

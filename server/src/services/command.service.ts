@@ -1,6 +1,13 @@
 import prisma from "../config/db";
 import { commandQueue } from "../config/queue";
-import { UNITS, getTravelTimeSec, getHarborCapacity } from "../../../shared/gameConfig";
+import {
+  UNITS,
+  getHarborCapacity,
+  getFieldDistance,
+  getSlowestUnitSpeed,
+  getUnitTravelTimeSec,
+  getResourceTravelTimeSec,
+} from "../../../shared/gameConfig";
 import env from "../config/env";
 import { CommandType, UnitName } from "@prisma/client";
 import { syncResources } from "./city.service";
@@ -65,8 +72,18 @@ export const sendCommand = async (
 
   await syncResources(fromCityId);
 
+  const distance = getFieldDistance(fromCity.x, fromCity.y, toCity.x, toCity.y);
+  let travelSec: number;
+  if (type === "RESOURCES") {
+    travelSec = getResourceTravelTimeSec(distance, env.gameSpeed);
+  } else {
+    const slowest = getSlowestUnitSpeed(unitCounts);
+    if (slowest <= 0) throw new Error("NO_UNITS");
+    travelSec = getUnitTravelTimeSec(distance, slowest, env.gameSpeed);
+  }
+
   const now       = new Date();
-  const arrivalAt = new Date(now.getTime() + getTravelTimeSec(env.gameSpeed) * 1000);
+  const arrivalAt = new Date(now.getTime() + travelSec * 1000);
   let commandId!: string;
 
   await prisma.$transaction(async (tx) => {
@@ -157,10 +174,16 @@ export const withdrawStationedSupport = async (
 ) => {
   const fromCity = await prisma.city.findUnique({
     where: { id: fromCityId },
-    select: { id: true, ownerId: true },
+    select: { id: true, ownerId: true, x: true, y: true },
   });
   if (!fromCity)                     throw new Error("CITY_NOT_FOUND");
   if (fromCity.ownerId !== userId)   throw new Error("UNAUTHORIZED");
+
+  const targetCity = await prisma.city.findUnique({
+    where:  { id: targetCityId },
+    select: { id: true, x: true, y: true },
+  });
+  if (!targetCity) throw new Error("TARGET_CITY_NOT_FOUND");
 
   const stationed = await prisma.command.findMany({
     where:  { fromCityId, toCityId: targetCityId, type: "SUPPORT", status: "ARRIVED" },
@@ -169,29 +192,38 @@ export const withdrawStationedSupport = async (
   });
   if (stationed.length === 0) throw new Error("NO_STATIONED_UNITS");
 
-  const travelMs      = getTravelTimeSec(env.gameSpeed) * 1000;
-  const returnArrival = new Date(Date.now() + travelMs);
+  const distance = getFieldDistance(fromCity.x, fromCity.y, targetCity.x, targetCity.y);
+  const travelMsFor = (units: { name: UnitName; quantity: number }[]): number => {
+    const counts: Partial<Record<UnitName, number>> = {};
+    for (const u of units) counts[u.name] = (counts[u.name] ?? 0) + u.quantity;
+    const slowest = getSlowestUnitSpeed(counts);
+    return getUnitTravelTimeSec(distance, slowest, env.gameSpeed) * 1000;
+  };
 
   if (unitCounts === "all") {
     const ids: string[] = [];
+    const delays = new Map<string, number>();
     const withdrawnAt = new Date().toISOString();
     await prisma.$transaction(async (tx) => {
       for (const c of stationed) {
+        const ms = travelMsFor(c.units.map(u => ({ name: u.name as UnitName, quantity: u.quantity })));
+        const arrival = new Date(Date.now() + ms);
         await tx.command.update({
           where: { id: c.id },
           data:  {
             status:    "RETURNING",
-            arrivalAt: returnArrival,
+            arrivalAt: arrival,
             report:    { withdrawal: true, withdrawnAt } as any,
           },
         });
         ids.push(c.id);
+        delays.set(c.id, ms);
       }
     });
     for (const id of ids) {
-      await commandQueue.add("return", { commandId: id }, { delay: travelMs });
+      await commandQueue.add("return", { commandId: id }, { delay: delays.get(id)! });
     }
-    return { withdrawnCommandIds: ids, arrivalAt: returnArrival };
+    return { withdrawnCommandIds: ids };
   }
 
   // Partial: aduna cat sa scoti per unit type
@@ -203,6 +235,8 @@ export const withdrawStationedSupport = async (
 
   const withdrawn = new Map<UnitName, number>();
   let newCommandId!: string;
+  let partialDelayMs = 0;
+  let partialArrivalAt: Date = new Date();
 
   await prisma.$transaction(async (tx) => {
     for (const cmd of stationed) {
@@ -239,24 +273,28 @@ export const withdrawStationedSupport = async (
 
     if (withdrawn.size === 0) throw new Error("NO_UNITS_WITHDRAWN");
 
+    const withdrawnUnits = Array.from(withdrawn.entries()).map(([name, quantity]) => ({ name, quantity }));
+    partialDelayMs       = travelMsFor(withdrawnUnits);
+    partialArrivalAt     = new Date(Date.now() + partialDelayMs);
+
     const created = await tx.command.create({
       data: {
         type:       "SUPPORT",
         status:     "RETURNING",
         fromCityId,
         toCityId:   targetCityId,
-        arrivalAt:  returnArrival,
+        arrivalAt:  partialArrivalAt,
         report:     { withdrawal: true, withdrawnAt: new Date().toISOString() } as any,
         units: {
-          create: Array.from(withdrawn.entries()).map(([name, quantity]) => ({ name, quantity })),
+          create: withdrawnUnits,
         },
       },
     });
     newCommandId = created.id;
   });
 
-  await commandQueue.add("return", { commandId: newCommandId }, { delay: travelMs });
-  return { withdrawnCommandIds: [newCommandId], arrivalAt: returnArrival };
+  await commandQueue.add("return", { commandId: newCommandId }, { delay: partialDelayMs });
+  return { withdrawnCommandIds: [newCommandId], arrivalAt: partialArrivalAt };
 };
 
 export const getCommandsForCity = async (cityId: string, userId: string) => {

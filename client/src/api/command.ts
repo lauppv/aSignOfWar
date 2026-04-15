@@ -37,5 +37,5 @@ export const withdrawStationedSupport = (
     mode: "all" | "partial";
     units?: Partial<Record<UnitName, number>>;
   }
-): Promise<{ withdrawnCommandIds: string[]; arrivalAt: string }> =>
+): Promise<{ withdrawnCommandIds: string[]; arrivalAt?: string }> =>
   api.post(`/cities/${fromCityId}/commands/withdraw`, body);

@@ -1,11 +1,11 @@
 import { api } from "./client.ts";
 import type { CityOverview, UnitName } from "../types/index.ts";
 
-export const getMyCity = (): Promise<CityOverview> =>
-  api.get<CityOverview>("/cities/mine");
+export const getMyCity = (cityId?: string): Promise<CityOverview> =>
+  api.get<CityOverview>(cityId ? `/cities/mine?cityId=${encodeURIComponent(cityId)}` : "/cities/mine");
 
-export const renameMyCity = (name: string): Promise<{ id: string; name: string }> =>
-  api.patch<{ id: string; name: string }>("/cities/mine/name", { name });
+export const renameMyCity = (name: string, cityId?: string): Promise<{ id: string; name: string }> =>
+  api.patch<{ id: string; name: string }>("/cities/mine/name", cityId ? { name, cityId } : { name });
 
 export const upgradeBuilding = (buildingId: string): Promise<void> =>
   api.post<void>(`/buildings/${buildingId}/upgrade`, {});

@@ -3,7 +3,12 @@ import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
 import { commandQueue, buildingQueue, recruitmentQueue } from "../config/queue";
 import { calculateBattle } from "../services/battle.service";
-import { getTravelTimeSec, UNITS } from "../../../shared/gameConfig";
+import {
+  UNITS,
+  getFieldDistance,
+  getSlowestUnitSpeed,
+  getUnitTravelTimeSec,
+} from "../../../shared/gameConfig";
 import env from "../config/env";
 import { syncResources } from "../services/city.service";
 import { UnitName } from "@prisma/client";
@@ -78,6 +83,13 @@ async function processAttackArrival(command: any) {
   });
   if (!toCity) return;
 
+  const fromCityCoords = await prisma.city.findUnique({
+    where:  { id: command.fromCityId },
+    select: { x: true, y: true },
+  });
+  if (!fromCityCoords) return;
+  const attackDistance = getFieldDistance(fromCityCoords.x, fromCityCoords.y, toCity.x, toCity.y);
+
   // Sprijinul stationat contribuie la aparare
   const stationedSupports = await prisma.command.findMany({
     where:   { toCityId: command.toCityId, type: "SUPPORT", status: "ARRIVED" },
@@ -137,7 +149,12 @@ async function processAttackArrival(command: any) {
     for (const s of shares) s.m.set(name, s.floor);
   }
 
-  const returnDelayMs   = getTravelTimeSec(env.gameSpeed) * 1000;
+  const survivorCounts: Partial<Record<UnitName, number>> = {};
+  for (const u of result.attackerSurvivors) survivorCounts[u.name as UnitName] = u.quantity;
+  const survivorSlowest = getSlowestUnitSpeed(survivorCounts);
+  const returnDelayMs   = survivorSlowest > 0
+    ? getUnitTravelTimeSec(attackDistance, survivorSlowest, env.gameSpeed) * 1000
+    : 0;
   const returnArrivalAt = new Date(Date.now() + returnDelayMs);
 
   // ── Cucerire ───────────────────────────────────────────────────────────────
@@ -168,7 +185,7 @@ async function processAttackArrival(command: any) {
   // Date colectate in tx, folosite afara pentru a curata cozile BullMQ
   let cancelledBuildingJobIds: string[] = [];
   let cancelledRecruitJobIds:  string[] = [];
-  const displacedSupportIds:   string[] = [];
+  const displacedSupportIds:   { id: string; delayMs: number }[] = [];
 
   await prisma.$transaction(async (tx) => {
     // Actualizeaza unitatile aparatorului (native)
@@ -258,27 +275,42 @@ async function processAttackArrival(command: any) {
       // ale altor jucatori, NU ale fostului proprietar — deci se intorc, nu se anuleaza.
       const stationedSurvivors = await tx.command.findMany({
         where:  { toCityId: command.toCityId, type: "SUPPORT", status: "ARRIVED" },
-        select: { id: true },
+        include: { units: true, fromCity: { select: { x: true, y: true } } },
       });
       for (const sc of stationedSurvivors) {
+        const counts: Partial<Record<UnitName, number>> = {};
+        for (const u of sc.units) counts[u.name as UnitName] = (counts[u.name as UnitName] ?? 0) + u.quantity;
+        const slowest = getSlowestUnitSpeed(counts);
+        const dist    = getFieldDistance(sc.fromCity.x, sc.fromCity.y, toCity.x, toCity.y);
+        const ms      = slowest > 0 ? getUnitTravelTimeSec(dist, slowest, env.gameSpeed) * 1000 : 0;
         await tx.command.update({
           where: { id: sc.id },
-          data:  { status: "RETURNING", arrivalAt: returnArrivalAt },
+          data:  { status: "RETURNING", arrivalAt: new Date(Date.now() + ms) },
         });
-        displacedSupportIds.push(sc.id);
+        displacedSupportIds.push({ id: sc.id, delayMs: ms });
       }
 
-      // Trupele atacatoare (cele care l-au insotit pe Governor) raman ca
-      // garnizoana noua a orasului. Le depunem ca unitati native.
-      for (const { name, quantity } of result.attackerSurvivors) {
-        if (quantity <= 0) continue;
-        await tx.unit.upsert({
-          where:  { cityId_name: { cityId: command.toCityId, name } },
-          update: { quantity: { increment: quantity } },
-          create: { cityId: command.toCityId, name, category: UNITS[name].category, quantity },
+      // Trupele atacatoare (cele care l-au insotit pe Governor) raman stationate
+      // in noul oras ca un SUPPORT din orasul lor de origine. Asa se comporta
+      // exact ca sprijinul din Triburi: contribuie la aparare, nu pot fi
+      // folosite de pe orasul cucerit, iar expeditorul le poate rechema acasa.
+      const garrisonUnits = result.attackerSurvivors.filter(u => u.quantity > 0);
+      if (garrisonUnits.length > 0) {
+        await tx.command.create({
+          data: {
+            type:       "SUPPORT",
+            status:     "ARRIVED",
+            fromCityId: command.fromCityId,
+            toCityId:   command.toCityId,
+            arrivalAt:  new Date(),
+            reportHiddenByAttacker: true,
+            reportHiddenByDefender: true,
+            units: { create: garrisonUnits.map(u => ({ name: u.name, quantity: u.quantity })) },
+          },
         });
       }
-      // CommandUnit pus pe 0 — armata nu mai exista in command, e in oras.
+      // CommandUnit-urile din comanda de ATTACK sunt golite — armata e
+      // acum intr-o comanda SUPPORT separata.
       for (const { name } of result.attackerSurvivors) {
         await tx.commandUnit.updateMany({
           where: { commandId: command.id, name },
@@ -339,8 +371,8 @@ async function processAttackArrival(command: any) {
       const j = await recruitmentQueue.getJob(jobId);
       if (j) await j.remove();
     }
-    for (const supportCommandId of displacedSupportIds) {
-      await commandQueue.add("return", { commandId: supportCommandId }, { delay: returnDelayMs });
+    for (const { id, delayMs } of displacedSupportIds) {
+      await commandQueue.add("return", { commandId: id }, { delay: delayMs });
     }
   }
 }
@@ -420,7 +452,14 @@ async function processSpyArrival(command: any) {
     };
   }
 
-  const returnDelayMs   = getTravelTimeSec(env.gameSpeed) * 1000;
+  const fromCityCoords = await prisma.city.findUnique({
+    where:  { id: command.fromCityId },
+    select: { x: true, y: true },
+  });
+  const distance = fromCityCoords
+    ? getFieldDistance(fromCityCoords.x, fromCityCoords.y, toCity.x, toCity.y)
+    : 0;
+  const returnDelayMs   = getUnitTravelTimeSec(distance, UNITS.HACKER.speed, env.gameSpeed) * 1000;
   const returnArrivalAt = new Date(Date.now() + returnDelayMs);
   const hasSurvivors    = survivors > 0;
 

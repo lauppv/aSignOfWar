@@ -595,3 +595,208 @@ Hacker (Spion)
   defense vs Mechanized: 1
   defense vs Range: 2
 
+
+================================================================================
+HARTA SI COORDONATE
+================================================================================
+
+Lumea e o grila 100x100 (configurabila). Fiecare oras ocupa exact o celula,
+identificata printr-o pereche (x, y). Coordonatele sunt cheia primara "reala"
+a unui oras in joc: numele pot sa se repete intre jucatori, dar (x, y) e unic.
+De aceea scripturile de dezvoltare (vezi server/scripts/dev-cheats.ts) iau ca
+argument "x,y", nu nume — numele "ORAS2" poate exista la doi jucatori diferiti.
+
+Harta client-side (MapPage) deseneaza gridul ca un repeating-linear-gradient
+ca sa evite zeci de mii de noduri DOM, si randeaza fiecare oras ca un sprite
+ales in functie de punctaj (0-299, 300-999, 1000-2999, 3000-8999, 9000+).
+Panoul de actiune care apare la click (CityActionPanel) e acelasi indiferent
+daca orasul e al tau, al aliantei (TODO), al unui alt jucator sau fantoma —
+doar butoanele si etichetele se schimba in functie de relatie.
+
+--------------------------------------------------------------------------------
+Distanta si timpi de deplasare
+--------------------------------------------------------------------------------
+
+Distanta dintre doua orase se masoara euclidian, in "campuri":
+
+    distance = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+
+Pentru comenzi militare (ATTACK, SUPPORT, SPY), timpul de deplasare se
+calculeaza exact ca in Triburile: se ia unitatea cea mai lenta din pachet,
+se multiplica speed-ul ei (exprimat in minute pe camp) cu distanta si cu 60
+(ca sa obtinem secunde), apoi se imparte la GAME_SPEED:
+
+    travelSec = distance * slowestSpeedMinPerField * 60 / gameSpeed
+
+Prin urmare, un pachet cu Tank (speed 11) si Light infantry (speed 18) se
+misca in ritmul Light infantry. Important: la intoarcere, timpul se recalculeaza
+pe baza supravietuitorilor — daca doar tank-urile au scapat, drumul inapoi
+devine mai scurt. Analog, Hacker-ii au propria lor viteza (9 min/camp), asa ca
+o comanda SPY nu e constransa de restul armatei.
+
+Pentru RESOURCES (prin HARBOR) avem o constanta globala de 2 minute pe camp
+(RESOURCE_TRAVEL_MIN_PER_FIELD): negustorii nu depind de unitatile din oras si
+trebuie sa fie rezonabil de rapizi, altfel logistica intre orase proprii devine
+prohibitiva.
+
+Toate aceste formule traiesc in shared/gameConfig.ts (getFieldDistance,
+getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec) ca sa nu
+existe drift intre client si server — clientul le foloseste pentru ETA-uri de
+preview, serverul pentru delay-ul real al job-urilor BullMQ.
+
+
+================================================================================
+CUCERIREA UNUI ORAS
+================================================================================
+
+Un Governor nu cucereste singur — el doar reduce loyalty-ul cand pachetul lui
+curata toata apararea. Fiecare Governor supravietuitor scade loyalty cu 20-35%
+(roll random per Governor). Cand loyalty ajunge la 0 sau mai jos, se intampla
+urmatoarele, atomic, in aceeasi tranzactie:
+
+  1) Un Governor e consumat din pachet (restul raman).
+  2) Loyalty-ul se reseteaza la 100.
+  3) ownerId al orasului se schimba in jucatorul atacator.
+  4) Toate comenzile SUPPORT "ARRIVED" de la alti jucatori care stationau in
+     oras sunt "displaced" inapoi spre casa: fiecare comanda isi recalculeaza
+     timpul de drum pe baza propriei distante si propriei unitati celei mai
+     lente, apoi e re-programata ca job de intoarcere. Asta e important: nu
+     dispar si nu raman in oras sub noul proprietar.
+  5) Supravietuitorii atacatorului (mai putin Governor-ul consumat) NU devin
+     unitati ale noului oras. In schimb, se creeaza o comanda SUPPORT cu
+     status "ARRIVED" de la orasul atacator catre orasul nou cucerit.
+     Flag-urile reportHidden* sunt ambele true ca sa nu genereze raport
+     redundant de "support arrived".
+
+De ce garnizoana e SUPPORT si nu "trupe pe oras"?
+
+  - ele trebuie sa contribuie la aparare daca cineva contraataca imediat
+    (logica de defense trateaza SUPPORT stationat ca defender),
+  - dar noul proprietar NU trebuie sa le poata folosi ca si cum ar fi propriile
+    trupe: nu trebuie sa le poata trimite la attack, nu trebuie sa apara in
+    listele de recrutare/total,
+  - atacatorul trebuie sa le poata retrage cu mecanismul standard de withdraw,
+  - daca un alt atacator curata apararea (inclusiv garnizoana asta), comanda
+    dispare natural prin acelasi code path ca orice alt SUPPORT pierdut.
+
+Re-folosind infrastructura SUPPORT "ARRIVED" obtinem gratis toate aceste
+comportamente fara duplicare de logica.
+
+--------------------------------------------------------------------------------
+Governor deposit (contor per cont)
+--------------------------------------------------------------------------------
+
+Contorul de Governori e per cont, nu per oras. Al N-lea Governor produs pe
+cont costa la fel indiferent de unde a fost "finalizat", iar costul creste
+dupa formula din sectiunea de mai sus (×1.5 pana la N=5, apoi ×2 de la N=6).
+
+Recrutarea fizica se face in trei pasi:
+
+  1) Jucatorul depune resurse (Money, Energy, Ammo) din orice oras propriu in
+     cele trei bare de progres partajate pe cont. POST /api/governor/deposit
+     scade resursele din orasul sursa si urca bara corespunzatoare.
+  2) Depunerile pot fi partiale si pot veni din orase diferite — e util cand
+     un singur oras nu are suficient dintr-o resursa, dar combinand doua da.
+  3) Cand toate cele 3 bare sunt pline, jucatorul apasa "Recruit governor".
+     POST /api/governor/recruit creeaza unitatea GOVERNOR in orasul din care
+     s-a facut apelul (implicit: orasul in care era activ clientul), incrementeaza
+     contorul producedCount si reseteaza deposit-ul la zero. Costul urmatorului
+     Governor devine automat cost(N+1).
+
+Governorii pierduti in atacuri esuate raman numarati in producedCount — nu se
+decrementeaza. Asta e o decizie de design: vrem ca presiunea economica sa
+creasca strict monoton, ca sa nu poti "reseta" pretul prin auto-sabotaj.
+
+
+================================================================================
+MULTIPLE ORASE PE CONT
+================================================================================
+
+Un jucator poate detine oricate orase — orasul de start plus orice fantoma sau
+oras adversar cucerit cu un Governor. Clientul are in orice moment un singur
+oras "activ": toate call-urile de tipul GET /api/cities/mine, recrutari,
+upgrade-uri de cladiri si comenzi sunt scoped pe orasul activ.
+
+Persistenta si sincronizare:
+
+  - activeCityId e salvat in localStorage (cheia "activeCityId") si in
+    acelasi timp oglindit in URL ca ?cityId=... Un refresh pastreaza aceeasi
+    selectie, si o navigatie prin link direct stie de la inceput ce oras sa
+    incarce (nu mai clipeste orasul default).
+  - CityPage foloseste urlCityId cu fallback la localStorage, si la fiecare
+    fetch de oras updateaza localStorage-ul la id-ul real primit (nu la ce a
+    cerut) — asa ca orase sterse sau cucerite inapoi nu lasa referinte moarte.
+  - React Query foloseste cheia ["city", activeCityId ?? "default"] ca sa nu
+    amestece caches intre orase. La switch, invalidam prefixul ["city"] si
+    ["commands"] ca sa fortam refetch fara sa stergem si alte query-uri.
+
+Interfata:
+
+  - ResourceBar arata un dropdown "▾" langa numele orasului doar daca
+    ownedCities.length > 1. In dropdown apar toate orasele cu coordonate si un
+    marker (●) pe cel activ.
+  - Pe harta, click pe un oras propriu care NU e cel activ deschide panoul de
+    actiune cu doua butoane: "Select" (doar schimba orasul activ si ramai pe
+    harta) si "Enter" (te duce pe /city?cityId=...). Click pe orasul activ nu
+    arata niciun buton de switch — e deja activ.
+  - Tot pe panoul de actiune al unui oras propriu non-activ apar si butoanele
+    "Support" si "Resources", ca sa poti trimite sprijin intern sau sa muti
+    resurse intre orasele proprii. Orasul activ nu arata aceste butoane fata
+    de el insusi (A nu poate trimite la A).
+  - Redenumirea foloseste PATCH /api/cities/mine/name cu { name, cityId }.
+    BuildingsView paseaza explicit city.id al orasului curent vizionat — asa
+    se repara bug-ul in care redenumirea unui oras nou cucerit afecta, de
+    fapt, orasul default (primul din ownedCities ordonat dupa createdAt).
+
+
+================================================================================
+COMENZI: WITHDRAW, CANCEL SI RAPOARTE
+================================================================================
+
+--------------------------------------------------------------------------------
+Withdraw (retragere SUPPORT stationat)
+--------------------------------------------------------------------------------
+
+Cand ai trimis SUPPORT care a ajuns in alt oras (status ARRIVED), poti cere
+retragerea: integral sau partial, per unitate. Retragerea calculeaza un timp
+de drum folosind distanta reala intre orasul-tinta si orasul-casa, cu viteza
+unitatii celei mai lente din pachetul retras. In modul "all", daca ai mai
+multe comenzi SUPPORT stationate in acelasi oras, fiecare comanda isi primeste
+propriul delay (nu se fac batch-uri care s-ar misca la viteza celui mai lent
+pachet combinat).
+
+--------------------------------------------------------------------------------
+Anulari (building / recruitment / comenzi)
+--------------------------------------------------------------------------------
+
+  - Anularea unei comenzi de constructie sau de recrutare: 75% din resurse
+    sunt rambursate, 25% se pierd. Level-ul nu se schimba deci punctajul
+    ramane egal.
+  - Anularea unei comenzi de tip ATTACK/SUPPORT/RESOURCES/SPY aflata in
+    TRAVELING: disponibila doar in primele 5 minute de la plecare (fereastra
+    de regret pentru greseli evidente). Dupa cele 5 minute, comanda e
+    "committed" — altfel jucatorii ar putea sa o anuleze la vederea unui
+    contra-atac si ar anula intreaga dinamica. Dupa anulare, trupele se
+    intorc "simetric": cat timp au mers pana in punctul respectiv, atata mai
+    au pana acasa.
+
+--------------------------------------------------------------------------------
+Rapoarte (soft-hide per utilizator)
+--------------------------------------------------------------------------------
+
+Nu salvam randuri duplicate pentru fiecare participant la o batalie — avem un
+singur rand Command cu rezultatul bataliei, si doua flag-uri boolean
+reportHiddenByAttacker si reportHiddenByDefender. Un utilizator care apasa
+"Hide report" seteaza doar flag-ul corespunzator rolului sau, iar celalalt
+participant vede in continuare raportul pana cand decide sa il ascunda si el.
+
+Categorii:
+  - ATTACK (atacator + aparator, fiecare vede propriul raport)
+  - SPY (doar atacator; defender-ul nu afla ca s-a spionat)
+  - SUPPORT (confirmare de sosire pentru cel care a trimis, plus notificare
+    pentru cel care primeste)
+  - RESOURCES (confirmare de sosire, cantitati livrate)
+
+Clientul tine un contor per-user de rapoarte necitite (cheia e user id-ul din
+JWT) ca sa nu se amestece starea intre conturi care au facut login pe acelasi
+browser.

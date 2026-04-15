@@ -356,7 +356,38 @@ export const getGovernorRecruitmentTime = (gameSpeed: number = 1): number => {
   return Math.max(1, Math.round(UNITS.GOVERNOR.baseRecruitmentTime / gameSpeed));
 };
 
-export const getTravelTimeSec = (gameSpeed: number = 1): number => Math.round(60 / gameSpeed);
+// Negustorii (RESOURCES) merg uniform, independent de cantitate, rapid.
+export const RESOURCE_TRAVEL_MIN_PER_FIELD = 2;
+
+export const getFieldDistance = (
+  fromX: number, fromY: number,
+  toX: number, toY: number
+): number => Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
+
+// Cea mai lenta unitate (valoare mare in min/camp = mai lent). Intoarce 0 daca
+// nu exista unitati > 0.
+export const getSlowestUnitSpeed = (
+  unitCounts: Partial<Record<UnitName, number>>
+): number => {
+  let slowest = 0;
+  for (const [name, qty] of Object.entries(unitCounts)) {
+    if (!qty || qty <= 0) continue;
+    const s = UNITS[name as UnitName].speed;
+    if (s > slowest) slowest = s;
+  }
+  return slowest;
+};
+
+export const getUnitTravelTimeSec = (
+  distanceFields: number,
+  slowestSpeedMinPerField: number,
+  gameSpeed: number = 1
+): number => Math.max(1, Math.round(distanceFields * slowestSpeedMinPerField * 60 / gameSpeed));
+
+export const getResourceTravelTimeSec = (
+  distanceFields: number,
+  gameSpeed: number = 1
+): number => Math.max(1, Math.round(distanceFields * RESOURCE_TRAVEL_MIN_PER_FIELD * 60 / gameSpeed));
 
 export const calcAirDefenseDamage = (airDefenseLevel: number, mlCount: number, droneCount: number): number => {
   if (airDefenseLevel <= 0 || (mlCount === 0 && droneCount === 0)) return 0;

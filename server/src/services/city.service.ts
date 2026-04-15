@@ -44,9 +44,10 @@ export const syncResources = async (cityId: string): Promise<void> => {
   });
 };
 
-export const getCityOverview = async (userId: string) => {
+export const getCityOverview = async (userId: string, cityId?: string) => {
   const city = await prisma.city.findFirst({
-    where: { ownerId: userId },
+    where: cityId ? { id: cityId, ownerId: userId } : { ownerId: userId },
+    orderBy: { createdAt: "asc" },
     include: {
       buildings:             { orderBy: { name: "asc" } },
       units:                 { orderBy: { name: "asc" } },
@@ -94,11 +95,21 @@ export const getCityOverview = async (userId: string) => {
     }
   }
 
-  return { ...city, ...updated, supportUnits, totalPopulation };
+  const ownedCities = await prisma.city.findMany({
+    where:   { ownerId: userId },
+    select:  { id: true, name: true, x: true, y: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return { ...city, ...updated, supportUnits, totalPopulation, ownedCities };
 };
 
-export const renameMyCity = async (userId: string, name: string) => {
-  const city = await prisma.city.findFirst({ where: { ownerId: userId }, select: { id: true } });
+export const renameMyCity = async (userId: string, name: string, cityId?: string) => {
+  const city = await prisma.city.findFirst({
+    where:   cityId ? { id: cityId, ownerId: userId } : { ownerId: userId },
+    orderBy: { createdAt: "asc" },
+    select:  { id: true },
+  });
   if (!city) throw new Error("CITY_NOT_FOUND");
   return prisma.city.update({
     where: { id: city.id },

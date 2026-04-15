@@ -5,7 +5,8 @@ import { renameCitySchema } from "../schemas";
 
 export const getMyCity = async (req: AuthRequest, res: Response) => {
   try {
-    const city = await getCityOverview(req.userId!);
+    const cityId = typeof req.query.cityId === "string" ? req.query.cityId : undefined;
+    const city = await getCityOverview(req.userId!, cityId);
     return res.json(city);
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "CITY_NOT_FOUND") {
@@ -21,7 +22,8 @@ export const renameCity = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ mesaj: "Invalid name" });
   }
   try {
-    const city = await renameMyCity(req.userId!, parsed.data.name);
+    const cityId = typeof req.body.cityId === "string" ? req.body.cityId : undefined;
+    const city = await renameMyCity(req.userId!, parsed.data.name, cityId);
     return res.json({ id: city.id, name: city.name });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "CITY_NOT_FOUND") {
