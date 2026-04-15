@@ -5,7 +5,7 @@ import { getGovernorState, depositGovernor, recruitGovernor, type GovernorResour
 import { BUILDINGS, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration } from "../lib/cityHelpers.ts";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
-import { BUILDING_DISPLAY, BUILDING_SHORT_DESC, BUILDING_ORDER } from "../lib/labels.ts";
+import { BUILDING_DESCRIPTION, BUILDING_DISPLAY, BUILDING_ORDER } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import ConfirmModal from "./ConfirmModal.tsx";
@@ -125,7 +125,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                 </button>
               )}
             </div>
-            <p className="text-xs text-[#b1bac4] mt-2">{BUILDING_SHORT_DESC["HEADQUARTERS"]}</p>
+            <p className="text-xs text-[#b1bac4] mt-2">{BUILDING_DESCRIPTION["HEADQUARTERS"]}</p>
           </div>
           <div className="flex items-center justify-center p-4 flex-1 min-h-0">
             <img

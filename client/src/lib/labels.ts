@@ -15,29 +15,17 @@ export const BUILDING_DISPLAY: Record<BuildingName, string> = {
 };
 
 export const BUILDING_DESCRIPTION: Record<BuildingName, string> = {
-  HEADQUARTERS:    "The beating heart of your empire. Every order flows from here — construction accelerates, new technologies are unlocked, and the city bends to your will. Without it, nothing rises.",
-  BANK:            "Vaults lined with gold and guarded day and night. The bank fuels your war machine with a steady stream of money, growing richer with every upgrade. Wealth is power.",
-  POWER_PLANT:     "A roaring colossus of generators and turbines. It channels raw energy into every corner of your city, powering factories, defenses, and the machinery of conquest.",
-  WEAPONS_FACTORY: "The forge where bullets are cast and warheads assembled. Smoke rises endlessly from its chimneys as ammunition stockpiles grow, readying your forces for the battles ahead.",
-  HOUSING:         "Rows of barracks and residences stretch across the district. Every upgrade draws more citizens and soldiers to your cause, expanding the ranks you can field in war.",
-  WAREHOUSE:       "A sprawling complex of reinforced bunkers and storage bays. It safeguards your money, energy, and ammunition from both decay and enemy raids. The bigger it grows, the more you can hoard.",
-  MILITARY_BASE:   "The crucible where raw recruits are forged into soldiers. Training grounds, armories, and drill fields sprawl across the compound. Higher levels produce hardened warriors faster.",
-  HARBOR:          "Cranes and cargo ships line the docks, ready to move resources across the waters. The harbor connects your city to allies, enabling vital supply lines that can turn the tide of war.",
-  AIR_DEFENSE:     "Missile batteries and radar arrays scan the skies without rest. When enemy aircraft dare approach, a curtain of fire rises to meet them. Upgrade to make your airspace a graveyard for invaders.",
+  HEADQUARTERS:    "Headquarters is the governing center of your city. Each upgrade reduces construction time for buildings and allows the recruitment of new units. Governors can also be recruited here, who conquer enemy cities—essential for the development of your empire.",
+  BANK:            "Bank produces money, one of your city's resources. The higher the level, the greater the production.",
+  POWER_PLANT:     "Power plant produces energy, one of your city's resources. The higher the level, the greater the production.",
+  WEAPONS_FACTORY: "Weapons factory produces ammunition, one of your city's resources. The higher the level, the greater the production.",
+  HOUSING:         "Housing increases the population capacity your city can support. Each level increases the capacity exponentially.",
+  WAREHOUSE:       "Warehouse increases the storage capacity of your city's resources. Each level increases the capacity exponentially for all types of resources.",
+  MILITARY_BASE:   "Military base allows the recruitment of military units. The higher the level, the shorter the recruitment time.",
+  HARBOR:          "Harbor allows sending resources to other cities. The higher the level, the greater the transport capacity.",
+  AIR_DEFENSE:     "Air defense protects the city from missile attacks. Each level increases your city's defensive bonus. The bonus applies to all units in the city, even if the attacking units are not using missiles.",
 };
 
-// Short descriptions used in the HQ building list
-export const BUILDING_SHORT_DESC: Record<BuildingName, string> = {
-  HEADQUARTERS:    "The nerve center of your city. Upgrading reduces construction time and unlocks new buildings and units.",
-  BANK:            "Generates money over time. Higher levels increase production rate.",
-  POWER_PLANT:     "Generates energy over time. Higher levels increase production rate.",
-  WEAPONS_FACTORY: "Generates ammo over time. Higher levels increase production rate.",
-  HOUSING:         "Increases maximum population, allowing you to field larger armies.",
-  WAREHOUSE:       "Increases resource storage capacity for all resource types.",
-  MILITARY_BASE:   "Enables unit recruitment and reduces training time at higher levels.",
-  HARBOR:          "Enables sending resources to allied cities. Higher levels increase capacity.",
-  AIR_DEFENSE:     "Protects your city against aerial attacks, increasing your defensive bonus.",
-};
 
 export const BUILDING_ORDER: BuildingName[] = [
   "HEADQUARTERS", "BANK", "POWER_PLANT", "WEAPONS_FACTORY",

@@ -4,7 +4,7 @@ import { recruitUnits, cancelRecruitmentOrder } from "../api/city.ts";
 import { UNITS, getRecruitmentTime, getHousingCapacity as getMaxPopulation } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration, computePopulation } from "../lib/cityHelpers.ts";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
-import { UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
+import { UNIT_DISPLAY, UNIT_ORDER, BUILDING_DESCRIPTION } from "../lib/labels.ts";
 import type { CityOverview, UnitName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import ConfirmModal from "./ConfirmModal.tsx";
@@ -79,9 +79,9 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
               </button>
             </div>
             <p className="text-xs text-[#b1bac4] mt-1">
-              Enables unit recruitment and reduces training time at higher levels.
-              Current level: <span className="text-[#c9d1d9]">{mbLevel}</span>
-              {" · "}Available population: <span className="text-[#c9d1d9]">{fmt(availablePop)}</span>
+              {BUILDING_DESCRIPTION["MILITARY_BASE"]}<br /><br />
+              Current level: <span className="text-[#c9d1d9]">{mbLevel}</span><br />
+              Available population: <span className="text-[#c9d1d9]">{fmt(availablePop)}</span>
             </p>
           </div>
           <div className="flex items-center justify-center p-4 flex-1 min-h-0">
