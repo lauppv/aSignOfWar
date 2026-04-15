@@ -4,6 +4,9 @@ import type { CityOverview, UnitName } from "../types/index.ts";
 export const getMyCity = (): Promise<CityOverview> =>
   api.get<CityOverview>("/cities/mine");
 
+export const renameMyCity = (name: string): Promise<{ id: string; name: string }> =>
+  api.patch<{ id: string; name: string }>("/cities/mine/name", { name });
+
 export const upgradeBuilding = (buildingId: string): Promise<void> =>
   api.post<void>(`/buildings/${buildingId}/upgrade`, {});
 

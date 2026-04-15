@@ -14,6 +14,12 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+// ─── City ────────────────────────────────────────────────────────────────────
+
+export const renameCitySchema = z.object({
+  name: z.string().trim().min(1).max(50),
+});
+
 // ─── Recruitment ─────────────────────────────────────────────────────────────
 
 export const recruitSchema = z.object({

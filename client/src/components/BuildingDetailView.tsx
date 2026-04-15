@@ -12,6 +12,7 @@ import {
   getAirDefenseBonus,
 } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration } from "../lib/cityHelpers.ts";
+import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { BUILDING_DISPLAY, BUILDING_DESCRIPTION } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
 
@@ -21,8 +22,8 @@ function getStats(name: BuildingName, level: number, hqLevel: number): StatRow[]
   const cfg     = BUILDINGS[name];
   const nextLvl = Math.min(level + 1, cfg.maxLevel);
 
-  const timeNow  = level  > 0 ? fmtDuration(getBuildingUpgradeTime(name, level,  hqLevel)) : "—";
-  const timeNext =               fmtDuration(getBuildingUpgradeTime(name, nextLvl, hqLevel));
+  const timeNow  = level  > 0 ? fmtDuration(getBuildingUpgradeTime(name, level,  hqLevel, GAME_SPEED)) : "—";
+  const timeNext =               fmtDuration(getBuildingUpgradeTime(name, nextLvl, hqLevel, GAME_SPEED));
 
   const base: StatRow[] = [
     { label: "Build time (next lvl)", current: timeNow, next: timeNext },
@@ -34,7 +35,7 @@ function getStats(name: BuildingName, level: number, hqLevel: number): StatRow[]
     case "WEAPONS_FACTORY": {
       const res  = name === "BANK" ? "Money" : name === "POWER_PLANT" ? "Energy" : "Ammo";
       return [
-        { label: `${res} production / hr`, current: level  > 0 ? getResourceProduction(level).toLocaleString()  : "—", next: getResourceProduction(nextLvl).toLocaleString() },
+        { label: `${res} production / hr`, current: level  > 0 ? getResourceProduction(level, GAME_SPEED).toLocaleString()  : "—", next: getResourceProduction(nextLvl, GAME_SPEED).toLocaleString() },
         ...base,
       ];
     }
@@ -110,7 +111,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const needsHQ     = (cfg.requiresHQ ?? 0) > hqLevel;
   const cost        = getBuildingUpgradeCost(name, effectiveLevel);
   const canAfford   = city.money >= cost.money && city.energy >= cost.energy && city.ammo >= cost.ammo;
-  const timeSec     = getBuildingUpgradeTime(name, effectiveLevel, hqLevel);
+  const timeSec     = getBuildingUpgradeTime(name, effectiveLevel, hqLevel, GAME_SPEED);
 
   const stats = getStats(name, level, hqLevel);
 

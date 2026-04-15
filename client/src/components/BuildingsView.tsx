@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { upgradeBuilding, cancelBuildingOrder, recruitUnits } from "../api/city.ts";
+import { upgradeBuilding, cancelBuildingOrder, recruitUnits, renameMyCity } from "../api/city.ts";
 import { BUILDINGS, UNITS, getBuildingUpgradeCost, getBuildingUpgradeTime, getRecruitmentTime } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration } from "../lib/cityHelpers.ts";
+import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { BUILDING_DISPLAY, BUILDING_SHORT_DESC, BUILDING_ORDER } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
@@ -27,8 +28,26 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
     mutationFn: ({ quantity }: { quantity: number }) => recruitUnits(city.id, "GOVERNOR", quantity),
     onSuccess: invalidate,
   });
+  const renameMutation = useMutation({
+    mutationFn: (name: string) => renameMyCity(name),
+    onSuccess: invalidate,
+  });
 
   const [govQty, setGovQty] = useState(1);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(city.name);
+
+  useEffect(() => { setNameDraft(city.name); }, [city.name]);
+
+  function commitRename() {
+    const trimmed = nameDraft.trim();
+    if (trimmed && trimmed !== city.name) {
+      renameMutation.mutate(trimmed);
+    } else {
+      setNameDraft(city.name);
+    }
+    setEditingName(false);
+  }
 
   // Ticker pentru countdown
   const [, setTick] = useState(0);
@@ -44,7 +63,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
         {/* Left 40%: HQ image + Governor */}
         <div className="w-2/5 shrink-0 flex flex-col bg-[#0d1117] border-r border-[#30363d] overflow-y-auto">
           <div className="px-4 pt-4 pb-2 shrink-0">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-[#e6b800]">Headquarters</h2>
               <button
                 onClick={onClose}
@@ -53,7 +72,33 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                 ← Back
               </button>
             </div>
-            <p className="text-xs text-[#b1bac4] mt-1">{BUILDING_SHORT_DESC["HEADQUARTERS"]}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">City name</span>
+              {editingName ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={nameDraft}
+                  maxLength={50}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") { setNameDraft(city.name); setEditingName(false); }
+                  }}
+                  className="flex-1 bg-[#0d1117] border border-[#30363d] rounded text-sm text-[#c9d1d9] px-2 py-1 focus:outline-none focus:border-[#e6b800]"
+                />
+              ) : (
+                <button
+                  onClick={() => setEditingName(true)}
+                  className="flex-1 text-left text-sm text-[#c9d1d9] border border-transparent hover:border-[#30363d] rounded px-2 py-1 cursor-pointer"
+                  title="Click to rename"
+                >
+                  {city.name} <span className="text-[10px] text-[#7d8590]">✎</span>
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-[#b1bac4] mt-2">{BUILDING_SHORT_DESC["HEADQUARTERS"]}</p>
           </div>
           <div className="flex items-center justify-center p-4 flex-1 min-h-0">
             <img
@@ -68,7 +113,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
             const cfg        = UNITS["GOVERNOR"];
             const hqLevel    = city.buildings.find(b => b.name === "HEADQUARTERS")?.level ?? 0;
             const unlocked   = hqLevel >= (cfg.requiresHQ ?? 0);
-            const timeSec    = getRecruitmentTime("GOVERNOR", 0);
+            const timeSec    = getRecruitmentTime("GOVERNOR", 0, GAME_SPEED);
             const moneyOk    = city.money  >= cfg.costMoney  * govQty;
             const energyOk   = city.energy >= cfg.costEnergy * govQty;
             const ammoOk     = city.ammo   >= cfg.costAmmo   * govQty;
@@ -148,7 +193,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                 const pendingCount = city.buildingUpgradeOrders.filter((o) => o.buildingName === name).length;
                 const effectiveLevel = level + pendingCount;
                 const cost    = getBuildingUpgradeCost(name, effectiveLevel);
-                const timeSec = getBuildingUpgradeTime(name, effectiveLevel, hqLevel);
+                const timeSec = getBuildingUpgradeTime(name, effectiveLevel, hqLevel, GAME_SPEED);
                 const isMaxLevel  = effectiveLevel >= cfg.maxLevel;
                 const hqRequired  = cfg.requiresHQ ?? 0;
                 const needsHQ     = hqLevel < hqRequired;

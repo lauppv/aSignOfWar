@@ -14,7 +14,8 @@ import {
   getAirDefenseBonus,
   getResourceProduction,
 } from "@shared/gameConfig.ts";
-import { computePopulation, getBuildingLevel } from "../lib/cityHelpers.ts";
+import { computePopulation, getBuildingLevel, computeCityPoints } from "../lib/cityHelpers.ts";
+import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import ResourceBar from "../components/ResourceBar.tsx";
 import UnitCard from "../components/UnitCard.tsx";
 import { UNIT_ORDER } from "../lib/labels.ts";
@@ -33,7 +34,7 @@ type MergedCommand =
 
 const CMD_COLORS = {
   ATTACK:    { border: "#f85149", badgeBg: "#3d1a1a", badgeText: "#f85149" },
-  SUPPORT:   { border: "#3fb950", badgeBg: "#1a3d1a", badgeText: "#3fb950" },
+  SUPPORT:   { border: "#58a6ff", badgeBg: "#0c2744", badgeText: "#58a6ff" },
   RESOURCES: { border: "#d29922", badgeBg: "#3d2e0a", badgeText: "#d29922" },
   SPY:       { border: "#a371f7", badgeBg: "#2e1a3d", badgeText: "#a371f7" },
 };
@@ -146,6 +147,7 @@ export default function CityPage() {
   }
 
   const population        = computePopulation(city);
+  const cityPoints        = computeCityPoints(city);
   const maxPopulation     = getMaxPopulation(getBuildingLevel(city, "HOUSING"));
   const warehouseCapacity = getWarehouseCapacity(getBuildingLevel(city, "WAREHOUSE"));
   const airDefenseLevel   = getBuildingLevel(city, "AIR_DEFENSE");
@@ -167,13 +169,14 @@ export default function CityPage() {
     <div className="flex flex-col h-screen overflow-hidden">
       <ResourceBar
         cityName={city.name}
+        cityPoints={cityPoints}
         money={city.money}
         energy={city.energy}
         ammo={city.ammo}
         capacity={warehouseCapacity}
-        moneyProd={getResourceProduction(getBuildingLevel(city, "BANK"))}
-        energyProd={getResourceProduction(getBuildingLevel(city, "POWER_PLANT"))}
-        ammoProd={getResourceProduction(getBuildingLevel(city, "WEAPONS_FACTORY"))}
+        moneyProd={getResourceProduction(getBuildingLevel(city, "BANK"), GAME_SPEED)}
+        energyProd={getResourceProduction(getBuildingLevel(city, "POWER_PLANT"), GAME_SPEED)}
+        ammoProd={getResourceProduction(getBuildingLevel(city, "WEAPONS_FACTORY"), GAME_SPEED)}
         population={population}
         maxPopulation={maxPopulation}
         onLogout={handleLogout}

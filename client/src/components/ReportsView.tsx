@@ -53,7 +53,7 @@ const CATEGORY_META: Record<Category, { label: string; fg: string; bg: string; b
   victory:     { label: "Victory",     fg: "#3fb950", bg: "#1a3d1a", border: "#3fb950" },
   loss:        { label: "Loss",        fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
   resources:   { label: "Resources",   fg: "#e3b341", bg: "#3d2e0a", border: "#e3b341" },
-  support:     { label: "Support",     fg: "#79c0ff", bg: "#0e1f3d", border: "#79c0ff" },
+  support:     { label: "Support",     fg: "#58a6ff", bg: "#0c2744", border: "#58a6ff" },
   withdrawal:  { label: "Withdrawal",  fg: "#d2a8ff", bg: "#2a1f3d", border: "#d2a8ff" },
   spy_success: { label: "Spy success", fg: "#a371f7", bg: "#2e1a3d", border: "#a371f7" },
   spy_failed:  { label: "Spy failed",  fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
@@ -373,9 +373,13 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
             {meta.label}
           </div>
           <div className="text-[11px] text-[#b1bac4] mt-0.5">
-            {r.fromCity.name} <span className="text-[#7d8590]">({r.fromCity.owner?.username ?? "Ghost city"})</span>
+            {r.fromCity.name}
+            <span className="text-[#7d8590] font-mono"> ({r.fromCity.x}, {r.fromCity.y})</span>
+            <span className="text-[#7d8590]"> [{r.fromCity.owner?.username ?? "Ghost city"}]</span>
             {" → "}
-            {r.toCity.name} <span className="text-[#7d8590]">({r.toCity.owner?.username ?? "Ghost city"})</span>
+            {r.toCity.name}
+            <span className="text-[#7d8590] font-mono"> ({r.toCity.x}, {r.toCity.y})</span>
+            <span className="text-[#7d8590]"> [{r.toCity.owner?.username ?? "Ghost city"}]</span>
           </div>
         </div>
         <div className="text-[10px] text-[#7d8590] text-right">
@@ -391,7 +395,7 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
           : <SupportDetail units={r.units} />
       )}
       {r.type === "RESOURCES" && <ResourcesDetail money={r.resourceMoney} energy={r.resourceEnergy} ammo={r.resourceAmmo} />}
-      {r.type === "SPY"       && isSpyReport(r.report) && <SpyDetail report={r.report} />}
+      {r.type === "SPY"       && isSpyReport(r.report) && <SpyDetail report={r.report} direction={r.direction} />}
     </div>
   );
 }
@@ -598,22 +602,51 @@ function BattleRow({ label, labelColor, sublabel, units, values, initial, kind, 
   );
 }
 
-function SpyDetail({ report: data }: { report: SpyReportData }) {
+function SpyDetail({ report: data, direction }: { report: SpyReportData; direction: "outgoing" | "incoming" }) {
+  const isIncoming = direction === "incoming";
   const { openUnit } = useUnitInfo();
 
-  const statBox = (
-    <div className="grid grid-cols-3 gap-2">
-      <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
-        <span className="text-[9px] uppercase tracking-widest text-[#a371f7]">Sent hackers</span>
-        <span className="text-[#c9d1d9] font-mono">{data.attackerHackers.toLocaleString()}</span>
-      </div>
-      <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
-        <span className="text-[9px] uppercase tracking-widest text-[#f85149]">Enemy hackers</span>
-        <span className="text-[#c9d1d9] font-mono">{data.defenderHackers.toLocaleString()}</span>
-      </div>
-      <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
-        <span className="text-[9px] uppercase tracking-widest text-[#3fb950]">Survivors</span>
-        <span className="text-[#c9d1d9] font-mono">{data.attackerSurvivors.toLocaleString()}</span>
+  const attackerLosses = data.attackerHackers - data.attackerSurvivors;
+  const defenderLosses = 0; // defender hackers never die in spy missions
+
+  // Atacatorul nu afla niciodata cati hackeri avea aparatorul daca spionajul a esuat.
+  const hideDefenderCount = !isIncoming && !data.success;
+
+  const hackerBox = (
+    <div className="rounded border border-[#30363d] bg-[#161b22] p-3">
+      <div className="flex items-center justify-around gap-6">
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[9px] uppercase tracking-widest text-[#f85149]">Attacker</span>
+          <img
+            src="/images/units/hacker.jpg"
+            alt="Hacker"
+            title="Hacker"
+            className="w-12 h-12 object-contain rounded cursor-pointer hover:brightness-125 transition-[filter]"
+            onClick={() => openUnit("HACKER")}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+          <span className="text-[#c9d1d9] font-mono text-xs">{data.attackerHackers.toLocaleString()}</span>
+          <span className="text-[#f85149] font-mono text-[11px]">
+            {attackerLosses > 0 ? `−${attackerLosses.toLocaleString()}` : "−0"}
+          </span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[9px] uppercase tracking-widest text-[#58a6ff]">Defender</span>
+          <img
+            src="/images/units/hacker.jpg"
+            alt="Hacker"
+            title="Hacker"
+            className="w-12 h-12 object-contain rounded cursor-pointer hover:brightness-125 transition-[filter]"
+            onClick={() => openUnit("HACKER")}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+          <span className="text-[#c9d1d9] font-mono text-xs">
+            {hideDefenderCount ? "?" : data.defenderHackers.toLocaleString()}
+          </span>
+          <span className="text-[#f85149] font-mono text-[11px]">
+            {hideDefenderCount ? "−" : (defenderLosses > 0 ? `−${defenderLosses.toLocaleString()}` : "−0")}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -622,26 +655,44 @@ function SpyDetail({ report: data }: { report: SpyReportData }) {
     return (
       <>
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
-          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Infiltration failed</div>
-          <div className="text-[11px] text-[#b1bac4] mb-2">
-            The target had at least as many hackers as were sent. All attacking hackers were destroyed and no intel was retrieved.
+          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">
+            {isIncoming ? "Spy attempt blocked" : "Infiltration failed"}
           </div>
-          {statBox}
+          <div className="text-[11px] text-[#b1bac4]">
+            {isIncoming
+              ? "An enemy tried to infiltrate your city. Your hackers detected and eliminated all intruders — no intel was leaked."
+              : "The target had at least as many hackers as were sent. All attacking hackers were destroyed and no intel was retrieved."}
+          </div>
         </div>
+        {hackerBox}
       </>
     );
   }
 
   const { buildings, units } = data.snapshot;
+  const resources = data.snapshot.resources ?? { money: 0, energy: 0, ammo: 0 };
+  const hasResources = !!data.snapshot.resources;
   const buildingByName = new Map(buildings.map(b => [b.name, b.level]));
   const activeUnits = units.filter(u => u.quantity > 0);
 
   return (
     <>
       <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
-        <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Infiltration successful</div>
-        {statBox}
+        <div className="text-[10px] uppercase tracking-widest text-[#b1bac4]">Infiltration successful</div>
       </div>
+
+      {hackerBox}
+
+      {hasResources && (
+        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Resources</div>
+          <div className="grid grid-cols-3 gap-2">
+            <LootCell label="Money"  color="#7ee787" value={resources.money} />
+            <LootCell label="Energy" color="#79c0ff" value={resources.energy} />
+            <LootCell label="Ammo"   color="#e3b341" value={resources.ammo} />
+          </div>
+        </div>
+      )}
 
       <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
         <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Buildings</div>

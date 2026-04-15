@@ -33,7 +33,7 @@ export default function CityMap({ cityName, onBuildingClick }: Props) {
       <img
         src="/images/city.jpg"
         alt={cityName}
-        className="h-full w-auto object-contain object-top pb-4 block"
+        className="h-full w-auto object-contain object-top block"
         draggable={false}
       />
 

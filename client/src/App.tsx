@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
 import CityPage from "./pages/CityPage.tsx";
 import MapPage from "./pages/MapPage.tsx";
 import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
+import { loadGameSpeed } from "./lib/gameSpeed.ts";
 
 function isLoggedIn(): boolean {
   return !!localStorage.getItem("token");
@@ -14,6 +16,31 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [configReady, setConfigReady] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadGameSpeed()
+      .then(() => setConfigReady(true))
+      .catch((e) => setConfigError(e.message ?? "Failed to load config"));
+  }, []);
+
+  if (configError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-red-400">
+        Failed to load server config: {configError}
+      </div>
+    );
+  }
+
+  if (!configReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-300">
+        Loading…
+      </div>
+    );
+  }
+
   return (
     // daca vom avea mai multe context providers, vom face un context/AppProviders.tsx
     // care sa le includa pe toate, pentru a nu avea un nesting prea adanc in acest fisier

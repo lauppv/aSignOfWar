@@ -1,5 +1,6 @@
 import prisma from "../config/db";
 import { Prisma } from "@prisma/client";
+import { getBuildingPoints, BuildingName } from "../../../shared/gameConfig";
 
 export const MAP_SIZE = 100;
 
@@ -103,13 +104,19 @@ export const createGhostCitiesAround = async (
 };
 
 export const getAllCitiesOnMap = async () => {
-  return prisma.city.findMany({
+  const cities = await prisma.city.findMany({
     select: {
       id: true,
       name: true,
       x: true,
       y: true,
       owner: { select: { username: true } },
+      buildings: { select: { name: true, level: true } },
     },
+  });
+  return cities.map(({ buildings, ...c }) => {
+    let points = 0;
+    for (const b of buildings) points += getBuildingPoints(b.name as BuildingName, b.level);
+    return { ...c, points };
   });
 };

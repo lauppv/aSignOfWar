@@ -266,8 +266,19 @@ async function processSpyArrival(command: any) {
   const survivors = success ? attackerHackers - defenderHackers : 0;
 
   // Snapshot al orasului spionat (doar la succes)
-  let snapshot: { buildings: { name: string; level: number }[]; units: { name: UnitName; quantity: number }[] } | null = null;
+  let snapshot: {
+    buildings: { name: string; level: number }[];
+    units: { name: UnitName; quantity: number }[];
+    resources: { money: number; energy: number; ammo: number };
+  } | null = null;
   if (success) {
+    // Sincronizam resursele target-ului inainte sa le citim, ca sa fie actuale
+    await syncResources(command.toCityId);
+    const freshCity = await prisma.city.findUnique({
+      where: { id: command.toCityId },
+      select: { money: true, energy: true, ammo: true },
+    });
+
     // Units = native + toate stack-urile stationate de SUPPORT
     const unitTotals = new Map<UnitName, number>();
     for (const u of toCity.units) {
@@ -281,6 +292,11 @@ async function processSpyArrival(command: any) {
     snapshot = {
       buildings: toCity.buildings.map(b => ({ name: b.name, level: b.level })),
       units:     Array.from(unitTotals.entries()).map(([name, quantity]) => ({ name, quantity })),
+      resources: {
+        money:  Math.floor(freshCity?.money  ?? 0),
+        energy: Math.floor(freshCity?.energy ?? 0),
+        ammo:   Math.floor(freshCity?.ammo   ?? 0),
+      },
     };
   }
 
@@ -300,8 +316,8 @@ async function processSpyArrival(command: any) {
       data: {
         status:    hasSurvivors ? "RETURNING" : "COMPLETED",
         arrivalAt: hasSurvivors ? returnArrivalAt : command.arrivalAt,
-        // Spionatul nu afla niciodata ca a fost spionat.
-        reportHiddenByDefender: true,
+        // Defenderul afla doar daca spionajul a esuat. La succes, nu e notificat.
+        reportHiddenByDefender: success,
         report: {
           spyReport:       true,
           success,

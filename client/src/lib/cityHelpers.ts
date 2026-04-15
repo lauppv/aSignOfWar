@@ -1,8 +1,14 @@
 // Helpers specifice UI-ului (nu config — config-ul e in shared/gameConfig.ts)
 
 import type { UnitName } from "@shared/gameConfig.ts";
-import { UNITS } from "@shared/gameConfig.ts";
+import { UNITS, getBuildingPoints } from "@shared/gameConfig.ts";
 import type { CityOverview } from "../types/index.ts";
+
+export function computeCityPoints(city: CityOverview): number {
+  let total = 0;
+  for (const b of city.buildings) total += getBuildingPoints(b.name, b.level);
+  return total;
+}
 
 export const UNIT_POPULATION: Record<UnitName, number> = Object.fromEntries(
   Object.entries(UNITS).map(([name, cfg]) => [name, cfg.population])

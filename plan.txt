@@ -236,6 +236,82 @@ Governor (nobil)
 
 
 ================================================================================
+GHOST CITIES (orase fara owner)
+================================================================================
+
+Orasele fantoma sunt orase neutre, fara proprietar, generate automat in jurul
+fiecarui oras nou fondat. Pentru fiecare jucator nou creat pe lume, se genereaza 3 Ghost city. Aceste orase se pot cuceri de catre alti jucatori
+--------------------------------------------------------------------------------
+Sablon initial (la generare)
+--------------------------------------------------------------------------------
+Cladiri:
+  Headquarters     Level 3
+  Bank             Level 3
+  Power plant      Level 3
+  Weapons factory  Level 3
+  Housing          Level 3
+  Warehouse        Level 3
+  Military base    Level 0
+  Harbor           Level 0
+  Air defense      Level 0
+
+Resurse: full (egal cu capacitatea Warehouse Level 3 = 1511 din fiecare).
+Loyalty: 100%.
+Unitati: niciuna (orasul fantoma nu are armata initiala).
+
+--------------------------------------------------------------------------------
+Productie de resurse
+--------------------------------------------------------------------------------
+Resursele cresc normal, dupa aceleasi formule ca orice alt oras (in functie de
+Level-urile Bank/Power plant/Weapons factory). Se cap-eaza la capacitatea
+Warehouse curent. Cand orasul e cucerit, jucatorul preia resursele la zi.
+
+--------------------------------------------------------------------------------
+Auto-upgrade cladiri (cresterea pasiva)
+--------------------------------------------------------------------------------
+La interval regulat, orasul fantoma alege RANDOM o cladire si ii urca Level-ul
+cu 1 (NU pune comenzi de constructie in coada, ci aplica direct Level+1):
+
+  - tick interval: la fiecare ~6h (de calibrat in functie de game speed)
+  - cladiri eligibile: TOATE cele 9 cladiri ale orasului — inclusiv Military
+    base si Air defense. Singura restrictie e ca orasul fantoma nu poate
+    recruta unitati (vezi sectiunea "Armata").
+      Headquarters, Bank, Power plant, Weapons factory, Housing, Warehouse,
+      Military base, Harbor, Air defense
+  - selectie: random uniform peste cladirile eligibile in tick-ul curent
+  - respecta toate cerintele de HQ (ex. Harbor cere HQ Level 15, Military base
+    si Air defense cer HQ Level 5). O cladire blocata de HQ e exclusa din
+    pool-ul de selectie pentru tick-ul curent.
+  - GRATUIT: auto-upgrade-ul NU consuma resursele orasului fantoma. Motivul:
+    jucatorii vor farma in mod constant aceste orase, deci ele vor avea
+    rareori resurse suficiente; daca am cere costuri reale, cresterea pasiva
+    s-ar bloca de fapt si scopul (tinte tot mai grase) nu s-ar realiza.
+  - se opreste cand toate cladirile sunt la maxLevel
+
+Efect: chiar daca nimeni nu il cucereste, orasul fantoma creste continuu in
+punctaj si in aparare (Air defense). Cu cat e lasat mai mult, cu atat devine
+o tinta mai grasa (mai multe puncte la cucerire) si mai greu de spart (bonus
+Air defense mare)
+
+--------------------------------------------------------------------------------
+Armata (interzisa)
+--------------------------------------------------------------------------------
+Orasul fantoma NU poate recruta unitati. Military base creste ca punctaj/Level,
+dar nu produce trupe. In consecinta:
+  - orasul fantoma nu trimite niciodata comenzi (attack, support, resources, spy)
+  - fiind fara unitati de aparare (decat daca e sprijinit de un jucator), orice Governor trimis pe fantoma ii reduce Loyalty cu 20-35% (regula standard de cucerire)
+  - dupa cucerire, cladirile raman la Level-urile lor curente, dar jucatorul
+    nou-proprietar incepe sa recruteze normal din Military base
+
+--------------------------------------------------------------------------------
+De calibrat
+--------------------------------------------------------------------------------
+  - intervalul de auto-upgrade (6h e doar punct de start; depinde de durata
+    medie a unei lumi si de game speed)
+  - daca auto-upgrade tine cont de game speed (probabil DA: tick = 6h / gameSpeed)
+
+
+================================================================================
 BUILDINGS CONFIG
 ================================================================================
  
@@ -398,6 +474,96 @@ Pentru a spiona se trimis hackeri. Aceasta este o comanda diferita de cea de att
 Mecanismul e hacker vs hacker. Un hacker ignora unitatile de aparare din orasul tinta. Batalia e hacker vs hacker.
 Daca orasul tinta are 100 hackers, e nevoie de cel putin 101 hackers pentru a se putea spiona orasul. Din cei 101 hackers atacatori, va supravietui 1. Asadar e nevoie de cel putin un hacker in viata pentru a putea spiona cu succes. Hackerii din aparare NU vor muri.                              
                                                                               
+================================================================================
+SCORING (puncte oras + puncte cont)
+================================================================================
+
+Valorile sunt PRELUATE direct din tabelul Triburile (incremental per Level).
+points_per_level[i] = puncte adaugate cand cladirea trece de la Level i-1 la i.
+total_cladire(L) = sum(points_per_level[1..L])
+total_oras       = sum(total_cladire pentru fiecare cladire din oras)
+total_cont       = sum(total_oras pentru fiecare oras detinut)
+
+Punctajul se recalculeaza la finalizarea oricarei comenzi de constructie sau la
+cucerirea/pierderea unui oras. Recrutarea de unitati NU da puncte (doar
+cladirile). Anularea unui upgrade nu afecteaza punctajul (Level-ul nu s-a
+schimbat). Clasament jucatori (descrescator dupa total_cont) 
+--------------------------------------------------------------------------------
+Headquarters (max 30)
+--------------------------------------------------------------------------------
+points_per_level (L1..L30):
+  10, 2, 2, 3, 4, 4, 5, 6, 7, 9,
+  10, 12, 15, 18, 21, 26, 31, 37, 44, 53,
+  64, 77, 92, 110, 133, 159, 191, 229, 274, 330
+
+--------------------------------------------------------------------------------
+Bank / Power plant / Weapons factory (max 30, partajeaza aceleasi valori)
+mapate pe Timber camp / Clay pit / Iron mine din Triburile
+--------------------------------------------------------------------------------
+points_per_level (L1..L30):
+  6, 1, 2, 1, 2, 3, 3, 3, 5, 5,
+  6, 8, 8, 11, 13, 15, 19, 22, 27, 32,
+  38, 46, 55, 66, 80, 95, 115, 137, 165, 198
+
+--------------------------------------------------------------------------------
+Warehouse (max 30) - mapata pe Warehouse din Triburile
+--------------------------------------------------------------------------------
+points_per_level (L1..L30):
+  6, 1, 2, 1, 2, 3, 3, 3, 5, 5,
+  6, 8, 8, 11, 13, 15, 19, 22, 27, 32,
+  38, 46, 55, 66, 80, 95, 115, 137, 165, 198
+
+--------------------------------------------------------------------------------
+Housing (max 30) - mapata pe Farm din Triburile
+--------------------------------------------------------------------------------
+points_per_level (L1..L30):
+  5, 1, 1, 2, 1, 2, 3, 3, 3, 5,
+  5, 6, 8, 8, 11, 13, 15, 19, 22, 27,
+  32, 38, 46, 55, 66, 80, 95, 115, 137, 165
+
+--------------------------------------------------------------------------------
+Military base (max 25) - mapata pe Barracks din Triburile
+--------------------------------------------------------------------------------
+points_per_level (L1..L25):
+  16, 3, 4, 5, 5, 7, 8, 9, 12, 14, 16,
+  20, 23, 28, 34, 42, 51, 59, 71, 85, 102,
+  122, 147, 175, 210, 212
+
+--------------------------------------------------------------------------------
+Harbor (max 25) - mapata pe Market din Triburile
+--------------------------------------------------------------------------------
+points_per_level (L1..L25):
+  10, 2, 2, 3, 4, 4, 5, 6, 7, 9,
+  10, 12, 15, 18, 21, 26, 31, 37, 44, 53,
+  64, 77, 92, 110, 133
+
+--------------------------------------------------------------------------------
+Air defense (max 20) - mapata pe Wall din Triburile
+--------------------------------------------------------------------------------
+points_per_level (L1..L20):
+  8, 2, 2, 2, 3, 3, 4, 5, 5, 7,
+  9, 12, 12, 15, 20, 20, 29, 29, 36, 43
+
+--------------------------------------------------------------------------------
+Note de implementare
+--------------------------------------------------------------------------------
+- Valorile mai sus sunt transcrise dintr-un screenshot al wiki-ului Triburile.
+  Daca apar discrepante in joc, valorile cele mai sigure sunt:
+    Headquarters    cumulativ L30 = 1982
+    Resurse/Wh      cumulativ L30 = 924
+    Farm/Housing    cumulativ L30 = 891
+    Barracks/MilB.  cumulativ L25 ≈ 1481
+    Market/Harbor   cumulativ L25 ≈ 793
+    Wall/AirDef     cumulativ L20 ≈ 266
+- Pentru o implementare curata, valorile se stocheaza intr-un singur loc
+  (ex. server/src/config/buildingPoints.ts) ca array per cladire si nu se
+  duplica in cod.
+
+
+================================================================================
+SPY
+================================================================================
+
 Hacker (Spion)
   type: Spy
   rol: spionaj (hacker vs hacker, ignora unitatile de aparare)

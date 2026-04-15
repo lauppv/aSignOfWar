@@ -27,7 +27,6 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const isOwn   = myCity?.id === city.id;
-  const isGhost = !city.owner;
 
   const ownerLabel = city.owner ? city.owner.username : "Ghost city";
   const dist = myCity ? Math.sqrt((city.x - myCity.x) ** 2 + (city.y - myCity.y) ** 2) : null;
@@ -87,6 +86,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
     return (
       <Wrapper headerColor={headerColor} title={`${city.name} (${city.x}, ${city.y})`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
         <Row label="Owner"       value={ownerLabel} />
+        <Row label="Points"      value={<span className="font-mono">{city.points.toLocaleString()}</span>} />
         <Row label="Alliance"    value={<span className="text-[#7d8590]">—</span>} />
         {dist !== null && (
           <Row label="Distance" value={<span className="font-mono">{dist.toFixed(1)}</span>} />
@@ -118,31 +118,25 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
         )}
 
         {!isOwn && myCity && (
-          <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => openForm("ATTACK")}
-                className="flex-1 text-[10px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-1 hover:bg-[#3d1a1a]"
-              >
-                Attack
-              </button>
-              {!isGhost && (
-                <>
-                  <button
-                    onClick={() => openForm("SUPPORT")}
-                    className="flex-1 text-[10px] uppercase tracking-wide border border-[#3fb950] text-[#3fb950] rounded py-1 hover:bg-[#1a3d1a]"
-                  >
-                    Support
-                  </button>
-                  <button
-                    onClick={() => openForm("RESOURCES")}
-                    className="flex-1 text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
-                  >
-                    Send
-                  </button>
-                </>
-              )}
-            </div>
+          <div className="grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
+            <button
+              onClick={() => openForm("ATTACK")}
+              className="text-[10px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-1 hover:bg-[#3d1a1a]"
+            >
+              Attack
+            </button>
+            <button
+              onClick={() => openForm("RESOURCES")}
+              className="text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
+            >
+              Resources
+            </button>
+            <button
+              onClick={() => openForm("SUPPORT")}
+              className="text-[10px] uppercase tracking-wide border border-[#58a6ff] text-[#58a6ff] rounded py-1 hover:bg-[#0c2744]"
+            >
+              Support
+            </button>
             <button
               onClick={() => openForm("SPY")}
               className="text-[10px] uppercase tracking-wide border border-[#a371f7] text-[#a371f7] rounded py-1 hover:bg-[#2e1a3d]"
@@ -160,7 +154,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
     .filter(u => type === "SPY" ? u.name === "HACKER" : u.name !== "HACKER");
   const typeColors: Record<CommandType, { fg: string; bg: string; border: string }> = {
     ATTACK:    { fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
-    SUPPORT:   { fg: "#3fb950", bg: "#1a3d1a", border: "#3fb950" },
+    SUPPORT:   { fg: "#58a6ff", bg: "#0c2744", border: "#58a6ff" },
     RESOURCES: { fg: "#d29922", bg: "#3d2e0a", border: "#d29922" },
     SPY:       { fg: "#a371f7", bg: "#2e1a3d", border: "#a371f7" },
   };
@@ -194,9 +188,9 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
             <div className="text-[10px] text-[#f85149] py-1">Harbor level 1 required</div>
           ) : (
             <>
-              <ResourceInput label="Money"  color="#7ee787" value={resources.money}  available={Math.floor(myCity?.money  ?? 0)} onChange={(v) => setResource("money",  v, myCity?.money  ?? 0)} />
-              <ResourceInput label="Energy" color="#79c0ff" value={resources.energy} available={Math.floor(myCity?.energy ?? 0)} onChange={(v) => setResource("energy", v, myCity?.energy ?? 0)} />
-              <ResourceInput label="Ammo"   color="#e3b341" value={resources.ammo}   available={Math.floor(myCity?.ammo   ?? 0)} onChange={(v) => setResource("ammo",   v, myCity?.ammo   ?? 0)} />
+              <ResourceInput label="Money"  color="#7ee787" value={resources.money}  available={Math.floor(myCity?.money  ?? 0)} maxForButton={Math.min(Math.floor(myCity?.money  ?? 0), Math.max(0, harborCap - resources.energy - resources.ammo))}  onChange={(v) => setResource("money",  v, myCity?.money  ?? 0)} />
+              <ResourceInput label="Energy" color="#79c0ff" value={resources.energy} available={Math.floor(myCity?.energy ?? 0)} maxForButton={Math.min(Math.floor(myCity?.energy ?? 0), Math.max(0, harborCap - resources.money  - resources.ammo))}  onChange={(v) => setResource("energy", v, myCity?.energy ?? 0)} />
+              <ResourceInput label="Ammo"   color="#e3b341" value={resources.ammo}   available={Math.floor(myCity?.ammo   ?? 0)} maxForButton={Math.min(Math.floor(myCity?.ammo   ?? 0), Math.max(0, harborCap - resources.money  - resources.energy))} onChange={(v) => setResource("ammo",   v, myCity?.ammo   ?? 0)} />
               <div className="text-[10px] text-[#b1bac4] flex justify-between mt-1">
                 <span>Harbor cap (lvl {harborLevel})</span>
                 <span className={resourceTotal > harborCap ? "text-[#f85149]" : "text-[#c9d1d9]"}>
@@ -279,7 +273,7 @@ function Wrapper({
 
 const ORDER_META: Record<CommandType, { label: string; fg: string; border: string }> = {
   ATTACK:    { label: "Attack",    fg: "#f85149", border: "#3d1a1a" },
-  SUPPORT:   { label: "Support",   fg: "#3fb950", border: "#1a3d1a" },
+  SUPPORT:   { label: "Support",   fg: "#58a6ff", border: "#0c2744" },
   RESOURCES: { label: "Resources", fg: "#d29922", border: "#3d2e0a" },
   SPY:       { label: "Spy",       fg: "#a371f7", border: "#2e1a3d" },
 };
@@ -386,7 +380,7 @@ function StationedWithdrawPanel({
         <button
           onClick={() => mutation.mutate({ mode: "partial", units: qty })}
           disabled={!hasPartialSelection || mutation.isPending}
-          className="flex-1 text-[10px] uppercase tracking-wide border border-[#58a6ff] text-[#58a6ff] rounded py-1 hover:bg-[#0c2744] disabled:opacity-40"
+          className="flex-1 text-[10px] uppercase tracking-wide border border-[#3fb950] text-[#3fb950] rounded py-1 hover:bg-[#1a3d1a] disabled:opacity-40"
         >
           Withdraw some
         </button>
@@ -483,8 +477,8 @@ function UnitInput({ name, available, value, onChange }: {
   );
 }
 
-function ResourceInput({ label, color, value, available, onChange }: {
-  label: string; color: string; value: number; available: number; onChange: (v: number) => void;
+function ResourceInput({ label, color, value, available, maxForButton, onChange }: {
+  label: string; color: string; value: number; available: number; maxForButton: number; onChange: (v: number) => void;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -499,7 +493,7 @@ function ResourceInput({ label, color, value, available, onChange }: {
         className="w-16 bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#c9d1d9] text-[10px] font-mono text-right focus:outline-none focus:border-[#58a6ff]"
       />
       <button
-        onClick={() => onChange(available)}
+        onClick={() => onChange(maxForButton)}
         className="text-[9px] text-[#b1bac4] border border-[#30363d] rounded px-1 py-0.5 hover:bg-[#1c2129]"
       >
         max

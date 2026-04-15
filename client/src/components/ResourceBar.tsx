@@ -1,5 +1,8 @@
+import { useEffect, useRef, useState } from "react";
+
 interface Props {
   cityName: string;
+  cityPoints: number;
   money: number;
   energy: number;
   ammo: number;
@@ -20,10 +23,42 @@ function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export default function ResourceBar({ cityName, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, unreadReports = 0 }: Props) {
+export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, unreadReports = 0 }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [menuOpen]);
+
   return (
     <div className="flex gap-6 px-4 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0 text-sm text-[#c9d1d9]" style={{ fontVariantNumeric: "tabular-nums" }}>
-      <span className="text-[#e6b800] font-semibold tracking-wider shrink-0">{cityName}</span>
+      <span className="flex items-center gap-2 shrink-0">
+        <span className="text-[#e6b800] font-semibold tracking-wider">{cityName}</span>
+        <span className="text-xs text-[#b1bac4]">{fmt(cityPoints)} pts</span>
+      </span>
+      {onMap && (
+        <button
+          onClick={onMap}
+          className="text-xs text-[#f0883e] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#f0883e] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
+        >
+          Map
+        </button>
+      )}
       <span className="flex items-center gap-1.5 text-[#7ee787] shrink-0 min-w-[200px]">
         <img src="/images/icons/money.png" alt="Money" className="w-4 h-4 object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
         Money: {fmt(money)} <span className="text-[#7d8590]">|</span> <span className="text-[#5a9e5f] text-xs">+{fmt(moneyProd)}/h</span>
@@ -42,22 +77,6 @@ export default function ResourceBar({ cityName, money, energy, ammo, capacity, m
       <span className="flex items-center gap-1.5 text-[#c9d1d9] shrink-0">
         Storage: {fmt(capacity)}
       </span>
-      {onMap && (
-        <button
-          onClick={onMap}
-          className="text-xs text-[#7ee787] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#7ee787] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
-        >
-          Map
-        </button>
-      )}
-      {onSimulator && (
-        <button
-          onClick={onSimulator}
-          className="text-xs text-[#d2a8ff] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#d2a8ff] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
-        >
-          Simulator
-        </button>
-      )}
       {onReports && (
         <button
           onClick={onReports}
@@ -71,13 +90,39 @@ export default function ResourceBar({ cityName, money, energy, ammo, capacity, m
           )}
         </button>
       )}
-      {onLogout && (
-        <button
-          onClick={onLogout}
-          className="ml-auto text-xs text-[#b1bac4] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#f85149] hover:text-[#f85149] cursor-pointer shrink-0"
-        >
-          Logout
-        </button>
+      {(onSimulator || onLogout) && (
+        <div ref={menuRef} className="relative ml-auto shrink-0">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Menu"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="text-[#b1bac4] border border-[#30363d] rounded px-2 py-1 hover:border-[#c9d1d9] hover:text-[#c9d1d9] cursor-pointer leading-none text-base"
+          >
+            ⋮
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 w-36 bg-[#161b22] border border-[#30363d] rounded shadow-lg z-50 overflow-hidden">
+              {onSimulator && (
+                <button
+                  onClick={() => { setMenuOpen(false); onSimulator(); }}
+                  className="block w-full text-left text-xs text-[#d2a8ff] px-3 py-2 hover:bg-[#1c2129] cursor-pointer"
+                >
+                  Simulator
+                </button>
+              )}
+              {onSimulator && onLogout && <div className="h-px bg-[#30363d]" />}
+              {onLogout && (
+                <button
+                  onClick={() => { setMenuOpen(false); onLogout(); }}
+                  className="block w-full text-left text-xs text-[#b1bac4] px-3 py-2 hover:bg-[#1c2129] hover:text-[#f85149] cursor-pointer"
+                >
+                  Logout
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

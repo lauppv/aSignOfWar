@@ -90,6 +90,7 @@ export interface MapCity {
   x: number;
   y: number;
   owner: { username: string } | null;
+  points: number;
 }
 
 export interface WorldMap {
@@ -134,6 +135,7 @@ export interface SpyReportData {
   snapshot: {
     buildings: { name: BuildingName; level: number }[];
     units:     BattleUnitCount[];
+    resources?: { money: number; energy: number; ammo: number };
   } | null;
   battleAt: string;
 }

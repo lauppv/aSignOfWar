@@ -220,6 +220,57 @@ const HARBOR_CAPACITY = [
   17347, 21684, 27105, 33881, 42351,
 ];
 
+// ─── Building points (incremental per level, sursa: wiki Triburile) ─────────
+
+const POINTS_HEADQUARTERS = [
+   10,   2,   3,   4,   5,   4,   5,   6,   7,   9,
+   11,  12,  15,  18,  21,  26,  31,  37,  44,  53,
+   64,  77,  92, 110, 133, 159, 191, 229, 274, 330,
+];
+
+const POINTS_RESOURCE = [
+    6,   1,   2,   1,   2,   3,   3,   3,   5,   5,
+    6,   8,   8,  11,  13,  15,  19,  22,  27,  32,
+   38,  46,  55,  66,  80,  95, 115, 137, 165, 198,
+];
+
+const POINTS_WAREHOUSE = POINTS_RESOURCE;
+
+const POINTS_HOUSING = [
+    5,   1,   1,   2,   1,   2,   3,   3,   3,   5,
+    5,   6,   8,   8,  11,  13,  15,  19,  22,  27,
+   32,  38,  46,  55,  66,  80,  95, 115, 137, 165,
+];
+
+const POINTS_MILITARY_BASE = [
+   16,   3,   4,   5,   6,   7,   9,  12,  14,  17,
+   21,  25,  29,  36,  43,  51,  59,  71,  85, 102,
+  122, 147, 175, 210, 212,
+];
+
+const POINTS_HARBOR = [
+   10,   2,   2,   3,   4,   4,   5,   6,   7,   9,
+   10,  12,  15,  18,  21,  26,  31,  37,  44,  53,
+   64,  77,  92, 110, 133,
+];
+
+const POINTS_AIR_DEFENSE = [
+    8,   2,   2,   2,   3,   3,   4,   5,   5,   7,
+    9,  12,  12,  15,  20,  20,  29,  29,  36,  43,
+];
+
+const BUILDING_POINTS: Record<BuildingName, readonly number[]> = {
+  HEADQUARTERS:    POINTS_HEADQUARTERS,
+  BANK:            POINTS_RESOURCE,
+  POWER_PLANT:     POINTS_RESOURCE,
+  WEAPONS_FACTORY: POINTS_RESOURCE,
+  WAREHOUSE:       POINTS_WAREHOUSE,
+  HOUSING:         POINTS_HOUSING,
+  MILITARY_BASE:   POINTS_MILITARY_BASE,
+  HARBOR:          POINTS_HARBOR,
+  AIR_DEFENSE:     POINTS_AIR_DEFENSE,
+};
+
 // ─── Functii pure (gameSpeed e parametru, default 1) ─────────────────────────
 
 export const getHousingCapacity = (level: number): number => {
@@ -278,6 +329,14 @@ export const getRecruitmentTime = (unit: UnitName, militaryBaseLevel: number, ga
     time = Math.round(time * factor);
   }
   return Math.max(1, Math.round(time / gameSpeed));
+};
+
+export const getBuildingPoints = (type: BuildingName, level: number): number => {
+  if (level <= 0) return 0;
+  const table = BUILDING_POINTS[type];
+  let sum = 0;
+  for (let i = 0; i < Math.min(level, table.length); i++) sum += table[i];
+  return sum;
 };
 
 export const getTravelTimeSec = (gameSpeed: number = 1): number => Math.round(60 / gameSpeed);

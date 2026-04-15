@@ -97,6 +97,16 @@ export const getCityOverview = async (userId: string) => {
   return { ...city, ...updated, supportUnits, totalPopulation };
 };
 
+export const renameMyCity = async (userId: string, name: string) => {
+  const city = await prisma.city.findFirst({ where: { ownerId: userId }, select: { id: true } });
+  if (!city) throw new Error("CITY_NOT_FOUND");
+  return prisma.city.update({
+    where: { id: city.id },
+    data: { name },
+    select: { id: true, name: true },
+  });
+};
+
 export const createStarterCity = async (
   userId: string,
   cityName: string,

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { recruitUnits, cancelRecruitmentOrder } from "../api/city.ts";
 import { UNITS, getRecruitmentTime, getHousingCapacity as getMaxPopulation } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration, computePopulation } from "../lib/cityHelpers.ts";
+import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import type { CityOverview, UnitName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
@@ -109,7 +110,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
               {UNIT_ORDER.map((name) => {
                 const cfg      = UNITS[name];
                 const unlocked = isUnlocked(name);
-                const timeSec  = getRecruitmentTime(name, mbLevel);
+                const timeSec  = getRecruitmentTime(name, mbLevel, GAME_SPEED);
                 const qty      = quantities[name] ?? 1;
 
                 const moneyOk   = city.money  >= cfg.costMoney  * qty;
@@ -117,6 +118,13 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                 const ammoOk    = city.ammo   >= cfg.costAmmo   * qty;
                 const popOk     = availablePop >= cfg.population * qty;
                 const canAfford = moneyOk && energyOk && ammoOk && popOk;
+
+                const affordableMax = Math.max(0, Math.min(
+                  cfg.costMoney  > 0 ? Math.floor(city.money  / cfg.costMoney)  : Infinity,
+                  cfg.costEnergy > 0 ? Math.floor(city.energy / cfg.costEnergy) : Infinity,
+                  cfg.costAmmo   > 0 ? Math.floor(city.ammo   / cfg.costAmmo)   : Infinity,
+                  cfg.population > 0 ? Math.floor(availablePop / cfg.population) : Infinity,
+                ));
 
                 return (
                   <tr key={name} className={`border-b border-[#21262d] hover:bg-[#161b22] transition-colors ${!unlocked ? "opacity-40" : ""}`}>
@@ -171,12 +179,13 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                             type="text"
                             inputMode="numeric"
                             value={qty}
+                            onFocus={(e) => e.currentTarget.select()}
                             onChange={(e) => {
                               const raw = e.target.value.replace(/[^0-9]/g, "");
                               const num = parseInt(raw);
                               setQuantities((prev) => ({
                                 ...prev,
-                                [name]: raw === "" ? 1 : Math.max(1, num),
+                                [name]: raw === "" ? 1 : Math.max(1, Math.min(num, Math.max(1, affordableMax))),
                               }));
                             }}
                             className="w-14 bg-[#0d1117] border border-[#30363d] rounded text-xs text-[#c9d1d9] px-1.5 py-1 text-center focus:outline-none focus:border-[#58a6ff]"
