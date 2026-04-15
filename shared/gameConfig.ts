@@ -339,6 +339,23 @@ export const getBuildingPoints = (type: BuildingName, level: number): number => 
   return sum;
 };
 
+// Costul (per resursa) pentru al N-lea Governor (N = 1, 2, 3, ...).
+// Contorul e per cont, iar Money = Energy = Ammo.
+// Formula: N ≤ 5 creste cu ×1.5 (usor); N ≥ 6 se dubleaza (greu).
+export const getGovernorCost = (governorNumber: number): number => {
+  const n = Math.max(1, Math.floor(governorNumber));
+  if (n <= 5) return Math.round(10_000 * Math.pow(1.5, n - 1));
+  const cost5 = Math.round(10_000 * Math.pow(1.5, 4)); // 50625
+  return cost5 * Math.pow(2, n - 5);
+};
+
+export const GOVERNOR_HQ_REQUIRED = 30;
+export const GOVERNOR_POPULATION  = 100;
+
+export const getGovernorRecruitmentTime = (gameSpeed: number = 1): number => {
+  return Math.max(1, Math.round(UNITS.GOVERNOR.baseRecruitmentTime / gameSpeed));
+};
+
 export const getTravelTimeSec = (gameSpeed: number = 1): number => Math.round(60 / gameSpeed);
 
 export const calcAirDefenseDamage = (airDefenseLevel: number, mlCount: number, droneCount: number): number => {

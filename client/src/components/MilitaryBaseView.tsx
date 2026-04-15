@@ -7,6 +7,7 @@ import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import type { CityOverview, UnitName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import ConfirmModal from "./ConfirmModal.tsx";
 
 interface Props {
   city: CityOverview;
@@ -28,6 +29,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
   const cancelMutation = useMutation({ mutationFn: cancelRecruitmentOrder, onSuccess: invalidate });
 
   const [quantities, setQuantities] = useState<Partial<Record<UnitName, number>>>({});
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -232,11 +234,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                       <span className="text-xs text-[#b1bac4] shrink-0">{fmtDuration(totalSec)}</span>
                       <span className="text-xs text-[#d29922] font-mono w-20 text-right shrink-0">{countdown}</span>
                       <button
-                        onClick={() => {
-                          if (window.confirm("You will lose 25% of the resources. Are you sure you want to continue?")) {
-                            cancelMutation.mutate(order.id);
-                          }
-                        }}
+                        onClick={() => setCancelOrderId(order.id)}
                         disabled={cancelMutation.isPending}
                         className="text-[10px] text-[#7d8590] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
                       >
@@ -249,6 +247,18 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
             </div>
           )}
         </div>
+        {cancelOrderId && (
+          <ConfirmModal
+            message="You will lose 25% of the resources. Are you sure you want to continue?"
+            confirmLabel="Cancel order"
+            cancelLabel="Keep order"
+            onConfirm={() => {
+              cancelMutation.mutate(cancelOrderId);
+              setCancelOrderId(null);
+            }}
+            onCancel={() => setCancelOrderId(null)}
+          />
+        )}
     </div>
   );
 }

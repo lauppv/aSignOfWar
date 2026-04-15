@@ -1,6 +1,6 @@
 import prisma from "../config/db";
 import { recruitmentQueue } from "../config/queue";
-import { UNITS, getRecruitmentTime, getHousingCapacity } from "../../../shared/gameConfig";
+import { UNITS, getRecruitmentTime, getHousingCapacity, getGovernorCost } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { UnitName } from "@prisma/client";
 import { syncResources } from "./city.service";
@@ -12,6 +12,7 @@ export const startRecruitment = async (
   userId: string
 ) => {
   if (quantity < 1) throw new Error("INVALID_QUANTITY");
+  if (unitName === "GOVERNOR") throw new Error("GOVERNOR_USE_DEPOSIT_ENDPOINT");
 
   const city = await prisma.city.findUnique({
     where: { id: cityId },
@@ -25,17 +26,13 @@ export const startRecruitment = async (
   const hq  = city.buildings.find(b => b.name === "HEADQUARTERS")!;
   const mb  = city.buildings.find(b => b.name === "MILITARY_BASE")!;
 
-  // Verificare conditii de deblocare
-  if (unitName === "GOVERNOR") {
-    if (hq.level < 30) throw new Error("HQ_REQUIRED:30");
-  } else {
-    if (mb.level < 1) throw new Error("MILITARY_BASE_REQUIRED");
-    if (cfg.requiresHQ && hq.level < cfg.requiresHQ) {
-      throw new Error(`HQ_REQUIRED:${cfg.requiresHQ}`);
-    }
-    if (cfg.requiresMilitaryBase && mb.level < cfg.requiresMilitaryBase) {
-      throw new Error(`MB_REQUIRED:${cfg.requiresMilitaryBase}`);
-    }
+  // Verificare conditii de deblocare (GOVERNOR are endpoint dedicat, vezi governor.service)
+  if (mb.level < 1) throw new Error("MILITARY_BASE_REQUIRED");
+  if (cfg.requiresHQ && hq.level < cfg.requiresHQ) {
+    throw new Error(`HQ_REQUIRED:${cfg.requiresHQ}`);
+  }
+  if (cfg.requiresMilitaryBase && mb.level < cfg.requiresMilitaryBase) {
+    throw new Error(`MB_REQUIRED:${cfg.requiresMilitaryBase}`);
   }
 
   // Verificare populatie disponibila
@@ -123,12 +120,23 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
   if (!order)                        throw new Error("ORDER_NOT_FOUND");
   if (order.city.ownerId !== userId) throw new Error("UNAUTHORIZED");
 
-  const cfg = UNITS[order.unitName];
-  const cost = {
-    money:  cfg.costMoney  * order.quantity,
-    energy: cfg.costEnergy * order.quantity,
-    ammo:   cfg.costAmmo   * order.quantity,
-  };
+  let cost: { money: number; energy: number; ammo: number };
+  if (order.unitName === "GOVERNOR") {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("USER_NOT_FOUND");
+    // Costul governor-ului anulat = cel al guvernatorului #governorsRecruited
+    // (a fost incrementat la pornirea recrutarii).
+    const c = getGovernorCost(user.governorsRecruited);
+    cost = { money: c, energy: c, ammo: c };
+  } else {
+    const cfg = UNITS[order.unitName];
+    cost = {
+      money:  cfg.costMoney  * order.quantity,
+      energy: cfg.costEnergy * order.quantity,
+      ammo:   cfg.costAmmo   * order.quantity,
+    };
+  }
+
   const refund = {
     money:  Math.floor(cost.money  * 0.75),
     energy: Math.floor(cost.energy * 0.75),
@@ -140,7 +148,7 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
     if (job) await job.remove();
   }
 
-  await prisma.$transaction([
+  const ops: any[] = [
     prisma.recruitmentOrder.delete({ where: { id: orderId } }),
     prisma.city.update({
       where: { id: order.cityId },
@@ -150,7 +158,16 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
         ammo:   { increment: refund.ammo },
       },
     }),
-  ]);
+  ];
+  if (order.unitName === "GOVERNOR") {
+    ops.push(
+      prisma.user.update({
+        where: { id: userId },
+        data:  { governorsRecruited: { decrement: 1 } },
+      }),
+    );
+  }
+  await prisma.$transaction(ops);
 
   return { refund };
 };

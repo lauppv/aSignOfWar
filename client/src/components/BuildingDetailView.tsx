@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { upgradeBuilding, cancelBuildingOrder } from "../api/city.ts";
+import ConfirmModal from "./ConfirmModal.tsx";
 import {
   BUILDINGS,
   getBuildingUpgradeCost,
@@ -91,6 +92,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const upgradeMutation = useMutation({ mutationFn: upgradeBuilding, onSuccess: invalidate });
   const cancelMutation  = useMutation({ mutationFn: cancelBuildingOrder, onSuccess: invalidate });
 
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -116,9 +118,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const stats = getStats(name, level, hqLevel);
 
   function handleCancel(orderId: string) {
-    if (window.confirm("You will lose 25% of the resources. Are you sure you want to continue?")) {
-      cancelMutation.mutate(orderId);
-    }
+    setCancelOrderId(orderId);
   }
 
   let upgradeNode: React.ReactNode;
@@ -254,6 +254,18 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
             </div>
           )}
         </div>
+        {cancelOrderId && (
+          <ConfirmModal
+            message="You will lose 25% of the resources. Are you sure you want to continue?"
+            confirmLabel="Cancel order"
+            cancelLabel="Keep order"
+            onConfirm={() => {
+              cancelMutation.mutate(cancelOrderId);
+              setCancelOrderId(null);
+            }}
+            onCancel={() => setCancelOrderId(null)}
+          />
+        )}
     </div>
   );
 }

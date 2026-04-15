@@ -9,9 +9,11 @@ import commandRoutes from "./api/routes/command.routes";
 import mapRoutes from "./api/routes/map.routes";
 import reportRoutes from "./api/routes/report.routes";
 import configRoutes from "./api/routes/config.routes";
+import governorRoutes from "./api/routes/governor.routes";
 import { registerBuildingWorker } from "./workers/building.worker";
 import { registerRecruitmentWorker } from "./workers/recruitment.worker";
 import { registerCommandWorker } from "./workers/command.worker";
+import { startGhostTicker } from "./services/ghost.service";
 
 const app = express();
 
@@ -31,6 +33,7 @@ app.use("/api/cities", commandRoutes);
 app.use("/api/map", mapRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/config", configRoutes);
+app.use("/api/governor", governorRoutes);
 
 // Middleware global de erori — prinde orice eroare neasteptata din controllere
 // Fara el, Express ar return un HTML urat cu tot stack trace-ul vizibil
@@ -42,6 +45,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 registerBuildingWorker();
 registerRecruitmentWorker();
 registerCommandWorker();
+startGhostTicker();
 
 app.listen(env.port, () => {
   console.log(`Server pornit pe http://localhost:${env.port}`);

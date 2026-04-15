@@ -20,6 +20,18 @@ export const renameCitySchema = z.object({
   name: z.string().trim().min(1).max(50),
 });
 
+// ─── Governor ────────────────────────────────────────────────────────────────
+
+export const depositGovernorSchema = z.object({
+  cityId:   z.string().uuid(),
+  resource: z.enum(["money", "energy", "ammo"]),
+  amount:   z.number().positive(),
+});
+
+export const recruitGovernorSchema = z.object({
+  cityId: z.string().uuid(),
+});
+
 // ─── Recruitment ─────────────────────────────────────────────────────────────
 
 export const recruitSchema = z.object({

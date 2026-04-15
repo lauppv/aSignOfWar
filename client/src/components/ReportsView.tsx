@@ -476,6 +476,12 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
           <span className="font-mono">−{data.loyaltyDamage}</span>
         </div>
       )}
+
+      {data.conquered && (
+        <div className="rounded border border-[#3fb950] bg-[#0e2a14] p-3 text-xs text-[#7ee787] uppercase tracking-widest text-center font-semibold">
+          City conquered — one Governor was consumed
+        </div>
+      )}
     </>
   );
 }

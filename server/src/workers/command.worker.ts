@@ -1,9 +1,9 @@
 import { Worker } from "bullmq";
 import { createRedisConnection } from "../config/redis";
 import prisma from "../config/db";
-import { commandQueue } from "../config/queue";
+import { commandQueue, buildingQueue, recruitmentQueue } from "../config/queue";
 import { calculateBattle } from "../services/battle.service";
-import { getTravelTimeSec } from "../../../shared/gameConfig";
+import { getTravelTimeSec, UNITS } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { syncResources } from "../services/city.service";
 import { UnitName } from "@prisma/client";
@@ -140,6 +140,36 @@ async function processAttackArrival(command: any) {
   const returnDelayMs   = getTravelTimeSec(env.gameSpeed) * 1000;
   const returnArrivalAt = new Date(Date.now() + returnDelayMs);
 
+  // ── Cucerire ───────────────────────────────────────────────────────────────
+  // Conditii: atac castigat (allDefDead implicit), loialitate ≤ 0 dupa damage,
+  // si cel putin un Governor supravietuitor. Un Governor se consuma (cel care
+  // a dat lovitura finala). Counter-ul de pe cont ramane neschimbat — exact ca
+  // taleri in Tribal Wars: nobilul mort nu te scuteste de costul urmatorului.
+  let conquered          = false;
+  let newOwnerId: string | null = null;
+  const govIdx           = result.attackerSurvivors.findIndex(u => u.name === "GOVERNOR");
+  const govSurvivors     = govIdx >= 0 ? result.attackerSurvivors[govIdx].quantity : 0;
+  const projectedLoyalty = toCity.loyalty - result.loyaltyDamage;
+  if (projectedLoyalty <= 0 && govSurvivors > 0) {
+    const fromCity = await prisma.city.findUnique({
+      where:  { id: command.fromCityId },
+      select: { ownerId: true },
+    });
+    if (fromCity?.ownerId) {
+      conquered     = true;
+      newOwnerId    = fromCity.ownerId;
+      // Decrementeaza guvernatorii din supravietuitori INAINTE de tx, ca loop-ul
+      // de jos sa scrie cantitatea corecta in CommandUnit.
+      result.attackerSurvivors[govIdx].quantity = govSurvivors - 1;
+    }
+  }
+  const finalLoyalty = conquered ? 25 : Math.max(0, projectedLoyalty);
+
+  // Date colectate in tx, folosite afara pentru a curata cozile BullMQ
+  let cancelledBuildingJobIds: string[] = [];
+  let cancelledRecruitJobIds:  string[] = [];
+  const displacedSupportIds:   string[] = [];
+
   await prisma.$transaction(async (tx) => {
     // Actualizeaza unitatile aparatorului (native)
     for (const [name, quantity] of nativeStack) {
@@ -174,41 +204,114 @@ async function processAttackArrival(command: any) {
       });
     }
 
-    // Scade resursele furate + actualizeaza loyalty
+    // Scade resursele furate, seteaza loyalty (clampat la 0 sau resetat la 25
+    // daca a fost cucerit), si transfera owner-ul daca e cazul.
     await tx.city.update({
       where: { id: command.toCityId },
       data: {
         money:   { decrement: result.stolenMoney },
         energy:  { decrement: result.stolenEnergy },
         ammo:    { decrement: result.stolenAmmo },
-        loyalty: { decrement: result.loyaltyDamage },
+        loyalty: finalLoyalty,
+        ...(conquered ? { ownerId: newOwnerId } : {}),
       },
     });
 
-    // Actualizeaza CommandUnit cu supravietuitorii (pentru trip-ul de intoarcere)
-    for (const { name, quantity } of result.attackerSurvivors) {
-      await tx.commandUnit.updateMany({
-        where: { commandId: command.id, name },
-        data:  { quantity },
+    if (conquered) {
+      // Anuleaza upgrade-urile de cladiri in curs (fara refund — e razboi).
+      const buildingOrders = await tx.buildingUpgradeOrder.findMany({
+        where:  { cityId: command.toCityId },
+        select: { id: true, jobId: true },
       });
+      cancelledBuildingJobIds = buildingOrders
+        .map(o => o.jobId)
+        .filter((x): x is string => x != null);
+      await tx.buildingUpgradeOrder.deleteMany({ where: { cityId: command.toCityId } });
+
+      // Anuleaza recrutarile in curs (inclusiv eventual GOVERNOR al defender-ului).
+      const recruitOrders = await tx.recruitmentOrder.findMany({
+        where:  { cityId: command.toCityId },
+        select: { id: true, jobId: true },
+      });
+      cancelledRecruitJobIds = recruitOrders
+        .map(o => o.jobId)
+        .filter((x): x is string => x != null);
+      await tx.recruitmentOrder.deleteMany({ where: { cityId: command.toCityId } });
+
+      // Anuleaza comenzile de RESURSE care plecau din orasul acum cucerit:
+      // nu ajung la destinatie si nici nu se intorc — pur si simplu dispar
+      // (resursele se pierd). Job-ul stale "arrive" va gasi commandId inexistent
+      // si va iesi linistit (vezi processArrival cand command e null).
+      // (Outgoing ATTACK/SUPPORT/SPY raman in zbor — sunt acte deja angajate.)
+      const cancelledResourceCmds = await tx.command.findMany({
+        where:  { fromCityId: command.toCityId, type: "RESOURCES", status: "TRAVELING" },
+        select: { id: true },
+      });
+      const cancelledResourceIds = cancelledResourceCmds.map(c => c.id);
+      if (cancelledResourceIds.length > 0) {
+        await tx.commandUnit.deleteMany({ where: { commandId: { in: cancelledResourceIds } } });
+        await tx.command.deleteMany({ where: { id: { in: cancelledResourceIds } } });
+      }
+
+      // Trimite acasa toate suporturile stationate care au mai supravietuit:
+      // un oras nu poate fi sprijinit dupa ce-i cade owner-ul. Acestea sunt
+      // ale altor jucatori, NU ale fostului proprietar — deci se intorc, nu se anuleaza.
+      const stationedSurvivors = await tx.command.findMany({
+        where:  { toCityId: command.toCityId, type: "SUPPORT", status: "ARRIVED" },
+        select: { id: true },
+      });
+      for (const sc of stationedSurvivors) {
+        await tx.command.update({
+          where: { id: sc.id },
+          data:  { status: "RETURNING", arrivalAt: returnArrivalAt },
+        });
+        displacedSupportIds.push(sc.id);
+      }
+
+      // Trupele atacatoare (cele care l-au insotit pe Governor) raman ca
+      // garnizoana noua a orasului. Le depunem ca unitati native.
+      for (const { name, quantity } of result.attackerSurvivors) {
+        if (quantity <= 0) continue;
+        await tx.unit.upsert({
+          where:  { cityId_name: { cityId: command.toCityId, name } },
+          update: { quantity: { increment: quantity } },
+          create: { cityId: command.toCityId, name, category: UNITS[name].category, quantity },
+        });
+      }
+      // CommandUnit pus pe 0 — armata nu mai exista in command, e in oras.
+      for (const { name } of result.attackerSurvivors) {
+        await tx.commandUnit.updateMany({
+          where: { commandId: command.id, name },
+          data:  { quantity: 0 },
+        });
+      }
+    } else {
+      // Lupta normala: supravietuitorii pleaca acasa cu prada.
+      for (const { name, quantity } of result.attackerSurvivors) {
+        await tx.commandUnit.updateMany({
+          where: { commandId: command.id, name },
+          data:  { quantity },
+        });
+      }
     }
 
     const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
+    // Daca a fost cucerit, comanda e definitivata aici (trupele raman in oras).
+    // Altfel, daca au supravietuit, programa intoarcerea.
+    const finalStatus    = conquered ? "COMPLETED" : (hasSurvivors ? "RETURNING" : "COMPLETED");
+    const finalArrivalAt = (!conquered && hasSurvivors) ? returnArrivalAt : command.arrivalAt;
 
-    // Salveaza raportul de lupta. Daca exista supravietuitori, mutam arrivalAt
-    // la momentul cand ajung inapoi acasa — altfel timer-ul ramane in trecut.
-    // Salvam si starea initiala a luptei (atacator/aparator + AD lvl) — altfel
-    // o pierdem dupa update-urile de mai sus si nu mai putem afisa pierderile.
     await tx.command.update({
       where: { id: command.id },
       data: {
-        status:        hasSurvivors ? "RETURNING" : "COMPLETED",
-        arrivalAt:     hasSurvivors ? returnArrivalAt : command.arrivalAt,
+        status:         finalStatus,
+        arrivalAt:      finalArrivalAt,
         resourceMoney:  result.stolenMoney,
         resourceEnergy: result.stolenEnergy,
         resourceAmmo:   result.stolenAmmo,
         report: {
           ...result,
+          conquered,
           attackerInitial:        attackerUnits,
           defenderInitial:        defenderUnits,
           airDefenseInitialLevel: airDefenseLevel,
@@ -218,10 +321,27 @@ async function processAttackArrival(command: any) {
     });
   });
 
-  // Programeaza intoarcerea daca au supravietuit unitati
+  // Programeaza intoarcerea daca au supravietuit unitati SI orasul nu a fost cucerit.
+  // (La cucerire trupele raman ca garnizoana, deci nu mai pleaca nicaieri.)
   const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
-  if (hasSurvivors) {
+  if (hasSurvivors && !conquered) {
     await commandQueue.add("return", { commandId: command.id }, { delay: returnDelayMs });
+  }
+
+  // Curatare cozi BullMQ pentru orderele anulate de cucerire si reprogramare
+  // a suporturilor displasate.
+  if (conquered) {
+    for (const jobId of cancelledBuildingJobIds) {
+      const j = await buildingQueue.getJob(jobId);
+      if (j) await j.remove();
+    }
+    for (const jobId of cancelledRecruitJobIds) {
+      const j = await recruitmentQueue.getJob(jobId);
+      if (j) await j.remove();
+    }
+    for (const supportCommandId of displacedSupportIds) {
+      await commandQueue.add("return", { commandId: supportCommandId }, { delay: returnDelayMs });
+    }
   }
 }
 

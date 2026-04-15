@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { upgradeBuilding, cancelBuildingOrder, recruitUnits, renameMyCity } from "../api/city.ts";
-import { BUILDINGS, UNITS, getBuildingUpgradeCost, getBuildingUpgradeTime, getRecruitmentTime } from "@shared/gameConfig.ts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { upgradeBuilding, cancelBuildingOrder, renameMyCity, cancelRecruitmentOrder } from "../api/city.ts";
+import { getGovernorState, depositGovernor, recruitGovernor, type GovernorResource } from "../api/governor.ts";
+import { BUILDINGS, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration } from "../lib/cityHelpers.ts";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { BUILDING_DISPLAY, BUILDING_SHORT_DESC, BUILDING_ORDER } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import ConfirmModal from "./ConfirmModal.tsx";
 
 interface Props {
   city: CityOverview;
@@ -24,18 +26,43 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
   const invalidate      = () => queryClient.invalidateQueries({ queryKey: ["city"] });
   const upgradeMutation = useMutation({ mutationFn: upgradeBuilding, onSuccess: invalidate });
   const cancelMutation  = useMutation({ mutationFn: cancelBuildingOrder, onSuccess: invalidate });
-  const recruitMutation = useMutation({
-    mutationFn: ({ quantity }: { quantity: number }) => recruitUnits(city.id, "GOVERNOR", quantity),
-    onSuccess: invalidate,
-  });
   const renameMutation = useMutation({
     mutationFn: (name: string) => renameMyCity(name),
     onSuccess: invalidate,
   });
 
-  const [govQty, setGovQty] = useState(1);
+  const governorQuery = useQuery({
+    queryKey: ["governor"],
+    queryFn:  getGovernorState,
+  });
+  const depositMutation = useMutation({
+    mutationFn: ({ resource, amount }: { resource: GovernorResource; amount: number }) =>
+      depositGovernor(city.id, resource, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["governor"] });
+      invalidate();
+    },
+  });
+  const recruitGovernorMutation = useMutation({
+    mutationFn: () => recruitGovernor(city.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["governor"] });
+      invalidate();
+    },
+  });
+  const cancelGovernorMutation = useMutation({
+    mutationFn: (orderId: string) => cancelRecruitmentOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["governor"] });
+      invalidate();
+    },
+  });
+  const [confirmRecruitGovernor, setConfirmRecruitGovernor] = useState(false);
+  const [cancelGovernorOrderId, setCancelGovernorOrderId] = useState<string | null>(null);
+
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(city.name);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
   useEffect(() => { setNameDraft(city.name); }, [city.name]);
 
@@ -110,19 +137,29 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
 
           {/* Governor */}
           {(() => {
-            const cfg        = UNITS["GOVERNOR"];
-            const hqLevel    = city.buildings.find(b => b.name === "HEADQUARTERS")?.level ?? 0;
-            const unlocked   = hqLevel >= (cfg.requiresHQ ?? 0);
-            const timeSec    = getRecruitmentTime("GOVERNOR", 0, GAME_SPEED);
-            const moneyOk    = city.money  >= cfg.costMoney  * govQty;
-            const energyOk   = city.energy >= cfg.costEnergy * govQty;
-            const ammoOk     = city.ammo   >= cfg.costAmmo   * govQty;
-            const canAfford  = moneyOk && energyOk && ammoOk;
+            const hqLvl    = city.buildings.find(b => b.name === "HEADQUARTERS")?.level ?? 0;
+            const unlocked = hqLvl >= 30;
+            const state    = governorQuery.data;
+
+            const resources: { key: GovernorResource; label: string; color: string; cityAmount: number }[] = [
+              { key: "money",  label: "M", color: "#7ee787", cityAmount: city.money  },
+              { key: "energy", label: "E", color: "#79c0ff", cityAmount: city.energy },
+              { key: "ammo",   label: "A", color: "#e3b341", cityAmount: city.ammo   },
+            ];
 
             return (
               <div className="p-4 pt-0 shrink-0">
-                <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Governor</div>
-                <div className="flex items-center gap-3 p-3 bg-[#161b22] border border-[#21262d] rounded">
+                <div className="flex items-baseline justify-between mb-2">
+                  <div className="text-[10px] uppercase tracking-widest text-[#b1bac4]">Governor</div>
+                  {state && (
+                    <div className="text-[10px] text-[#7d8590]">
+                      Recruited: <span className="text-[#c9d1d9] font-medium">{state.recruited}</span>
+                      {" · "}
+                      Next: #{state.nextNumber}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-[#161b22] border border-[#21262d] rounded">
                   <img
                     src="/images/units/governor.jpg"
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
@@ -131,37 +168,89 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                     onClick={() => openUnit("GOVERNOR")}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-[#c9d1d9]">Governor</div>
-                    <div className="text-[10px] text-[#7d8590]">Conquer cities · HQ lvl 30 req.</div>
-                    <div className="flex gap-2 mt-1 text-xs flex-wrap">
-                      <span className={moneyOk  ? "text-[#7ee787]" : "text-[#f85149]"}>{cfg.costMoney.toLocaleString()} M</span>
-                      <span className={energyOk ? "text-[#79c0ff]" : "text-[#f85149]"}>{cfg.costEnergy.toLocaleString()} E</span>
-                      <span className={ammoOk   ? "text-[#e3b341]" : "text-[#f85149]"}>{cfg.costAmmo.toLocaleString()} A</span>
-                      <span className="text-[#7d8590]">{fmtDuration(timeSec)}</span>
-                    </div>
-                    {unlocked ? (
-                      <div className="flex items-center gap-2 mt-2">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={govQty}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/[^0-9]/g, "");
-                            const num = parseInt(raw);
-                            setGovQty(raw === "" ? 1 : Math.max(1, num));
-                          }}
-                          className="w-14 bg-[#0d1117] border border-[#30363d] rounded text-xs text-[#c9d1d9] px-1.5 py-1 text-center focus:outline-none focus:border-[#58a6ff]"
-                        />
-                        <button
-                          onClick={() => recruitMutation.mutate({ quantity: govQty })}
-                          disabled={!canAfford || recruitMutation.isPending}
-                          className="px-3 py-1.5 rounded text-xs font-medium cursor-pointer bg-[#238636] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2ea043]"
-                        >
-                          Recruit
-                        </button>
+                    {!unlocked && (
+                      <div className="text-[#f85149] text-xs">HQ lvl 30 required in this city</div>
+                    )}
+                    {unlocked && !state && (
+                      <div className="text-[10px] text-[#7d8590]">Loading…</div>
+                    )}
+                    {unlocked && state && (
+                      <div className="flex flex-col gap-1.5">
+                        {resources.map(({ key, label, color, cityAmount }) => {
+                          const current = state.deposits[key];
+                          const target  = state.nextCost[key];
+                          const pct     = Math.min(100, (current / target) * 100);
+                          const remaining = Math.max(0, target - current);
+                          const depositable = Math.min(remaining, Math.floor(cityAmount));
+                          const full = current >= target;
+                          return (
+                            <div key={key} className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold w-3 shrink-0" style={{ color }}>{label}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="h-3 bg-[#0d1117] border border-[#30363d] rounded overflow-hidden relative">
+                                  <div
+                                    className="h-full transition-[width]"
+                                    style={{ width: `${pct}%`, backgroundColor: color, opacity: 0.75 }}
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-[#c9d1d9] pointer-events-none">
+                                    {fmt(Math.floor(current))} / {fmt(target)}
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => depositMutation.mutate({ resource: key, amount: depositable })}
+                                disabled={full || depositable <= 0 || depositMutation.isPending}
+                                title={full ? "Full" : `Deposit ${fmt(depositable)}`}
+                                className="px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer bg-[#238636] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#2ea043] shrink-0"
+                              >
+                                +{fmt(depositable)}
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {(() => {
+                          const pending = state.pendingOrders.find(o => o.cityId === city.id) ?? null;
+                          if (pending) {
+                            const diff = new Date(pending.finishAt).getTime() - Date.now();
+                            const s    = Math.max(0, Math.floor(diff / 1000));
+                            const countdown = s === 0 ? "finishing..." : fmtDuration(s);
+                            return (
+                              <div className="flex items-center gap-2 mt-1 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded">
+                                <span className="text-[10px] text-[#b1bac4] flex-1 truncate">
+                                  Recruiting in <span className="text-[#c9d1d9]">{pending.cityName}</span>
+                                </span>
+                                <span className="text-[10px] text-[#d29922] font-mono">{countdown}</span>
+                                <button
+                                  onClick={() => setCancelGovernorOrderId(pending.id)}
+                                  disabled={cancelGovernorMutation.isPending}
+                                  className="text-[10px] text-[#7d8590] hover:text-[#f85149] cursor-pointer disabled:opacity-40"
+                                  title="Cancel recruitment"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="flex flex-col gap-1 mt-1">
+                              <button
+                                onClick={() => setConfirmRecruitGovernor(true)}
+                                disabled={!state.barsReady || recruitGovernorMutation.isPending}
+                                className="px-2 py-1 rounded text-[10px] font-medium cursor-pointer bg-[#238636] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#2ea043]"
+                                title={state.barsReady ? `Recruit Governor (${fmtDuration(state.recruitTimeSec)})` : "Fill all bars first"}
+                              >
+                                Recruit Governor · {fmtDuration(state.recruitTimeSec)}
+                              </button>
+                              {recruitGovernorMutation.isError && (
+                                <div className="text-[10px] text-[#f85149]">
+                                  {(recruitGovernorMutation.error as Error)?.message ?? "Error"}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
-                    ) : (
-                      <div className="text-[#f85149] text-xs mt-1">HQ lvl 30 req.</div>
                     )}
                   </div>
                 </div>
@@ -297,11 +386,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                         {countdown}
                       </span>
                       <button
-                        onClick={() => {
-                          if (window.confirm("You will lose 25% of the resources. Are you sure you want to continue?")) {
-                            cancelMutation.mutate(order.id);
-                          }
-                        }}
+                        onClick={() => setCancelOrderId(order.id)}
                         disabled={cancelMutation.isPending}
                         className="text-[10px] text-[#7d8590] hover:text-[#f85149] cursor-pointer disabled:opacity-40 shrink-0"
                       >
@@ -315,6 +400,43 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
             </div>
           )}
         </div>
+        {cancelOrderId && (
+          <ConfirmModal
+            message="You will lose 25% of the resources. Are you sure you want to continue?"
+            confirmLabel="Cancel order"
+            cancelLabel="Keep order"
+            onConfirm={() => {
+              cancelMutation.mutate(cancelOrderId);
+              setCancelOrderId(null);
+            }}
+            onCancel={() => setCancelOrderId(null)}
+          />
+        )}
+        {confirmRecruitGovernor && (
+          <ConfirmModal
+            message={`Start recruiting a Governor in ${city.name}? This will consume the deposited resources and take ${fmtDuration(governorQuery.data?.recruitTimeSec ?? 0)}.`}
+            confirmLabel="Recruit"
+            cancelLabel="Not now"
+            variant="primary"
+            onConfirm={() => {
+              recruitGovernorMutation.mutate();
+              setConfirmRecruitGovernor(false);
+            }}
+            onCancel={() => setConfirmRecruitGovernor(false)}
+          />
+        )}
+        {cancelGovernorOrderId && (
+          <ConfirmModal
+            message="You will lose 25% of the deposited resources. Are you sure you want to cancel the Governor recruitment?"
+            confirmLabel="Cancel recruitment"
+            cancelLabel="Keep recruiting"
+            onConfirm={() => {
+              cancelGovernorMutation.mutate(cancelGovernorOrderId);
+              setCancelGovernorOrderId(null);
+            }}
+            onCancel={() => setCancelGovernorOrderId(null)}
+          />
+        )}
     </div>
   );
 }

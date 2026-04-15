@@ -78,7 +78,25 @@ Vom avea si harta cu coordonate. Pentru a trimite comenzi (attack, suport, resur
 Daca ID-ul nu e valabil, componenta va contine un simplu mesaj "orasul cu ID-ul X nu exista"
 
 Fiecare oras are ceva ce se numeste Loyalty (adeziune in Triburile). Fiecare oras incepe cu Loyalty = 100%. Cand aceasta scade sub 0%, orasul este cucerit. Pentru a scadea Loyalty, e nevoie de unul sau mai multi Governors. Un Governor poate scadea Loyalty cu 20-35%, iar acest lucru se intampla doar daca orasul atacat e lipsit de orice unitate in defense. Un Governor nu are valori ofensive sau defensive, dar ocupa 100 population.
-Pentru a recruta un Governor e necesar ca Headquarters sa fie la Level 30 (maxim). Acesta se poate recruta din Headquarters. In Headquarters avem numarul de Governors actuali din oras. Deoarece nu avem taleri ca in Triburile, fiecare Governor va costa exponential mai mult. Vor fi 3 bare de progres care trebuie umplute cu cele 3 resurse (ca Minunile Lumii in Grepolis sau ca nivelurile cladirilor legendare in Forge of Empires)
+Pentru a recruta un Governor e necesar ca Headquarters sa fie la Level 30 (maxim). Acesta se poate recruta din Headquarters. In Headquarters avem numarul de Governors actuali din oras. Deoarece nu avem taleri ca in Triburile, fiecare Governor va costa exponential mai mult. Vor fi 3 bare de progres care trebuie umplute cu cele 3 resurse (ca Minunile Lumii in Grepolis sau ca nivelurile cladirilor legendare in Forge of Empires).
+
+Contorul de Governori e PER CONT (nu per oras). Adica al N-lea Governor recrutat pe cont costa la fel indiferent din ce oras il recrutezi — inclusiv Governorii pierduti in atacuri esuate raman numarati (nu se reseteaza contorul). Cei 3 recipienti (Money/Energy/Ammo) accepta depuneri partiale din orice oras propriu: poti contribui treptat pana cand toate cele 3 bare sunt pline, moment in care Governor-ul e recrutat in orasul unde ai completat ultima bara.
+
+Costul fiecarei resurse pentru al N-lea Governor (Money = Energy = Ammo):
+
+  Governor 1:    10,000
+  Governor 2:    15,000
+  Governor 3:    22,500
+  Governor 4:    35,000
+  Governor 5:    55,000
+  Governor 6:   100,000
+  Governor 7:   190,000
+  Governor 8:   370,000
+  Governor 9:   730,000
+  Governor 10: 1,460,000
+  ...
+
+Formula: pentru N ≤ 5, cost(N) = round(10_000 * 1.5^(N-1)); pentru N ≥ 6, cost(N) = cost(5) * 2^(N-5). Primii 5 cresc cu ~×1.5 (accesibili cu 1-2 orase bine dezvoltate), apoi de la al 6-lea curba se dubleaza (presiunea de expansiune — ai nevoie de mai multe orase care produc simultan).
 
 
 --------------------------------------------------------------------------------

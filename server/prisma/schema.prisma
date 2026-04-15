@@ -68,6 +68,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Governor recruitment (per cont)
+  governorsRecruited Int   @default(0)
+  governorMoney      Float @default(0)
+  governorEnergy     Float @default(0)
+  governorAmmo       Float @default(0)
+
   cities City[]
 }
 

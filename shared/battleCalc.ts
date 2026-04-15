@@ -125,14 +125,13 @@ export function calculateBattle(
   }
 
   // 9. Efect Governor (reduce loyalty)
+  // Indiferent cati guvernatori sunt in atac, doar UNUL reduce loyalty: 20-35%.
+  // Daca vrei sa cuceresti mai repede, trimite atacuri separate cu cate un Governor.
   const govSurvivors = attackerSurvivors.find(u => u.name === "GOVERNOR")?.quantity ?? 0;
   const allDefDead   = defenderSurvivors.every(u => u.quantity === 0);
   let loyaltyDamage  = 0;
   if (attackerWon && allDefDead && govSurvivors > 0) {
-    // 20-35% per Governor (fara luck, dar range conform plan.txt)
-    for (let i = 0; i < govSurvivors; i++) {
-      loyaltyDamage += 20 + Math.floor(Math.random() * 16);
-    }
+    loyaltyDamage = 20 + Math.floor(Math.random() * 16);
   }
 
   return {

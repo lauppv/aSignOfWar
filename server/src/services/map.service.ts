@@ -1,6 +1,21 @@
 import prisma from "../config/db";
 import { Prisma } from "@prisma/client";
-import { getBuildingPoints, BuildingName } from "../../../shared/gameConfig";
+import { getBuildingPoints, getWarehouseCapacity, BuildingName } from "../../../shared/gameConfig";
+
+// Sablon cladiri pentru orasele fantoma nou create (vezi plan.txt → GHOST CITIES).
+export const GHOST_STARTER_BUILDINGS: { name: BuildingName; level: number }[] = [
+  { name: "HEADQUARTERS",    level: 3 },
+  { name: "BANK",            level: 3 },
+  { name: "POWER_PLANT",     level: 3 },
+  { name: "WEAPONS_FACTORY", level: 3 },
+  { name: "HOUSING",         level: 3 },
+  { name: "WAREHOUSE",       level: 3 },
+  { name: "MILITARY_BASE",   level: 0 },
+  { name: "HARBOR",          level: 0 },
+  { name: "AIR_DEFENSE",     level: 0 },
+];
+
+const GHOST_STARTER_WAREHOUSE_LEVEL = 3;
 
 export const MAP_SIZE = 100;
 
@@ -89,6 +104,7 @@ export const createGhostCitiesAround = async (
   tx: TransactionClient = prisma
 ): Promise<void> => {
   const occupied = await getOccupiedSet(tx);
+  const startingResources = getWarehouseCapacity(GHOST_STARTER_WAREHOUSE_LEVEL);
 
   for (let i = 0; i < count; i++) {
     const slot = pickFreeSlotNear(origin.x, origin.y, occupied);
@@ -98,6 +114,10 @@ export const createGhostCitiesAround = async (
         name: GHOST_NAME,
         x: slot.x,
         y: slot.y,
+        money:  startingResources,
+        energy: startingResources,
+        ammo:   startingResources,
+        buildings: { create: GHOST_STARTER_BUILDINGS },
       },
     });
   }

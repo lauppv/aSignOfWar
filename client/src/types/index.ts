@@ -116,6 +116,7 @@ export interface BattleReportData {
   stolenEnergy: number;
   stolenAmmo: number;
   loyaltyDamage: number;
+  conquered?: boolean;
   battleAt: string;
 }
 

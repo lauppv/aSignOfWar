@@ -6,7 +6,7 @@ import { getMyCity } from "../api/city.ts";
 import type { MapCity } from "../types/index.ts";
 import CityActionPanel from "../components/CityActionPanel.tsx";
 
-const CELL = 48; // pixeli per celula → 100x100 = 4800x4800 px
+const CELL = 80; // pixeli per celula → 100x100 = 8000x8000 px
 const GRID_LINE = "#21262d";
 
 // Paleta orase pe harta. Alianta ramane TODO pana cand modelam Alliance.
@@ -31,6 +31,14 @@ function colorFor(kind: CityKind): string {
     case "alliance": return COLOR_ALLIANCE;
     case "other":    return COLOR_OTHER;
   }
+}
+
+function spriteFor(points: number): string {
+  if (points >= 9000) return "/images/map/9000-max.jpg";
+  if (points >= 3000) return "/images/map/3000-8999.jpg";
+  if (points >= 1000) return "/images/map/1000-2999.jpg";
+  if (points >= 300)  return "/images/map/300-999.jpg";
+  return "/images/map/0-299.jpg";
 }
 
 export default function MapPage() {
@@ -218,9 +226,9 @@ export default function MapPage() {
           })()}
 
           {map.cities.map((c) => {
-            const kind = classify(c, myCity?.id);
-            const bg = colorFor(kind);
-            const label = kind === "ghost" ? "★" : c.name.slice(0, 2).toUpperCase();
+            const kind   = classify(c, myCity?.id);
+            const accent = colorFor(kind);
+            const sprite = spriteFor(c.points);
             return (
               <div
                 key={c.id}
@@ -234,22 +242,24 @@ export default function MapPage() {
                   e.stopPropagation();
                   setSelected({ city: c, px: c.x * CELL, py: c.y * CELL });
                 }}
-                className="absolute flex items-center justify-center rounded-sm"
+                className="absolute rounded-sm"
                 style={{
-                  left: c.x * CELL + 4,
-                  top: c.y * CELL + 4,
-                  width: CELL - 8,
-                  height: CELL - 8,
-                  background: bg,
-                  boxShadow: kind === "own" ? `0 0 10px ${bg}` : `0 0 4px rgba(0,0,0,0.6)`,
-                  border: kind === "ghost" ? "1px solid #484f58" : undefined,
+                  left: c.x * CELL + 2,
+                  top: c.y * CELL + 2,
+                  width: CELL - 4,
+                  height: CELL - 4,
+                  outline: `2px solid ${accent}`,
+                  outlineOffset: -2,
+                  boxShadow: kind === "own" ? `0 0 12px ${accent}` : `0 0 4px rgba(0,0,0,0.6)`,
                   cursor: isDragging ? "grabbing" : "pointer",
-                  fontSize: 10,
-                  color: "#0d1117",
-                  fontWeight: 700,
                 }}
               >
-                {label}
+                <img
+                  src={sprite}
+                  alt={c.name}
+                  draggable={false}
+                  className="w-full h-full object-cover rounded-sm pointer-events-none"
+                />
               </div>
             );
           })}
