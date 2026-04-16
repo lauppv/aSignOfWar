@@ -800,3 +800,19 @@ Categorii:
 Clientul tine un contor per-user de rapoarte necitite (cheia e user id-ul din
 JWT) ca sa nu se amestece starea intre conturi care au facut login pe acelasi
 browser.
+
+
+Din Map, cand se trimite o comanda, dupa ce se selecteaaza trupele/resursele, sa se arate si timpul de deplasare + inlocuirea numelor unitatilor cu imaginile aferente 
+
+La hover peste cladirile din city overview, pe langa numele cladirii sa se arate si nivelul in paranteza
+
+Sistem de aliante. Un jucator nu poate ataca jucatori care se afla in aceeasi alianta cu el
+
+Mesaje intre jucatori si in cadrul aliantei. Exista doua sectiuni, ca in forge of empires, cu mesaje la nivel de alianta pe care le vede toata lumea si o sectiune de mesaje private intre jucatori. Mesajele sa fie in timp real, fara refresh manual
+
+Rapoartele se pot publica, adica se pot trimite altor jucatori fie prin mesaj privat, fie mesaj la nivel de alianta
+
+Profil jucator. Acesta poate avea ca avatar o imagine 240x180 (sau cum e in triburile), plecand cu avatar default. Aici se vor afisa numarul de orase + listarea acestora, locul in clasament, numarul total de puncte, alianta din care face parte, descriere 
+
+Cand dai click pe o alianta, se poate vizualiza profilul ei: numar de jucatori, clasament, numar total de puncte, media punctelor pe jucator, numarul de orase, etc
+

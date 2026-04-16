@@ -3,9 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/index.ts";
 import { sendCommand, getCityCommands, withdrawStationedSupport, cancelCommand, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
-import { getHarborCapacity } from "@shared/gameConfig.ts";
+import { getHarborCapacity, getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec, getFieldDistance } from "@shared/gameConfig.ts";
 import { UNIT_DISPLAY } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { useNow } from "../context/TickContext.tsx";
 import CancelCommandConfirm from "./CancelCommandConfirm.tsx";
 
