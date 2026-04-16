@@ -1,29 +1,28 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { getMap } from "../api/map.ts";
 import { getMyCity } from "../api/city.ts";
 import { getActiveCityId, setActiveCityId } from "../api/client.ts";
 import type { MapCity } from "../types/index.ts";
 import CityActionPanel from "../components/CityActionPanel.tsx";
 
-const CELL = 80; // pixeli per celula → 100x100 = 8000x8000 px
+const CELL = 80; 
 const GRID_LINE = "#21262d";
 
-// Paleta orase pe harta. Alianta ramane TODO pana cand modelam Alliance.
-const COLOR_ACTIVE   = "#e85aad"; // roz — orasul propriu selectat (cel activ)
-const COLOR_OWN      = "#e3b341"; // galben — celelalte orase proprii
-const COLOR_GHOST    = "#e6edf3"; // alb — orase fantoma (fara owner)
-const COLOR_ALLIANCE = "#58a6ff"; // albastru — neutilizat momentan
-const COLOR_OTHER    = "#8b5e3c"; // maro — alti jucatori
+const COLOR_ACTIVE   = "#e85aad";
+const COLOR_OWN      = "#e3b341";
+const COLOR_GHOST    = "#ffffff";
+const COLOR_ALLIANCE = "#58a6ff";
+const COLOR_OTHER    = "#7125b8";
 
 type CityKind = "active" | "own" | "ghost" | "alliance" | "other";
+type TileType = "forest" | "mountain" | "lake" | "grass";
 
 function classify(c: MapCity, ownedIds: Set<string>, activeCityId: string | undefined): CityKind {
   if (c.id === activeCityId) return "active";
   if (ownedIds.has(c.id)) return "own";
   if (!c.owner) return "ghost";
-  // TODO: cand avem alianta, return "alliance" daca c.owner.allianceId === myAllianceId
   return "other";
 }
 
@@ -43,6 +42,26 @@ function spriteFor(points: number): string {
   if (points >= 1000) return "/images/map/1000-2999.jpg";
   if (points >= 300)  return "/images/map/300-999.jpg";
   return "/images/map/0-299.jpg";
+}
+
+// TODO doublecheck
+function getPseudoRandom(x: number, y: number) {
+  // O funcție de hash "sinusoidală" care împrăștie valorile mult mai bine
+  const dot = x * 12.9898 + y * 78.233;
+  const val = Math.sin(dot) * 43758.5453123;
+  return val - Math.floor(val);
+}
+
+function getTileInfo(x: number, y: number) {
+  const rand = getPseudoRandom(x, y);
+  const seed = rand * 100;
+
+  let type: TileType = "grass";
+  if (seed < 5) type = "mountain";
+  else if (seed < 10) type = "lake";
+  else if (seed < 40) type = "forest";
+
+  return { type };
 }
 
 export default function MapPage() {
@@ -65,15 +84,12 @@ export default function MapPage() {
 
   useEffect(() => { setPanelOffset({ dx: 0, dy: 0 }); }, [selected?.city.id]);
 
-  // Measure the panel after each render and adjust top so it stays fully on screen
   useEffect(() => {
     if (!selected || !panelRef.current) return;
     const idealTop = selected.py - scroll.top;
     const panelH = panelRef.current.scrollHeight;
     let top = idealTop;
-    // Push up if panel overflows the bottom
     if (top + panelH > scroll.h) top = scroll.h - panelH;
-    // But never above 0
     if (top < 0) top = 0;
     setPanelTop(top);
   });
@@ -124,8 +140,6 @@ export default function MapPage() {
 
   const ownedCityIds = new Set(myCity?.ownedCities?.map((c) => c.id) ?? []);
 
-  // Sync scroll state (pentru rigle de coordonate + panel positioning).
-  // Depinde de `map` ca sa re-ruleze dupa ce loading-ul se termina si scrollRef devine disponibil.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -139,7 +153,6 @@ export default function MapPage() {
     return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
   }, [map]);
 
-  // Centreaza viewport-ul pe orasul propriu la primul load
   useEffect(() => {
     if (centered || !map || !myCity || !scrollRef.current) return;
     const el = scrollRef.current;
@@ -147,6 +160,29 @@ export default function MapPage() {
     el.scrollTop  = myCity.y * CELL + CELL / 2 - el.clientHeight / 2;
     setCentered(true);
   }, [map, myCity, centered]);
+// TODO doublecheck
+  const visibleSpecialTiles = useMemo(() => {
+    if (!map) return [];
+    const tiles = [];
+    const margin = 1;
+    const startX = Math.max(0, Math.floor(scroll.left / CELL) - margin);
+    const endX   = Math.min(map.size - 1, Math.ceil((scroll.left + scroll.w) / CELL) + margin);
+    const startY = Math.max(0, Math.floor(scroll.top  / CELL) - margin);
+    const endY   = Math.min(map.size - 1, Math.ceil((scroll.top  + scroll.h) / CELL) + margin);
+
+    for (let x = startX; x <= endX; x++) {
+      for (let y = startY; y <= endY; y++) {
+        const hasCity = map.cities.some(c => c.x === x && c.y === y);
+        if (!hasCity) {
+          const info = getTileInfo(x, y);
+          if (info.type !== "grass") {
+            tiles.push({ x, y, ...info });
+          }
+        }
+      }
+    }
+    return tiles;
+  }, [scroll.left, scroll.top, scroll.w, scroll.h, map]);
 
   function handleMouseDown(e: React.MouseEvent) {
     if (!scrollRef.current) return;
@@ -191,7 +227,6 @@ export default function MapPage() {
     setCursorCell(null);
   }
 
-  // Inchide panel-ul de click pe Escape
   useEffect(() => {
     if (!selected) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSelected(null); };
@@ -209,7 +244,6 @@ export default function MapPage() {
   const worldPx = map.size * CELL;
   const hovered = hover ? map.cities.find(c => c.x === hover.x && c.y === hover.y) ?? null : null;
 
-  // Background grid via repeating gradients — fara mii de DOM nodes
   const gridBg = `
     repeating-linear-gradient(0deg,  ${GRID_LINE} 0 1px, transparent 1px ${CELL}px),
     repeating-linear-gradient(90deg, ${GRID_LINE} 0 1px, transparent 1px ${CELL}px)
@@ -256,10 +290,41 @@ export default function MapPage() {
           style={{
             width: worldPx,
             height: worldPx,
-            background: `${gridBg}, #0d1117`,
+            backgroundImage: `${gridBg}, url("/images/map/grass.jpg")`,
+            backgroundSize: `${CELL}px ${CELL}px`,
+            backgroundRepeat: "repeat",
+            backgroundColor: "#0d1117",
           }}
           onClick={() => { if (!hasDragged) setSelected(null); }}
         >
+          // TODO doublecheck
+          {/* RENDER TEREN SPECIAL (RANDOMIZAT VIZUAL) */}
+          {visibleSpecialTiles.map((t: any) => (
+            <div
+              key={`${t.type}-${t.x}-${t.y}`}
+              className="absolute pointer-events-none"
+              style={{
+                left: t.x * CELL,
+                top: t.y * CELL,
+                width: CELL,
+                height: CELL,
+                overflow: 'hidden'
+              }}
+            >
+              <img
+                src={`/images/map/${t.type}.jpg`}
+                alt=""
+                className="w-full h-full object-cover opacity-90"
+                style={{
+                    // Rotația și oglindirea fac ca aceleași texturi să nu mai pară repetitive
+                    transform: `rotate(${t.rotation}deg) scaleX(${t.flip})`,
+                    // Un mic padding pentru a nu vedea marginile albe dacă rotația lasă goluri
+                    padding: '0.5px' 
+                }}
+              />
+            </div>
+          ))}
+
           {cursorCell && !isDragging && (
             <div
               className="absolute pointer-events-none"
@@ -271,7 +336,7 @@ export default function MapPage() {
                 outline: "2px solid #58a6ff",
                 outlineOffset: -1,
                 background: "rgba(88,166,255,0.10)",
-                boxShadow: "0 0 0 9999px rgba(0,0,0,0)",
+                zIndex: 5
               }}
             />
           )}
@@ -303,6 +368,8 @@ export default function MapPage() {
                   outlineOffset: -2,
                   boxShadow: kind === "own" ? `0 0 12px ${accent}` : `0 0 4px rgba(0,0,0,0.6)`,
                   cursor: isDragging ? "grabbing" : "pointer",
+                  backgroundColor: "#161b22",
+                  zIndex: 10
                 }}
               >
                 <img
@@ -317,22 +384,18 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* City action panel — viewport-relative, aligned with the city row */}
       {selected && (() => {
         const c = selected.city;
         const kind = classify(c, ownedCityIds, activeCityId);
-
         const PANEL_W = 260;
         const MARGIN = 8;
-        // Convert world coords to viewport coords
         let left = selected.px + CELL + MARGIN - scroll.left;
-        // Flip to left side if overflows right
         if (left + PANEL_W > scroll.w) left = selected.px - PANEL_W - MARGIN - scroll.left;
 
         return (
           <div
             ref={panelRef}
-            className="absolute z-10 bg-[#161b22] border border-[#30363d] rounded shadow-2xl overflow-y-auto"
+            className="absolute z-50 bg-[#161b22] border border-[#30363d] rounded shadow-2xl overflow-y-auto"
             style={{
               left: left + panelOffset.dx,
               top: panelTop + panelOffset.dy,
@@ -357,7 +420,6 @@ export default function MapPage() {
         );
       })()}
 
-      {/* Rigle de coordonate (stil Triburile) */}
       {(() => {
         const RULER_W = 28;
         const RULER_H = 20;
@@ -371,9 +433,8 @@ export default function MapPage() {
         for (let i = startY; i <= endY; i++) ys.push(i);
         return (
           <>
-            {/* Left ruler (Y) */}
             <div
-              className="absolute top-0 left-0 pointer-events-none bg-[#161b22] border-r border-[#30363d] overflow-hidden"
+              className="absolute top-0 left-0 pointer-events-none bg-[#161b22] border-r border-[#30363d] overflow-hidden z-20"
               style={{ width: RULER_W, height: scroll.h - RULER_H }}
             >
               {ys.map(y => {
@@ -397,9 +458,8 @@ export default function MapPage() {
               })}
             </div>
 
-            {/* Bottom ruler (X) */}
             <div
-              className="absolute left-0 bottom-0 pointer-events-none bg-[#161b22] border-t border-[#30363d] overflow-hidden"
+              className="absolute left-0 bottom-0 pointer-events-none bg-[#161b22] border-t border-[#30363d] overflow-hidden z-20"
               style={{ height: RULER_H, width: scroll.w }}
             >
               {xs.map(x => {
@@ -423,9 +483,8 @@ export default function MapPage() {
               })}
             </div>
 
-            {/* Corner */}
             <div
-              className="absolute left-0 bottom-0 bg-[#161b22] border-t border-r border-[#30363d] pointer-events-none flex items-center justify-center font-mono"
+              className="absolute left-0 bottom-0 bg-[#161b22] border-t border-r border-[#30363d] pointer-events-none flex items-center justify-center font-mono z-30"
               style={{ width: RULER_W, height: RULER_H, fontSize: 10, color: "#58a6ff" }}
             >
               {cursorCell ? `${cursorCell.x},${cursorCell.y}` : ""}
@@ -435,7 +494,7 @@ export default function MapPage() {
       })()}
       </div>
 
-      <div className="border-t border-[#30363d] bg-[#161b22] px-3 py-2 text-xs h-10 shrink-0 flex items-center justify-between gap-4">
+      <div className="border-t border-[#30363d] bg-[#161b22] px-3 py-2 text-xs h-10 shrink-0 flex items-center justify-between gap-4 z-40">
         <div>
           {hovered ? (
             <span>

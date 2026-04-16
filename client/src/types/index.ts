@@ -93,10 +93,18 @@ export interface MapCity {
   owner: { username: string } | null;
   points: number;
 }
+// TODO doublecheck
+// Tip nou pentru terenul generat pe server
+export interface MapTile {
+  x: number;
+  y: number;
+  type: "forest" | "mountain" | "lake" | "grass";
+}
 
 export interface WorldMap {
   size: number;
   cities: MapCity[];
+  tiles: MapTile[]; // Adăugat pentru a suporta terenul randomizat de server
 }
 
 export interface BattleUnitCount {
