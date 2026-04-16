@@ -44,9 +44,7 @@ function spriteFor(points: number): string {
   return "/images/map/0-299.jpg";
 }
 
-// TODO doublecheck
 function getPseudoRandom(x: number, y: number) {
-  // O funcție de hash "sinusoidală" care împrăștie valorile mult mai bine
   const dot = x * 12.9898 + y * 78.233;
   const val = Math.sin(dot) * 43758.5453123;
   return val - Math.floor(val);
@@ -159,7 +157,11 @@ export default function MapPage() {
     el.scrollTop  = myCity.y * CELL + CELL / 2 - el.clientHeight / 2;
     setCentered(true);
   }, [map, myCity, centered]);
-// TODO doublecheck
+  const citySlots = useMemo(() => {
+    if (!map) return new Set<string>();
+    return new Set(map.cities.map(c => `${c.x},${c.y}`));
+  }, [map]);
+
   const visibleSpecialTiles = useMemo(() => {
     if (!map) return [];
     const tiles = [];
@@ -171,8 +173,7 @@ export default function MapPage() {
 
     for (let x = startX; x <= endX; x++) {
       for (let y = startY; y <= endY; y++) {
-        const hasCity = map.cities.some(c => c.x === x && c.y === y);
-        if (!hasCity) {
+        if (!citySlots.has(`${x},${y}`)) {
           const info = getTileInfo(x, y);
           if (info.type !== "grass") {
             tiles.push({ x, y, ...info });
@@ -181,7 +182,7 @@ export default function MapPage() {
       }
     }
     return tiles;
-  }, [scroll.left, scroll.top, scroll.w, scroll.h, map]);
+  }, [scroll.left, scroll.top, scroll.w, scroll.h, map, citySlots]);
 
   function handleMouseDown(e: React.MouseEvent) {
     if (!scrollRef.current) return;
@@ -296,30 +297,23 @@ export default function MapPage() {
           }}
           onClick={() => { if (!hasDragged) setSelected(null); }}
         >
-          // TODO doublecheck
-          {/* RENDER TEREN SPECIAL (RANDOMIZAT VIZUAL) */}
+          {/* Special terrain tiles (deterministic per-cell) */}
           {visibleSpecialTiles.map((t: any) => (
             <div
               key={`${t.type}-${t.x}-${t.y}`}
               className="absolute pointer-events-none"
               style={{
-                left: t.x * CELL,
-                top: t.y * CELL,
-                width: CELL,
-                height: CELL,
-                overflow: 'hidden'
+                left: t.x * CELL + 1,
+                top: t.y * CELL + 1,
+                width: CELL - 2,
+                height: CELL - 2,
+                overflow: 'hidden',
               }}
             >
               <img
                 src={`/images/map/${t.type}.jpg`}
                 alt=""
                 className="w-full h-full object-cover opacity-90"
-                style={{
-                    // Rotația și oglindirea fac ca aceleași texturi să nu mai pară repetitive
-                    transform: `rotate(${t.rotation}deg) scaleX(${t.flip})`,
-                    // Un mic padding pentru a nu vedea marginile albe dacă rotația lasă goluri
-                    padding: '0.5px' 
-                }}
               />
             </div>
           ))}
