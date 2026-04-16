@@ -4,20 +4,52 @@ import { BUILDING_DISPLAY } from "../lib/labels.ts";
 
 interface Hotspot {
   name: BuildingName;
-  top: string;
-  left: string;
+  top: string;    // Poziția unde apare textul (Tooltip)
+  left: string;   // Poziția unde apare textul (Tooltip)
+  points: string; // Zona clickabilă a clădirii
 }
 
-// Ajusteaza top/left (procente) dupa pozitia reala a cladirilor in city.jpg
 const HOTSPOTS: Hotspot[] = [
-  { name: "HEADQUARTERS",    top: "47%", left: "50%" },
-  { name: "BANK",            top: "42%", left: "34%" },
-  { name: "POWER_PLANT",     top: "28%", left: "12%" },
-  { name: "WEAPONS_FACTORY", top: "50%", left: "90%" },
-  { name: "HOUSING",         top: "65%", left: "25%" },
-  { name: "WAREHOUSE",       top: "21%", left: "55%" },
-  { name: "MILITARY_BASE",   top: "83%", left: "71%" },
-  { name: "HARBOR",          top: "10%", left: "80%" },
+  { 
+    name: "HEADQUARTERS",    
+    top: "47%", left: "50%", 
+    points: "47,38 50.3,32 53,36 54,43 60,44 60,53 51,57 42,53 42,44 45,43" 
+  },
+  { 
+    name: "MILITARY_BASE",   
+    top: "83%", left: "71%", 
+    points: "68,65 100,79 100,100 64,100 38,83" 
+  },
+  { 
+    name: "WEAPONS_FACTORY", 
+    top: "50%", left: "90%", 
+    points: "72,37 80,35 80,30 92,30 92,35 100,35 100,74 60,58 63,54 73,40" 
+  },
+  { 
+    name: "WAREHOUSE",       
+    top: "21%", left: "55%", 
+    points: "27,18 61,12 84,18 85,21 49,31 30,27" 
+  },
+  { 
+    name: "HARBOR",          
+    top: "10%", left: "80%", 
+    points: "72,2 100,2 100,17 95,18 67,13 67,10" 
+  },
+  { 
+    name: "POWER_PLANT",     
+    top: "28%", left: "12%", 
+    points: "1,20 10,17 21,17 33,33 20,40 1,37" 
+  },
+  { 
+    name: "BANK",            
+    top: "42%", left: "34%", 
+    points: "27,38 34,35 41,37 41,48 34,50 27,46" 
+  },
+  { 
+    name: "HOUSING",         
+    top: "65%", left: "25%", 
+    points: "0,52 22,45 62,64 0,99" 
+  },
 ];
 
 interface Props {
@@ -29,7 +61,8 @@ export default function CityMap({ cityName, onBuildingClick }: Props) {
   const [hovered, setHovered] = useState<BuildingName | null>(null);
 
   return (
-    <div className="relative h-full w-auto shrink-0">
+    <div className="relative h-full w-auto shrink-0 inline-block overflow-hidden">
+      {/* Imaginea Map */}
       <img
         src="/images/city.jpg"
         alt={cityName}
@@ -37,33 +70,40 @@ export default function CityMap({ cityName, onBuildingClick }: Props) {
         draggable={false}
       />
 
-      {HOTSPOTS.map((spot) => {
-        const isHovered = hovered === spot.name;
-        return (
-          <div
-            key={spot.name}
-            className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-            style={{ top: spot.top, left: spot.left }}
+      {/* SVG Overlay - Doar logică de detecție, fără vizual */}
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox="0 0 100 100" 
+        preserveAspectRatio="none"
+        style={{ pointerEvents: 'none' }}
+      >
+        {HOTSPOTS.map((spot) => (
+          <polygon
+            key={`poly-${spot.name}`}
+            points={spot.points}
+            style={{ pointerEvents: 'auto' }}
+            // fill-transparent asigură că poligonul e clickabil, dar invizibil
+            className="fill-transparent stroke-transparent cursor-pointer"
             onMouseEnter={() => setHovered(spot.name)}
             onMouseLeave={() => setHovered(null)}
             onClick={() => onBuildingClick?.(spot.name)}
-          >
-            {/* Dot */}
-            <div
-              className={`w-4 h-4 rounded-full border-2 transition-all duration-150 ${
-                isHovered
-                  ? "bg-[#e6b800] border-[#fff8] scale-125 shadow-[0_0_8px_3px_rgba(230,184,0,0.6)]"
-                  : "bg-[#e6b80066] border-[#e6b800aa]"
-              }`}
-              style={{ transform: isHovered ? "scale(1.4)" : "scale(1)", transition: "transform 0.15s, box-shadow 0.15s" }}
-            />
+          />
+        ))}
+      </svg>
 
-            {/* Tooltip */}
-            {isHovered && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap bg-[#161b22] border border-[#e6b800] text-[#e6b800] text-[11px] font-semibold px-2 py-0.5 rounded pointer-events-none">
-                {BUILDING_DISPLAY[spot.name]}
-              </div>
-            )}
+      {/* Tooltip-ul cu numele clădirii */}
+      {HOTSPOTS.map((spot) => {
+        if (hovered !== spot.name) return null;
+
+        return (
+          <div
+            key={`label-${spot.name}`}
+            className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10"
+            style={{ top: spot.top, left: spot.left }}
+          >
+            <div className="whitespace-nowrap bg-[#161b22]/95 border border-[#e6b800] text-[#e6b800] text-[12px] font-bold px-3 py-1 rounded shadow-xl animate-in fade-in zoom-in duration-150">
+              {BUILDING_DISPLAY[spot.name]}
+            </div>
           </div>
         );
       })}
