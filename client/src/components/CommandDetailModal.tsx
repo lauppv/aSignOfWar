@@ -1,6 +1,7 @@
 import type { OutgoingCommand, IncomingCommand } from "../types/index.ts";
 import { UNIT_DISPLAY } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import { useNow } from "../context/TickContext.tsx";
 
 type MergedCommand =
   | ({ direction: "outgoing" } & OutgoingCommand)
@@ -18,8 +19,8 @@ const TYPE_META = {
   SPY:       { label: "Spy",       fg: "#a371f7", bg: "#2e1a3d" },
 } as const;
 
-function fmtArrival(iso: string): string {
-  const diff = new Date(iso).getTime() - Date.now();
+function fmtArrival(iso: string, now: number): string {
+  const diff = new Date(iso).getTime() - now;
   if (diff <= 0) return "arriving...";
   const s = Math.floor(diff / 1000);
   const h = Math.floor(s / 3600);
@@ -32,6 +33,7 @@ function fmtArrival(iso: string): string {
 
 export default function CommandDetailModal({ cmd, onClose }: Props) {
   const { openUnit } = useUnitInfo();
+  const now = useNow();
   const isOut  = cmd.direction === "outgoing";
   const meta   = TYPE_META[cmd.type];
   const other  = isOut
@@ -88,7 +90,7 @@ export default function CommandDetailModal({ cmd, onClose }: Props) {
               {isStationed ? "Status" : isReturning ? "Returns in" : "Arrives in"}
             </span>
             <span className="text-[#c9d1d9] font-mono">
-              {isStationed ? "Stationed" : fmtArrival(cmd.arrivalAt)}
+              {isStationed ? "Stationed" : fmtArrival(cmd.arrivalAt, now)}
             </span>
           </div>
 

@@ -1,4 +1,4 @@
-import { api, setToken, clearToken } from "./client.ts";
+import { api, setToken, clearToken, clearActiveCityId } from "./client.ts";
 
 interface AuthResponse {
   token: string;
@@ -16,4 +16,5 @@ export async function register(username: string, email: string, password: string
 
 export function logout(): void {
   clearToken();
+  clearActiveCityId();
 }

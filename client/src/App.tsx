@@ -4,7 +4,9 @@ import LoginPage from "./pages/LoginPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
 import CityPage from "./pages/CityPage.tsx";
 import MapPage from "./pages/MapPage.tsx";
+import RankingsPage from "./pages/RankingsPage.tsx";
 import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
+import { TickProvider } from "./context/TickContext.tsx";
 import { loadGameSpeed } from "./lib/gameSpeed.ts";
 
 function isLoggedIn(): boolean {
@@ -47,6 +49,7 @@ export default function App() {
 
     // mergem pe principiul YAGNI - You Aren't Gonna Need It, adica nu facem lucruri care nu sunt necesare acum
     // poate nici nu vom avea nevoie de context pentru cladiri, notificari, etc
+    <TickProvider>
     <UnitInfoProvider>
     <BrowserRouter>
       <Routes>
@@ -68,9 +71,18 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/rankings"
+          element={
+            <ProtectedRoute>
+              <RankingsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to={isLoggedIn() ? "/city" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
     </UnitInfoProvider>
+    </TickProvider>
   );
 }

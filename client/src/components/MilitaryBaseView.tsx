@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNow } from "../context/TickContext.tsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { recruitUnits, cancelRecruitmentOrder } from "../api/city.ts";
 import { UNITS, getRecruitmentTime, getHousingCapacity as getMaxPopulation } from "@shared/gameConfig.ts";
@@ -30,17 +31,12 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
 
   const [quantities, setQuantities] = useState<Partial<Record<UnitName, number>>>({});
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
 
   const hqLevel = getBuildingLevel(city, "HEADQUARTERS");
   const mbLevel = getBuildingLevel(city, "MILITARY_BASE");
   const unitCountMap = new Map<UnitName, number>(city.units.map(u => [u.name, u.quantity]));
   const population    = computePopulation(city);
-  const now = Date.now();
   const pendingPop    = city.recruitmentOrders
     .filter((o) => new Date(o.finishAt).getTime() > now)
     .reduce((sum, o) => sum + o.quantity * (UNITS[o.unitName]?.population ?? 1), 0);
@@ -211,13 +207,13 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
           </table>
 
           {/* Recruitment Queue */}
-          {city.recruitmentOrders.some((o) => new Date(o.finishAt).getTime() > Date.now()) && (
+          {city.recruitmentOrders.some((o) => new Date(o.finishAt).getTime() > now) && (
             <div className="mt-6">
               <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Recruitment Queue</div>
               <div className="flex flex-col gap-1.5">
-                {city.recruitmentOrders.filter((o) => new Date(o.finishAt).getTime() > Date.now()).map((order, i) => {
+                {city.recruitmentOrders.filter((o) => new Date(o.finishAt).getTime() > now).map((order, i) => {
                   const totalSec  = Math.round((new Date(order.finishAt).getTime() - new Date(order.startAt).getTime()) / 1000);
-                  const diff      = new Date(order.finishAt).getTime() - Date.now();
+                  const diff      = new Date(order.finishAt).getTime() - now;
                   const s         = Math.max(0, Math.floor(diff / 1000));
                   const countdown = s === 0 ? "finishing..." : fmtDuration(s);
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getReports, deleteReport } from "../api/report.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import { useNow } from "../context/TickContext.tsx";
 import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 
@@ -11,6 +12,7 @@ const SKIP_CONFIRM_KEY = "skipReportDeleteConfirm";
 
 interface Props {
   onClose: () => void;
+  initiallyRead?: Set<string>;
 }
 
 // ─── Category helpers ────────────────────────────────────────────────────────
@@ -66,9 +68,9 @@ const VERB_BY_TYPE: Record<CommandReportType, string> = {
   SPY:       "spies on",
 };
 
-function fmtTimeAgo(iso: string): string {
+function fmtTimeAgo(iso: string, now: number): string {
   const d = new Date(iso);
-  const diff = Date.now() - d.getTime();
+  const diff = now - d.getTime();
   const h = Math.floor(diff / 3_600_000);
   if (h >= 24) {
     return d.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -88,7 +90,8 @@ function asMap(units: BattleUnitCount[] | undefined): Map<UnitName, number> {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-export default function ReportsView({ onClose }: Props) {
+export default function ReportsView({ onClose, initiallyRead }: Props) {
+  const now = useNow();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const [confirming, setConfirming] = useState(false);
@@ -104,9 +107,20 @@ export default function ReportsView({ onClose }: Props) {
     mutationFn: async (ids: string[]) => {
       await Promise.all(ids.map(id => deleteReport(id)));
     },
-    onSuccess: (_, ids) => {
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: ["reports"] });
+      const previous = queryClient.getQueryData<BattleReport[]>(["reports"]);
+      queryClient.setQueryData<BattleReport[]>(["reports"], (old) =>
+        (old ?? []).filter((r) => !ids.includes(r.id))
+      );
       setSelectedId(prev => (prev && ids.includes(prev) ? null : prev));
       setCheckedIds(new Set());
+      return { previous };
+    },
+    onError: (_e, _ids, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(["reports"], ctx.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["reports"] });
     },
   });
@@ -185,8 +199,10 @@ export default function ReportsView({ onClose }: Props) {
                 <ReportRow
                   key={r.id}
                   report={r}
+                  now={now}
                   active={selected?.id === r.id}
                   checked={checkedIds.has(r.id)}
+                  unread={!initiallyRead?.has(r.id)}
                   onClick={() => setSelectedId(r.id)}
                   onToggleChecked={() => toggleChecked(r.id)}
                 />
@@ -234,10 +250,12 @@ export default function ReportsView({ onClose }: Props) {
 
 // ─── Report row (list card) ──────────────────────────────────────────────────
 
-function ReportRow({ report: r, active, checked, onClick, onToggleChecked }: {
+function ReportRow({ report: r, now, active, checked, unread, onClick, onToggleChecked }: {
   report: BattleReport;
+  now: number;
   active: boolean;
   checked: boolean;
+  unread: boolean;
   onClick: () => void;
   onToggleChecked: () => void;
 }) {
@@ -278,10 +296,18 @@ function ReportRow({ report: r, active, checked, onClick, onToggleChecked }: {
       onClick={onClick}
       className="relative flex items-start gap-2 px-3 py-2 border-b border-[#21262d] cursor-pointer text-xs"
       style={{
-        background: active ? "#1c2129" : undefined,
-        borderLeft: `3px solid ${meta.border}`,
+        background: active ? "#1c2129" : unread ? "#161b22" : "#07090c",
+        borderLeft: `3px solid ${unread ? meta.border : "#1f2530"}`,
+        opacity: unread ? 1 : 0.42,
       }}
     >
+      {unread && (
+        <span
+          className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full"
+          style={{ background: meta.fg, boxShadow: `0 0 4px ${meta.fg}` }}
+          title="Unread"
+        />
+      )}
       <div className="flex-1 flex flex-col gap-1 min-w-0">
         <div>
           <span
@@ -291,7 +317,10 @@ function ReportRow({ report: r, active, checked, onClick, onToggleChecked }: {
             {meta.label}
           </span>
         </div>
-        <div className="text-[#c9d1d9] text-[11px] leading-tight">
+        <div
+          className="text-[11px] leading-tight"
+          style={{ color: unread ? "#f0f6fc" : "#8b949e", fontWeight: unread ? 600 : 400 }}
+        >
           {message}
         </div>
         <div>
@@ -301,7 +330,7 @@ function ReportRow({ report: r, active, checked, onClick, onToggleChecked }: {
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">
-        <span className="text-[11px] text-[#b1bac4] whitespace-nowrap">{fmtTimeAgo(r.arrivalAt)}</span>
+        <span className="text-[11px] text-[#b1bac4] whitespace-nowrap">{fmtTimeAgo(r.arrivalAt, now)}</span>
         <input
           type="checkbox"
           checked={checked}
@@ -406,6 +435,7 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
   const atkSurv = asMap(data.attackerSurvivors);
   const defInit = asMap(data.defenderInitial);
   const defSurv = asMap(data.defenderSurvivors);
+  const defenderHidden = !data.defenderInitial;
 
   return (
     <>
@@ -431,8 +461,21 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
             <tbody>
               <BattleRow label="Attacker" labelColor="#f85149" sublabel="Units"  units={ALL_UNITS} values={atkInit} />
               <BattleRow label=""         labelColor="#f85149" sublabel="Losses" units={ALL_UNITS} values={atkSurv} initial={atkInit} kind="losses" borderBottom />
-              <BattleRow label="Defender" labelColor="#3fb950" sublabel="Units"  units={ALL_UNITS} values={defInit} />
-              <BattleRow label=""         labelColor="#3fb950" sublabel="Losses" units={ALL_UNITS} values={defSurv} initial={defInit} kind="losses" />
+              {defenderHidden ? (
+                <tr>
+                  <td colSpan={ALL_UNITS.length + 1} className="py-3 text-center">
+                    <div className="flex items-center justify-center gap-2 text-[#b1bac4] italic">
+                      <span className="text-sm">❓</span>
+                      <span className="text-[11px]">Defender forces unknown — your attack was defeated</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  <BattleRow label="Defender" labelColor="#3fb950" sublabel="Units"  units={ALL_UNITS} values={defInit} />
+                  <BattleRow label=""         labelColor="#3fb950" sublabel="Losses" units={ALL_UNITS} values={defSurv} initial={defInit} kind="losses" />
+                </>
+              )}
             </tbody>
           </table>
       </div>

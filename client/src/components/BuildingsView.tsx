@@ -8,6 +8,7 @@ import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { BUILDING_DESCRIPTION, BUILDING_DISPLAY, BUILDING_ORDER } from "../lib/labels.ts";
 import type { CityOverview, BuildingName } from "../types/index.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import { useNow } from "../context/TickContext.tsx";
 import ConfirmModal from "./ConfirmModal.tsx";
 
 interface Props {
@@ -76,12 +77,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
     setEditingName(false);
   }
 
-  // Ticker pentru countdown
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
 
   const hqLevel = getBuildingLevel(city, "HEADQUARTERS");
 
@@ -212,7 +208,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                         {(() => {
                           const pending = state.pendingOrders.find(o => o.cityId === city.id) ?? null;
                           if (pending) {
-                            const diff = new Date(pending.finishAt).getTime() - Date.now();
+                            const diff = new Date(pending.finishAt).getTime() - now;
                             const s    = Math.max(0, Math.floor(diff / 1000));
                             const countdown = s === 0 ? "finishing..." : fmtDuration(s);
                             return (
@@ -353,12 +349,11 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
           </table>
 
           {/* Construction Queue */}
-          {city.buildingUpgradeOrders.some((o) => new Date(o.finishAt).getTime() > Date.now()) && (
+          {city.buildingUpgradeOrders.some((o) => new Date(o.finishAt).getTime() > now) && (
             <div className="mt-6">
               <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Construction Queue</div>
               <div className="flex flex-col gap-1.5">
                 {(() => {
-                  const now = Date.now();
                   const activeOrders = city.buildingUpgradeOrders.filter(
                     (o) => new Date(o.finishAt).getTime() > now
                   );
@@ -371,7 +366,7 @@ export default function BuildingsView({ city, onClose, onBuildingClick }: Props)
                   const toLevel = fromLevel + 1;
 
                   const totalSec = Math.round((new Date(order.finishAt).getTime() - new Date(order.startAt).getTime()) / 1000);
-                  const diff     = new Date(order.finishAt).getTime() - Date.now();
+                  const diff     = new Date(order.finishAt).getTime() - now;
                   const s        = Math.max(0, Math.floor(diff / 1000));
                   const countdown = s === 0 ? "finishing..." : fmtDuration(s);
 

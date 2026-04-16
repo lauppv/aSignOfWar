@@ -121,6 +121,8 @@ export const sendCommand = async (
         fromCityId,
         toCityId,
         arrivalAt,
+        attackerUserId: fromCity.ownerId!,
+        defenderUserId: toCity.ownerId,
         resourceMoney:  type === "RESOURCES" ? resources.money  : 0,
         resourceEnergy: type === "RESOURCES" ? resources.energy : 0,
         resourceAmmo:   type === "RESOURCES" ? resources.ammo   : 0,
@@ -277,6 +279,12 @@ export const withdrawStationedSupport = async (
     partialDelayMs       = travelMsFor(withdrawnUnits);
     partialArrivalAt     = new Date(Date.now() + partialDelayMs);
 
+    // Withdraw-ul nou pleaca din orasul "atacator" (expeditor) catre orasul
+    // "defender" (targetul unde stationau). Proprietarii raman legati de
+    // participantii originali ai sprijinului, nu de cine detine orasele azi.
+    const srcCity = await tx.city.findUnique({ where: { id: fromCityId },   select: { ownerId: true } });
+    const dstCity = await tx.city.findUnique({ where: { id: targetCityId }, select: { ownerId: true } });
+
     const created = await tx.command.create({
       data: {
         type:       "SUPPORT",
@@ -284,6 +292,8 @@ export const withdrawStationedSupport = async (
         fromCityId,
         toCityId:   targetCityId,
         arrivalAt:  partialArrivalAt,
+        attackerUserId: srcCity!.ownerId!,
+        defenderUserId: dstCity?.ownerId ?? null,
         report:     { withdrawal: true, withdrawnAt: new Date().toISOString() } as any,
         units: {
           create: withdrawnUnits,

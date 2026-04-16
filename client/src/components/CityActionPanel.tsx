@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/index.ts";
-import { sendCommand, getCityCommands, withdrawStationedSupport, type CommandType } from "../api/command.ts";
+import { sendCommand, getCityCommands, withdrawStationedSupport, cancelCommand, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import { getHarborCapacity } from "@shared/gameConfig.ts";
 import { UNIT_DISPLAY } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
+import { useNow } from "../context/TickContext.tsx";
+import CancelCommandConfirm from "./CancelCommandConfirm.tsx";
 
 interface Props {
   city: MapCity;
@@ -28,7 +30,9 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const [unitCounts, setUnitCounts] = useState<Partial<Record<UnitName, number>>>({});
   const [resources, setResources] = useState({ money: 0, energy: 0, ammo: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
 
+  const now = useNow();
   const isOwn     = myCity?.id === city.id;
   const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
 
@@ -44,6 +48,14 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const commandsToThisCity = (commands?.outgoing ?? []).filter(c => c.toCity.id === city.id);
   const ordersInFlight = commandsToThisCity.filter(c => c.status === "TRAVELING" || c.status === "RETURNING");
   const stationedHere  = commandsToThisCity.filter(c => c.status === "ARRIVED");
+
+  const cancelMutation = useMutation({
+    mutationFn: (commandId: string) => cancelCommand(myCity!.id, commandId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commands"] });
+      queryClient.invalidateQueries({ queryKey: ["city"] });
+    },
+  });
 
   const harborLevel  = myCity ? getBuildingLevel(myCity, "HARBOR") : 0;
   const harborCap    = getHarborCapacity(harborLevel);
@@ -102,8 +114,16 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
             <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1">
               My orders ({ordersInFlight.length})
             </div>
-            <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto pr-1">
-              {ordersInFlight.map(c => <OrderRow key={c.id} cmd={c} />)}
+            <div className="flex flex-col gap-1">
+              {ordersInFlight.map(c => (
+                <OrderRow
+                  key={c.id}
+                  cmd={c}
+                  now={now}
+                  onCancel={() => setCancelTargetId(c.id)}
+                  cancelPending={cancelMutation.isPending && cancelMutation.variables === c.id}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -189,6 +209,18 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
             </button>
           </div>
         )}
+
+        <CancelCommandConfirm
+          open={!!cancelTargetId}
+          pending={cancelMutation.isPending}
+          onBack={() => setCancelTargetId(null)}
+          onConfirm={() => {
+            if (!cancelTargetId) return;
+            cancelMutation.mutate(cancelTargetId, {
+              onSettled: () => setCancelTargetId(null),
+            });
+          }}
+        />
       </Wrapper>
     );
   }
@@ -322,14 +354,14 @@ const ORDER_META: Record<CommandType, { label: string; fg: string; border: strin
   SPY:       { label: "Spy",       fg: "#a371f7", border: "#2e1a3d" },
 };
 
-function fmtEta(cmd: OutgoingCommand): string {
+function fmtEta(cmd: OutgoingCommand, now: number): string {
   if (cmd.status === "ARRIVED")   return "stationed";
   if (cmd.status === "RETURNING") {
-    const ms = new Date(cmd.arrivalAt).getTime() - Date.now();
+    const ms = new Date(cmd.arrivalAt).getTime() - now;
     if (ms <= 0) return "arriving home";
     return "← " + formatMs(ms);
   }
-  const ms = new Date(cmd.arrivalAt).getTime() - Date.now();
+  const ms = new Date(cmd.arrivalAt).getTime() - now;
   if (ms <= 0) return "arriving";
   return formatMs(ms);
 }
@@ -433,10 +465,20 @@ function StationedWithdrawPanel({
   );
 }
 
-function OrderRow({ cmd }: { cmd: OutgoingCommand }) {
+const CANCEL_WINDOW_MS = 5 * 60 * 1000;
+
+function canCancelCmd(cmd: OutgoingCommand, now: number): boolean {
+  return cmd.status === "TRAVELING"
+    && now - new Date(cmd.departureAt).getTime() <= CANCEL_WINDOW_MS;
+}
+
+function OrderRow({
+  cmd, onCancel, cancelPending, now,
+}: { cmd: OutgoingCommand; onCancel?: () => void; cancelPending?: boolean; now: number }) {
   const { openUnit } = useUnitInfo();
   const meta = ORDER_META[cmd.type];
   const activeUnits = cmd.units.filter(u => u.quantity > 0);
+  const cancelable = !!onCancel && canCancelCmd(cmd, now);
 
   return (
     <div
@@ -447,7 +489,7 @@ function OrderRow({ cmd }: { cmd: OutgoingCommand }) {
         <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: meta.fg }}>
           {meta.label}
         </span>
-        <span className="text-[10px] text-[#b1bac4] font-mono">{fmtEta(cmd)}</span>
+        <span className="text-[10px] text-[#b1bac4] font-mono">{fmtEta(cmd, now)}</span>
       </div>
 
       {cmd.type === "RESOURCES" ? (
@@ -480,6 +522,17 @@ function OrderRow({ cmd }: { cmd: OutgoingCommand }) {
             </div>
           ))}
         </div>
+      )}
+
+      {cancelable && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onCancel?.(); }}
+          disabled={cancelPending}
+          className="mt-1 text-[9px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-0.5 hover:bg-[#3d1a1a] disabled:opacity-40"
+          title="Recall this command — only allowed in the first 5 minutes"
+        >
+          {cancelPending ? "Cancelling…" : "Cancel command"}
+        </button>
       )}
     </div>
   );

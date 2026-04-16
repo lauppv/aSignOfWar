@@ -74,7 +74,17 @@ model User {
   governorEnergy     Float @default(0)
   governorAmmo       Float @default(0)
 
-  cities City[]
+  // Lifetime combat stats (leaderboard)
+  killsAsAttacker  Int   @default(0)
+  killsAsDefender  Int   @default(0)
+  killsAsSupporter Int   @default(0)
+  lootedMoney      Float @default(0)
+  lootedEnergy     Float @default(0)
+  lootedAmmo       Float @default(0)
+
+  cities           City[]
+  commandsAttacker Command[] @relation("CommandAttacker")
+  commandsDefender Command[] @relation("CommandDefender")
 }
 
 model City {
@@ -174,6 +184,14 @@ model Command {
 
   toCityId String
   toCity   City   @relation("CommandTo", fields: [toCityId], references: [id])
+
+  // Proprietarii la momentul crearii raportului. Decuplati de ownerId-ul
+  // curent al oraselor — altfel, daca un oras e cucerit ulterior, raportul
+  // "schimba" de partea cui e si verificarile de acces/stergere esueaza.
+  attackerUserId String
+  attacker       User    @relation("CommandAttacker", fields: [attackerUserId], references: [id])
+  defenderUserId String?
+  defender       User?   @relation("CommandDefender", fields: [defenderUserId], references: [id])
 
   units CommandUnit[]
 }

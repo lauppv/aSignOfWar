@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { login } from "../api/auth.ts";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +17,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(username, password);
+      queryClient.clear();
       navigate("/city");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

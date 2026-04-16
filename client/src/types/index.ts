@@ -108,8 +108,8 @@ export interface BattleReportData {
   attackerWon: boolean;
   attackerInitial: BattleUnitCount[];
   attackerSurvivors: BattleUnitCount[];
-  defenderInitial: BattleUnitCount[];
-  defenderSurvivors: BattleUnitCount[];
+  defenderInitial?: BattleUnitCount[];
+  defenderSurvivors?: BattleUnitCount[];
   airDefenseInitialLevel: number;
   newAirDefenseLevel: number;
   airDefenseLevelsDestroyed: number;

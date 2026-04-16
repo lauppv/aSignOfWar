@@ -19,8 +19,8 @@ export const getReportsForUser = async (userId: string) => {
         },
         {
           OR: [
-            { fromCity: { ownerId: userId }, reportHiddenByAttacker: false },
-            { toCity:   { ownerId: userId }, reportHiddenByDefender: false },
+            { attackerUserId: userId, reportHiddenByAttacker: false },
+            { defenderUserId: userId, reportHiddenByDefender: false },
           ],
         },
       ],
@@ -34,6 +34,8 @@ export const getReportsForUser = async (userId: string) => {
       resourceEnergy: true,
       resourceAmmo:   true,
       report:         true,
+      attackerUserId: true,
+      defenderUserId: true,
       units:          { select: { name: true, quantity: true } },
       fromCity: {
         select: {
@@ -51,10 +53,18 @@ export const getReportsForUser = async (userId: string) => {
     orderBy: { arrivalAt: "desc" },
   });
 
-  return reports.map(r => ({
-    ...r,
-    direction: r.fromCity.ownerId === userId ? ("outgoing" as const) : ("incoming" as const),
-  }));
+  return reports.map(r => {
+    const direction = r.attackerUserId === userId ? ("outgoing" as const) : ("incoming" as const);
+    let report = r.report as Record<string, unknown> | null;
+
+    // Atacatorul care a pierdut nu vede compozitia aparatorului
+    if (report && r.type === "ATTACK" && direction === "outgoing" && !(report as any).attackerWon) {
+      const { defenderInitial, defenderSurvivors, ...rest } = report;
+      report = rest;
+    }
+
+    return { ...r, report, direction };
+  });
 };
 
 // "Sterge" un raport pentru user-ul curent: ascunde din partea lui
@@ -63,12 +73,12 @@ export const deleteReportForUser = async (commandId: string, userId: string) => 
   const cmd = await prisma.command.findUnique({
     where:  { id: commandId },
     select: {
-      id:       true,
-      type:     true,
-      status:   true,
-      report:   true,
-      fromCity: { select: { ownerId: true } },
-      toCity:   { select: { ownerId: true } },
+      id:             true,
+      type:           true,
+      status:         true,
+      report:         true,
+      attackerUserId: true,
+      defenderUserId: true,
     },
   });
   if (!cmd) throw new Error("Report not found");
@@ -80,15 +90,19 @@ export const deleteReportForUser = async (commandId: string, userId: string) => 
     (cmd.type === "RESOURCES" && cmd.status === "COMPLETED");
   if (!isReportable) throw new Error("Report not found");
 
-  const isAttacker = cmd.fromCity.ownerId === userId;
-  const isDefender = cmd.toCity.ownerId   === userId;
+  const isAttacker = cmd.attackerUserId === userId;
+  const isDefender = cmd.defenderUserId === userId;
   if (!isAttacker && !isDefender) throw new Error("Forbidden");
 
+  // Daca user-ul e si attacker si defender (comenzi pe propriul oras, sau
+  // comenzi legate de un oras pe care l-a cucerit ulterior), trebuie sa
+  // ascundem AMBELE fete — altfel lista il va mai prinde prin cealalta fata.
   await prisma.command.update({
     where: { id: commandId },
-    data:  isAttacker
-      ? { reportHiddenByAttacker: true }
-      : { reportHiddenByDefender: true },
+    data: {
+      ...(isAttacker ? { reportHiddenByAttacker: true } : {}),
+      ...(isDefender ? { reportHiddenByDefender: true } : {}),
+    },
   });
 };
 
@@ -106,7 +120,7 @@ export const deleteAllReportsForUser = async (userId: string) => {
     prisma.command.updateMany({
       where: {
         AND: [reportableWhere, {
-          fromCity: { ownerId: userId },
+          attackerUserId: userId,
           reportHiddenByAttacker: false,
         }],
       },
@@ -115,7 +129,7 @@ export const deleteAllReportsForUser = async (userId: string) => {
     prisma.command.updateMany({
       where: {
         AND: [reportableWhere, {
-          toCity: { ownerId: userId },
+          defenderUserId: userId,
           reportHiddenByDefender: false,
         }],
       },

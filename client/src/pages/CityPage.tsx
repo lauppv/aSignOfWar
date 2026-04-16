@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { useNow } from "../context/TickContext.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CommandDetailModal from "../components/CommandDetailModal.tsx";
+import CancelCommandConfirm from "../components/CancelCommandConfirm.tsx";
 import { cancelCommand } from "../api/command.ts";
 import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
 import { getReports } from "../api/report.ts";
 import { logout } from "../api/auth.ts";
-import { getCurrentUserId, getActiveCityId, setActiveCityId } from "../api/client.ts";
+import { getCurrentUserId, getActiveCityId, setActiveCityId, clearActiveCityId } from "../api/client.ts";
 import {
   getHousingCapacity as getMaxPopulation,
   getWarehouseCapacity,
@@ -41,12 +43,12 @@ const CMD_COLORS = {
 
 const CANCEL_WINDOW_MS = 5 * 60 * 1000;
 
-function canCancel(cmd: OutgoingCommand): boolean {
-  return Date.now() - new Date(cmd.departureAt).getTime() <= CANCEL_WINDOW_MS;
+function canCancel(cmd: OutgoingCommand, now: number): boolean {
+  return now - new Date(cmd.departureAt).getTime() <= CANCEL_WINDOW_MS;
 }
 
-function fmtArrival(iso: string): string {
-  const diff = new Date(iso).getTime() - Date.now();
+function fmtArrival(iso: string, now: number): string {
+  const diff = new Date(iso).getTime() - now;
   if (diff <= 0) return "arriving...";
   const s = Math.floor(diff / 1000);
   const h = Math.floor(s / 3600);
@@ -59,6 +61,7 @@ function fmtArrival(iso: string): string {
 
 export default function CityPage() {
   const navigate = useNavigate();
+  const now = useNow();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCmd, setSelectedCmd] = useState<MergedCommand | null>(null);
   const [cancelTarget, setCancelTarget] = useState<OutgoingCommand | null>(null);
@@ -97,7 +100,19 @@ export default function CityPage() {
     queryKey: ["city", activeCityId ?? "default"],
     queryFn: () => getMyCity(activeCityId),
     refetchInterval: 5000,
+    retry: false,
   });
+
+  // Daca query-ul esueaza si aveam un cityId explicit (din URL sau localStorage),
+  // e probabil un ID stale de la alt cont. Curatam si reincarcam fara el.
+  useEffect(() => {
+    if (error && activeCityId) {
+      clearActiveCityId();
+      const next = new URLSearchParams(searchParams);
+      next.delete("cityId");
+      setSearchParams(next, { replace: true });
+    }
+  }, [error, activeCityId, searchParams, setSearchParams]);
 
   // Persista id-ul orasului incarcat efectiv (poate fi diferit de activeCityId
   // daca acel id era invalid si backend-ul a picat pe default).
@@ -145,9 +160,13 @@ export default function CityPage() {
       return new Set<string>();
     }
   });
+  // Snapshot-ul "what was already read" la momentul deschiderii listei, ca sa
+  // putem evidentia randurile necitite dupa ce marcam totul ca vazut.
+  const [readSnapshot, setReadSnapshot] = useState<Set<string>>(() => new Set());
   const unreadReports = (reports ?? []).filter((r) => !seenReportIds.has(r.id)).length;
 
   function openReports() {
+    setReadSnapshot(new Set(seenReportIds));
     const allIds = (reports ?? []).map((r) => r.id);
     const next = new Set<string>(allIds);
     localStorage.setItem(seenReportsKey, JSON.stringify(Array.from(next)));
@@ -157,6 +176,7 @@ export default function CityPage() {
 
   function handleLogout() {
     logout();
+    queryClient.clear();
     navigate("/login");
   }
 
@@ -209,6 +229,7 @@ export default function CityPage() {
         population={population}
         maxPopulation={maxPopulation}
         onLogout={handleLogout}
+        onRankings={() => navigate("/rankings")}
         onSimulator={() => openView("simulator")}
         onReports={openReports}
         onMap={() => navigate("/map")}
@@ -218,7 +239,7 @@ export default function CityPage() {
       {showSimulator ? (
         <SimulatorView onClose={closeView} />
       ) : showReports ? (
-        <ReportsView onClose={closeView} />
+        <ReportsView onClose={closeView} initiallyRead={readSnapshot} />
       ) : showBuildings ? (
         <BuildingsView city={city} onClose={closeView} onBuildingClick={(name) => {
           if (name === "MILITARY_BASE") openView("military_base");
@@ -311,10 +332,10 @@ export default function CityPage() {
                     </span>
 
                     <span className="text-[10px] text-[#7d8590] font-mono flex-1 text-right">
-                      {cmd.status === "ARRIVED" ? "stationed" : `⏱ ${fmtArrival(cmd.arrivalAt)}`}
+                      {cmd.status === "ARRIVED" ? "stationed" : `⏱ ${fmtArrival(cmd.arrivalAt, now)}`}
                     </span>
 
-                    {isOut && cmd.status === "TRAVELING" && canCancel(cmd as OutgoingCommand) && (
+                    {isOut && cmd.status === "TRAVELING" && canCancel(cmd as OutgoingCommand, now) && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -359,42 +380,18 @@ export default function CityPage() {
         <CommandDetailModal cmd={selectedCmd} onClose={() => setSelectedCmd(null)} />
       )}
 
-      {cancelTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-          onClick={() => setCancelTarget(null)}
-        >
-          <div
-            className="bg-[#161b22] border border-[#30363d] rounded p-5 w-[340px] text-xs"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-[#c9d1d9] mb-1">Are you sure you want to cancel this command?</div>
-            <div className="text-[10px] text-[#7d8590] mb-4">
-              Units will return home in the same time they've been travelling so far.
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setCancelTarget(null)}
-                className="px-3 py-1 text-[#b1bac4] border border-[#30363d] rounded hover:bg-[#1c2129]"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => {
-                  cancelMutation.mutate(
-                    { fromCityId: city.id, commandId: cancelTarget.id },
-                    { onSettled: () => setCancelTarget(null) }
-                  );
-                }}
-                disabled={cancelMutation.isPending}
-                className="px-3 py-1 text-[#f85149] border border-[#3d1a1a] rounded hover:bg-[#1f0e0e] disabled:opacity-40"
-              >
-                {cancelMutation.isPending ? "Cancelling..." : "Cancel command"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CancelCommandConfirm
+        open={!!cancelTarget}
+        pending={cancelMutation.isPending}
+        onBack={() => setCancelTarget(null)}
+        onConfirm={() => {
+          if (!cancelTarget) return;
+          cancelMutation.mutate(
+            { fromCityId: city.id, commandId: cancelTarget.id },
+            { onSettled: () => setCancelTarget(null) }
+          );
+        }}
+      />
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { register } from "../api/auth.ts";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +19,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(username, email, password, cityName);
+      queryClient.clear();
       navigate("/city");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");

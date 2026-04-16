@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNow } from "../context/TickContext.tsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { upgradeBuilding, cancelBuildingOrder } from "../api/city.ts";
 import ConfirmModal from "./ConfirmModal.tsx";
@@ -93,18 +94,12 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
   const cancelMutation  = useMutation({ mutationFn: cancelBuildingOrder, onSuccess: invalidate });
 
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
 
   const cfg      = BUILDINGS[name];
   const building = city.buildings.find((b) => b.name === name);
   const level    = building?.level ?? 0;
   const hqLevel  = getBuildingLevel(city, "HEADQUARTERS");
-
-  const now = Date.now();
   const pendingOrders = city.buildingUpgradeOrders.filter(
     (o) => o.buildingName === name && new Date(o.finishAt).getTime() > now
   );
@@ -228,7 +223,7 @@ export default function BuildingDetailView({ name, city, onClose }: Props) {
               <div className="flex flex-col gap-1.5">
                 {pendingOrders.map((order, i) => {
                   const totalSec  = Math.round((new Date(order.finishAt).getTime() - new Date(order.startAt).getTime()) / 1000);
-                  const diff      = new Date(order.finishAt).getTime() - Date.now();
+                  const diff      = new Date(order.finishAt).getTime() - now;
                   const s         = Math.max(0, Math.floor(diff / 1000));
                   const countdown = s === 0 ? "finishing..." : fmtDuration(s);
 

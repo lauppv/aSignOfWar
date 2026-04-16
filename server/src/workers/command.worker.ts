@@ -94,6 +94,7 @@ async function processAttackArrival(command: any) {
   const stationedSupports = await prisma.command.findMany({
     where:   { toCityId: command.toCityId, type: "SUPPORT", status: "ARRIVED" },
     include: { units: true },
+    // attackerUserId = owner-ul care a trimis suportul (necesar pt stats)
   });
 
   const airDefenseBuilding = toCity.buildings.find(b => b.name === "AIR_DEFENSE");
@@ -105,6 +106,7 @@ async function processAttackArrival(command: any) {
   const nativeStack  = new Map<UnitName, number>(toCity.units.map(u => [u.name, u.quantity]));
   const supportStacks = stationedSupports.map(sc => ({
     commandId: sc.id,
+    userId:    sc.attackerUserId,
     units:     new Map<UnitName, number>(sc.units.map(u => [u.name as UnitName, u.quantity])),
   }));
 
@@ -303,6 +305,8 @@ async function processAttackArrival(command: any) {
             fromCityId: command.fromCityId,
             toCityId:   command.toCityId,
             arrivalAt:  new Date(),
+            attackerUserId: newOwnerId!,
+            defenderUserId: newOwnerId!,
             reportHiddenByAttacker: true,
             reportHiddenByDefender: true,
             units: { create: garrisonUnits.map(u => ({ name: u.name, quantity: u.quantity })) },
@@ -352,6 +356,78 @@ async function processAttackArrival(command: any) {
       },
     });
   });
+
+  // ── Leaderboard stats ─────────────────────────────────────────────────────
+  // Calculam kills-urile si loot-ul dupa tranzactie (non-critical, fire-and-forget)
+  try {
+    // Attacker kills = defender casualties weighted by population
+    let attackerKills = 0;
+    for (const u of defenderUnits) {
+      const survived = result.defenderSurvivors.find(s => s.name === u.name)?.quantity ?? 0;
+      const lost = u.quantity - survived;
+      attackerKills += lost * (UNITS[u.name]?.population ?? 1);
+    }
+    // Defender kills = attacker casualties weighted by population
+    let totalDefKills = 0;
+    for (const u of attackerUnits) {
+      const survived = result.attackerSurvivors.find(s => s.name === u.name)?.quantity ?? 0;
+      const lost = u.quantity - survived;
+      totalDefKills += lost * (UNITS[u.name]?.population ?? 1);
+    }
+
+    // Attacker: kills + loot
+    await prisma.user.update({
+      where: { id: command.attackerUserId },
+      data: {
+        killsAsAttacker: { increment: attackerKills },
+        lootedMoney:     { increment: result.stolenMoney },
+        lootedEnergy:    { increment: result.stolenEnergy },
+        lootedAmmo:      { increment: result.stolenAmmo },
+      },
+    });
+
+    // Distribui kills-urile defensive proportional intre defender (native) si supporteri
+    if (totalDefKills > 0) {
+      // Total initial units per stack weighted by population
+      let nativeTotal = 0;
+      for (const [name, q] of nativeStack) nativeTotal += q * (UNITS[name]?.population ?? 1);
+      const supportTotals = supportStacks.map(s => {
+        let total = 0;
+        for (const [name, q] of s.units) total += q * (UNITS[name]?.population ?? 1);
+        return { userId: s.userId, total };
+      });
+      const grandTotal = nativeTotal + supportTotals.reduce((s, x) => s + x.total, 0);
+
+      if (grandTotal > 0) {
+        // Defender owner gets kills proportional to native units
+        const defenderUserId = toCity.ownerId;
+        const nativeKills = Math.round((nativeTotal / grandTotal) * totalDefKills);
+        if (defenderUserId && nativeKills > 0) {
+          await prisma.user.update({
+            where: { id: defenderUserId },
+            data:  { killsAsDefender: { increment: nativeKills } },
+          });
+        }
+
+        // Each supporter gets kills proportional to their units
+        // Group by userId in case multiple support commands from same player
+        const supporterKillMap = new Map<string, number>();
+        for (const { userId, total } of supportTotals) {
+          if (total <= 0) continue;
+          const kills = Math.round((total / grandTotal) * totalDefKills);
+          if (kills > 0) supporterKillMap.set(userId, (supporterKillMap.get(userId) ?? 0) + kills);
+        }
+        for (const [userId, kills] of supporterKillMap) {
+          await prisma.user.update({
+            where: { id: userId },
+            data:  { killsAsSupporter: { increment: kills } },
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to update combat stats:", e);
+  }
 
   // Programeaza intoarcerea daca au supravietuit unitati SI orasul nu a fost cucerit.
   // (La cucerire trupele raman ca garnizoana, deci nu mai pleaca nicaieri.)
@@ -492,6 +568,22 @@ async function processSpyArrival(command: any) {
 
   if (hasSurvivors) {
     await commandQueue.add("return", { commandId: command.id }, { delay: returnDelayMs });
+  }
+
+  // ── Spy stats ──────────────────────────────────────────────────────────────
+  try {
+    const attackerLosses = attackerHackers - survivors;
+    if (attackerLosses > 0 && toCity.ownerId) {
+      // Defender killed the attacker's hackers (weighted by HACKER population)
+      const hackerPop = UNITS.HACKER?.population ?? 1;
+      await prisma.user.update({
+        where: { id: toCity.ownerId },
+        data:  { killsAsDefender: { increment: attackerLosses * hackerPop } },
+      });
+    }
+    // Attacker never kills defender hackers in spy missions
+  } catch (e) {
+    console.error("Failed to update spy stats:", e);
   }
 }
 
