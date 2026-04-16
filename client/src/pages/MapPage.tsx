@@ -8,7 +8,7 @@ import type { MapCity } from "../types/index.ts";
 import CityActionPanel from "../components/CityActionPanel.tsx";
 
 const CELL = 80; 
-const GRID_LINE = "#21262d";
+const GRID_LINE = "#3d660e";
 
 const COLOR_ACTIVE   = "#e85aad";
 const COLOR_OWN      = "#e3b341";
@@ -72,7 +72,6 @@ export default function MapPage() {
   const dragState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [hasDragged, setHasDragged] = useState(false);
-  const [hover, setHover] = useState<{ x: number; y: number; px: number; py: number } | null>(null);
   const [cursorCell, setCursorCell] = useState<{ x: number; y: number } | null>(null);
   const [scroll, setScroll] = useState({ left: 0, top: 0, w: 0, h: 0 });
   const [selected, setSelected] = useState<{ city: MapCity; px: number; py: number } | null>(null);
@@ -242,7 +241,7 @@ export default function MapPage() {
   }
 
   const worldPx = map.size * CELL;
-  const hovered = hover ? map.cities.find(c => c.x === hover.x && c.y === hover.y) ?? null : null;
+  //const hovered = hover ? map.cities.find(c => c.x === hover.x && c.y === hover.y) ?? null : null;
 
   const gridBg = `
     repeating-linear-gradient(0deg,  ${GRID_LINE} 0 1px, transparent 1px ${CELL}px),
@@ -263,14 +262,14 @@ export default function MapPage() {
               }}
               className="text-xs border border-[#30363d] rounded px-3 py-1 hover:bg-[#1c2129]"
             >
-              ⌖ My city
+              ⌖ Center city
             </button>
           )}
           <button
             onClick={() => navigate(myCity?.id ? `/city?cityId=${encodeURIComponent(myCity.id)}` : "/city")}
             className="text-xs border border-[#30363d] rounded px-3 py-1 hover:bg-[#1c2129]"
           >
-            ← Back to city
+            ← Enter current city
           </button>
         </div>
       </div>
@@ -293,7 +292,7 @@ export default function MapPage() {
             backgroundImage: `${gridBg}, url("/images/map/grass.jpg")`,
             backgroundSize: `${CELL}px ${CELL}px`,
             backgroundRepeat: "repeat",
-            backgroundColor: "#0d1117",
+            backgroundColor: "#299945",
           }}
           onClick={() => { if (!hasDragged) setSelected(null); }}
         >
@@ -335,7 +334,7 @@ export default function MapPage() {
                 height: CELL,
                 outline: "2px solid #58a6ff",
                 outlineOffset: -1,
-                background: "rgba(88,166,255,0.10)",
+                background: "rgba(28, 126, 66, 0.1)",
                 zIndex: 5
               }}
             />
@@ -348,8 +347,8 @@ export default function MapPage() {
             return (
               <div
                 key={c.id}
-                onMouseEnter={() => setHover({ x: c.x, y: c.y, px: c.x * CELL, py: c.y * CELL })}
-                onMouseLeave={() => setHover(null)}
+                // onMouseEnter={() => setHover({ x: c.x, y: c.y, px: c.x * CELL, py: c.y * CELL })}
+                // onMouseLeave={() => setHover(null)}
                 onClick={(e) => {
                   if (hasDragged) {
                     e.stopPropagation();
@@ -495,20 +494,6 @@ export default function MapPage() {
       </div>
 
       <div className="border-t border-[#30363d] bg-[#161b22] px-3 py-2 text-xs h-10 shrink-0 flex items-center justify-between gap-4 z-40">
-        <div>
-          {hovered ? (
-            <span>
-              <span className="text-[#c9d1d9] font-semibold">{hovered.name}</span>
-              <span className="text-[#b1bac4]">
-                {" · "}
-                {hovered.owner ? hovered.owner.username : "Ghost city"}
-                {" · "}({hovered.x},{hovered.y})
-              </span>
-            </span>
-          ) : (
-            <span className="text-[#7d8590]">Drag to pan · hover a city for details</span>
-          )}
-        </div>
         <div className="flex items-center gap-3 text-[#b1bac4]">
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_ACTIVE }} /> active</span>
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_OWN }} /> mine</span>
