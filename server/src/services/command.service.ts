@@ -33,6 +33,16 @@ export const sendCommand = async (
   if (type === "ATTACK" && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_ATTACK_OWN_CITY");
   if (type === "SPY"    && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_SPY_OWN_CITY");
 
+  if ((type === "ATTACK" || type === "SPY") && toCity.ownerId && toCity.ownerId !== userId) {
+    const [me, defender] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { allianceId: true } }),
+      prisma.user.findUnique({ where: { id: toCity.ownerId }, select: { allianceId: true } }),
+    ]);
+    if (me?.allianceId && defender?.allianceId && me.allianceId === defender.allianceId) {
+      throw new Error("CANNOT_ATTACK_ALLIANCE_MEMBER");
+    }
+  }
+
   const units = Object.entries(unitCounts)
     .filter(([, qty]) => qty && qty > 0)
     .map(([name, qty]) => ({ name: name as UnitName, quantity: qty! }));

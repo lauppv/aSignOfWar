@@ -9,6 +9,7 @@ import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { useNow } from "../context/TickContext.tsx";
 import CancelCommandConfirm from "./CancelCommandConfirm.tsx";
+import { getMyAlliance } from "../api/alliance.ts";
 
 interface Props {
   city: MapCity;
@@ -36,6 +37,13 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const now = useNow();
   const isOwn     = myCity?.id === city.id;
   const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
+
+  const { data: myAlliance } = useQuery({
+    queryKey: ["alliance", "me"],
+    queryFn: getMyAlliance,
+  });
+  const sameAlliance =
+    !!myAlliance && !!city.owner?.allianceId && myAlliance.id === city.owner.allianceId;
 
   const ownerLabel = city.owner ? city.owner.username : "Ghost city";
   const dist = myCity ? Math.sqrt((city.x - myCity.x) ** 2 + (city.y - myCity.y) ** 2) : null;
@@ -166,32 +174,43 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
         )}
 
         {!isOwn && !isOwnedByMe && myCity && (
-          <div className="grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
-            <button
-              onClick={() => openForm("ATTACK")}
-              className="text-[10px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-1 hover:bg-[#3d1a1a]"
-            >
-              Attack
-            </button>
-            <button
-              onClick={() => openForm("RESOURCES")}
-              className="text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
-            >
-              Resources
-            </button>
-            <button
-              onClick={() => openForm("SUPPORT")}
-              className="text-[10px] uppercase tracking-wide border border-[#58a6ff] text-[#58a6ff] rounded py-1 hover:bg-[#0c2744]"
-            >
-              Support
-            </button>
-            <button
-              onClick={() => openForm("SPY")}
-              className="text-[10px] uppercase tracking-wide border border-[#a371f7] text-[#a371f7] rounded py-1 hover:bg-[#2e1a3d]"
-            >
-              Spy
-            </button>
-          </div>
+          <>
+            {sameAlliance && (
+              <div className="mt-2 pt-2 border-t border-[#30363d] text-[10px] text-[#8b949e]">
+                Alliance member — attack and spy are disabled.
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-[#30363d]">
+              {!sameAlliance && (
+                <button
+                  onClick={() => openForm("ATTACK")}
+                  className="text-[10px] uppercase tracking-wide border border-[#f85149] text-[#f85149] rounded py-1 hover:bg-[#3d1a1a]"
+                >
+                  Attack
+                </button>
+              )}
+              <button
+                onClick={() => openForm("RESOURCES")}
+                className="text-[10px] uppercase tracking-wide border border-[#d29922] text-[#d29922] rounded py-1 hover:bg-[#3d2e0a]"
+              >
+                Resources
+              </button>
+              <button
+                onClick={() => openForm("SUPPORT")}
+                className="text-[10px] uppercase tracking-wide border border-[#58a6ff] text-[#58a6ff] rounded py-1 hover:bg-[#0c2744]"
+              >
+                Support
+              </button>
+              {!sameAlliance && (
+                <button
+                  onClick={() => openForm("SPY")}
+                  className="text-[10px] uppercase tracking-wide border border-[#a371f7] text-[#a371f7] rounded py-1 hover:bg-[#2e1a3d]"
+                >
+                  Spy
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         {!isOwn && isOwnedByMe && myCity && (
@@ -258,6 +277,25 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
         {" → "}
         ({city.x}, {city.y}) · {ownerLabel}
       </div>
+
+      {(() => {
+        if (!myCity) return null;
+        const fieldDist = getFieldDistance(myCity.x, myCity.y, city.x, city.y);
+        let sec = 0;
+        if (type === "RESOURCES") {
+          if (resourceTotal > 0) sec = getResourceTravelTimeSec(fieldDist, GAME_SPEED);
+        } else {
+          const slowest = getSlowestUnitSpeed(unitCounts);
+          if (slowest > 0) sec = getUnitTravelTimeSec(fieldDist, slowest, GAME_SPEED);
+        }
+        if (sec <= 0) return null;
+        return (
+          <div className="text-[10px] text-[#b1bac4] mb-2 flex justify-between">
+            <span>Travel time</span>
+            <span className="font-mono text-[#c9d1d9]">{formatMs(sec * 1000)}</span>
+          </div>
+        );
+      })()}
 
       {type === "RESOURCES" ? (
         <div className="flex flex-col gap-2">
@@ -549,13 +587,20 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function UnitInput({ name, available, value, onChange }: {
-  name: string; available: number; value: number; onChange: (v: number) => void;
+  name: UnitName; available: number; value: number; onChange: (v: number) => void;
 }) {
+  const { openUnit } = useUnitInfo();
   return (
     <div className="flex items-center gap-2">
-      <span className="flex-1 text-[#c9d1d9] text-[10px] uppercase truncate">
-        {name.toLowerCase().replace(/_/g, " ")}
-      </span>
+      <img
+        src={`/images/units/${name.toLowerCase()}.jpg`}
+        alt={UNIT_DISPLAY[name]}
+        title={UNIT_DISPLAY[name]}
+        onClick={(e) => { e.stopPropagation(); openUnit(name); }}
+        className="w-6 h-6 object-cover rounded shrink-0 cursor-pointer hover:brightness-125"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+      <span className="flex-1" />
       <span className="text-[10px] text-[#7d8590] font-mono w-10 text-right">{available}</span>
       <input
         type="text"

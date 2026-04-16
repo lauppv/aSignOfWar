@@ -58,6 +58,13 @@ enum CommandStatus {
   COMPLETED
 }
 
+enum AllianceAccess {
+  OPEN
+  CLOSED
+  INVITE_ONLY
+  APPLICATION
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -82,9 +89,70 @@ model User {
   lootedEnergy     Float @default(0)
   lootedAmmo       Float @default(0)
 
+  allianceId      String?
+  alliance        Alliance? @relation("AllianceMembers", fields: [allianceId], references: [id])
+  leadingAlliance Alliance? @relation("AllianceLeader")
+
+  allianceInvitations AllianceInvitation[] @relation("InviteTarget")
+  allianceApplications AllianceApplication[] @relation("ApplicationUser")
+  allianceMessages     AllianceMessage[]    @relation("MessageAuthor")
+
   cities           City[]
   commandsAttacker Command[] @relation("CommandAttacker")
   commandsDefender Command[] @relation("CommandDefender")
+}
+
+model Alliance {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  tag         String         @unique
+  description String?
+  accessMode  AllianceAccess @default(OPEN)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  leaderId String @unique
+  leader   User   @relation("AllianceLeader", fields: [leaderId], references: [id])
+
+  members      User[]                @relation("AllianceMembers")
+  invitations  AllianceInvitation[]
+  applications AllianceApplication[]
+  messages     AllianceMessage[]
+}
+
+model AllianceInvitation {
+  id         String   @id @default(uuid())
+  allianceId String
+  alliance   Alliance @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("InviteTarget", fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([allianceId, userId])
+}
+
+model AllianceApplication {
+  id         String   @id @default(uuid())
+  allianceId String
+  alliance   Alliance @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("ApplicationUser", fields: [userId], references: [id])
+  message    String
+  createdAt  DateTime @default(now())
+
+  @@unique([allianceId, userId])
+}
+
+model AllianceMessage {
+  id         String   @id @default(uuid())
+  allianceId String
+  alliance   Alliance @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation("MessageAuthor", fields: [authorId], references: [id])
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([allianceId, createdAt])
 }
 
 model City {

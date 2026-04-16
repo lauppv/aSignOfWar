@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { BuildingName } from "../types/index.ts";
+import type { BuildingName, CityOverview } from "../types/index.ts";
 import { BUILDING_DISPLAY } from "../lib/labels.ts";
+import { getBuildingLevel } from "../lib/cityHelpers.ts";
 
 interface Hotspot {
   name: BuildingName;
@@ -54,10 +55,11 @@ const HOTSPOTS: Hotspot[] = [
 
 interface Props {
   cityName: string;
+  city?: CityOverview;
   onBuildingClick?: (name: BuildingName) => void;
 }
 
-export default function CityMap({ cityName, onBuildingClick }: Props) {
+export default function CityMap({ cityName, city, onBuildingClick }: Props) {
   const [hovered, setHovered] = useState<BuildingName | null>(null);
 
   return (
@@ -103,6 +105,7 @@ export default function CityMap({ cityName, onBuildingClick }: Props) {
           >
             <div className="whitespace-nowrap bg-[#161b22]/95 border border-[#e6b800] text-[#e6b800] text-[12px] font-bold px-3 py-1 rounded shadow-xl animate-in fade-in zoom-in duration-150">
               {BUILDING_DISPLAY[spot.name]}
+              {city ? ` (${getBuildingLevel(city, spot.name)})` : ""}
             </div>
           </div>
         );

@@ -230,6 +230,7 @@ export default function CityPage() {
         maxPopulation={maxPopulation}
         onLogout={handleLogout}
         onRankings={() => navigate("/rankings")}
+        onAlliance={() => navigate("/alliance")}
         onSimulator={() => openView("simulator")}
         onReports={openReports}
         onMap={() => navigate("/map")}
@@ -356,6 +357,7 @@ export default function CityPage() {
           {/* CENTER: City image */}
           <CityMap
             cityName={city.name}
+            city={city}
             onBuildingClick={(name) => {
               if (name === "HEADQUARTERS")              openView("buildings");
               else if (name === "MILITARY_BASE")        openView("military_base");

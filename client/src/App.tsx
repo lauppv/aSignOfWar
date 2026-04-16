@@ -5,6 +5,7 @@ import RegisterPage from "./pages/RegisterPage.tsx";
 import CityPage from "./pages/CityPage.tsx";
 import MapPage from "./pages/MapPage.tsx";
 import RankingsPage from "./pages/RankingsPage.tsx";
+import AlliancePage from "./pages/AlliancePage.tsx";
 import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
 import { TickProvider } from "./context/TickContext.tsx";
 import { loadGameSpeed } from "./lib/gameSpeed.ts";
@@ -76,6 +77,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <RankingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/alliance"
+          element={
+            <ProtectedRoute>
+              <AlliancePage />
             </ProtectedRoute>
           }
         />

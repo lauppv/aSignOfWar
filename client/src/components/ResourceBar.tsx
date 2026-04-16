@@ -17,6 +17,7 @@ interface Props {
   onReports?: () => void;
   onMap?: () => void;
   onRankings?: () => void;
+  onAlliance?: () => void;
   unreadReports?: number;
   ownedCities?: { id: string; name: string; x: number; y: number }[];
   activeCityId?: string;
@@ -27,7 +28,7 @@ function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, onRankings, unreadReports = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
+export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, onRankings, onAlliance, unreadReports = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
@@ -146,7 +147,7 @@ export default function ResourceBar({ cityName, cityPoints, money, energy, ammo,
           )}
         </button>
       )}
-      {(onSimulator || onRankings || onLogout) && (
+      {(onSimulator || onRankings || onAlliance || onLogout) && (
         <div ref={menuRef} className="relative ml-auto shrink-0">
           <button
             onClick={() => setMenuOpen((v) => !v)}
@@ -167,6 +168,14 @@ export default function ResourceBar({ cityName, cityPoints, money, energy, ammo,
                   Rankings
                 </button>
               )}
+              {onAlliance && (
+                <button
+                  onClick={() => { setMenuOpen(false); onAlliance(); }}
+                  className="block w-full text-left text-xs text-[#58a6ff] px-3 py-2 hover:bg-[#1c2129] cursor-pointer"
+                >
+                  Alliance
+                </button>
+              )}
               {onSimulator && (
                 <button
                   onClick={() => { setMenuOpen(false); onSimulator(); }}
@@ -175,7 +184,7 @@ export default function ResourceBar({ cityName, cityPoints, money, energy, ammo,
                   Simulator
                 </button>
               )}
-              {(onRankings || onSimulator) && onLogout && <div className="h-px bg-[#30363d]" />}
+              {(onRankings || onAlliance || onSimulator) && onLogout && <div className="h-px bg-[#30363d]" />}
               {onLogout && (
                 <button
                   onClick={() => { setMenuOpen(false); onLogout(); }}
