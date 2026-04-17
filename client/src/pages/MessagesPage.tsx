@@ -10,6 +10,9 @@ import {
   listDirectConversations, listDirectThread, sendDirectMessage, deleteDirectMessage,
   type DirectConversation, type DirectMessage,
 } from "../api/message.ts";
+import { getMyAlliance } from "../api/alliance.ts";
+
+
 
 type Tab = "alliance" | "private";
 
@@ -33,11 +36,11 @@ export default function MessagesPage() {
           onClick={() => navigate(-1)}
           className="text-xs text-[#b1bac4] border border-[#30363d] rounded px-2.5 py-1 hover:bg-[#1c2129]"
         >
-          ← Back
+          Back
         </button>
       </div>
 
-      <div className="flex border-b border-[#30363d] bg-[#0d1117] shrink-0">
+      <div className="flex border-b border-[#30363d] bg-[#0d1117] shrink-0 center self-center mt-1 mb-3">
         {(["alliance", "private"] as const).map(t => {
           const active = tab === t;
           return (
@@ -106,9 +109,10 @@ function AllianceMessages({ myId }: { myId: string | null }) {
     );
   }
 
+
   return (
-    <div className="flex flex-col h-full p-3 gap-2">
-      <div className="flex-1 bg-[#161b22] border border-[#30363d] rounded p-3 overflow-y-auto flex flex-col gap-2">
+    <div className="flex max-w-[480px] flex-col h-full p-3 gap-2 ml-auto mr-auto">
+      <div className="flex  bg-[#161b22] border border-[#30363d] rounded p-3 overflow-y-auto flex flex-col gap-2">
         {isLoading && <div className="text-xs text-[#8b949e]">Loading messages…</div>}
         {!isLoading && (messages?.length ?? 0) === 0 && (
           <div className="text-xs text-[#8b949e]">No messages yet. Start the conversation.</div>
@@ -143,9 +147,9 @@ function AllianceMessages({ myId }: { myId: string | null }) {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Write a message…"
+          placeholder="Enter to send. Shift+Enter for new line"
           rows={2}
-          className="flex-1 bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#c9d1d9] focus:outline-none focus:border-[#58a6ff]"
+          className="flex w-[480px] bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#c9d1d9] focus:outline-none focus:border-[#58a6ff]"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && content.trim()) {
               e.preventDefault();
@@ -153,13 +157,13 @@ function AllianceMessages({ myId }: { myId: string | null }) {
             }
           }}
         />
-        <button
+        {/* <button
           onClick={() => post.mutate()}
           disabled={!content.trim() || post.isPending}
           className="text-xs border border-[#3fb950] text-[#3fb950] rounded px-3 py-1 hover:bg-[#1a3d1a] disabled:opacity-40"
         >
           Send
-        </button>
+        </button> */}
       </div>
     </div>
   );
@@ -190,11 +194,15 @@ function PrivateMessages({ myId }: { myId: string | null }) {
   }, [conversations, activePeerId]);
 
   return (
-    <div className="flex h-full">
+  <div className="flex w-full h-full justify-center">
+    <div className="flex h-full max-w-[960px] w-full">
+
       {/* Left: conversations */}
       <div className="w-72 shrink-0 bg-[#0d1117] border-r border-[#30363d] overflow-y-auto flex flex-col">
         <div className="p-2 border-b border-[#30363d] flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-widest text-[#b1bac4]">Conversations</span>
+          <span className="text-[11px] uppercase tracking-widest text-[#b1bac4]">
+            Conversations
+          </span>
           <button
             onClick={() => setComposeOpen(true)}
             className="text-[11px] border border-[#30363d] rounded px-2 py-0.5 text-[#3fb950] hover:bg-[#1a3d1a]"
@@ -202,13 +210,18 @@ function PrivateMessages({ myId }: { myId: string | null }) {
             + New
           </button>
         </div>
+
         {(conversations?.length ?? 0) === 0 && (
           <div className="p-4 text-[11px] text-[#8b949e]">
-            No conversations yet. Click <span className="text-[#3fb950]">+ New</span> to send your first message.
+            No conversations yet. Click{" "}
+            <span className="text-[#3fb950]">+ New</span> to send your first
+            message.
           </div>
         )}
+
         {conversations?.map(c => {
           const isActive = c.peer.id === activePeerId;
+
           return (
             <button
               key={c.peer.id}
@@ -217,19 +230,29 @@ function PrivateMessages({ myId }: { myId: string | null }) {
               style={{ background: isActive ? "#1c2129" : undefined }}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className={`text-xs font-semibold truncate ${isActive ? "text-[#e6b800]" : "text-[#c9d1d9]"}`}>
+                <span
+                  className={`text-xs font-semibold truncate ${
+                    isActive ? "text-[#e6b800]" : "text-[#c9d1d9]"
+                  }`}
+                >
                   {c.peer.username}
                 </span>
+
                 {c.unread > 0 && (
                   <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#f85149] text-white text-[10px] font-bold leading-[18px] text-center">
                     {c.unread > 99 ? "99+" : c.unread}
                   </span>
                 )}
               </div>
+
               <div className="text-[11px] text-[#8b949e] truncate">
-                {c.lastFromMe ? "You: " : ""}{c.lastContent}
+                {c.lastFromMe ? "You: " : ""}
+                {c.lastContent}
               </div>
-              <div className="text-[10px] text-[#6e7681]">{new Date(c.lastAt).toLocaleString()}</div>
+
+              <div className="text-[10px] text-[#6e7681]">
+                {new Date(c.lastAt).toLocaleString()}
+              </div>
             </button>
           );
         })}
@@ -249,11 +272,15 @@ function PrivateMessages({ myId }: { myId: string | null }) {
       {composeOpen && (
         <ComposeModal
           onClose={() => setComposeOpen(false)}
-          onSent={(peerId) => { setComposeOpen(false); selectPeer(peerId); }}
+          onSent={(peerId) => {
+            setComposeOpen(false);
+            selectPeer(peerId);
+          }}
         />
       )}
     </div>
-  );
+  </div>
+);
 }
 
 function Thread({ peer, myId }: { peer: { id: string; username: string }; myId: string | null }) {
@@ -297,13 +324,15 @@ function Thread({ peer, myId }: { peer: { id: string; username: string }; myId: 
     },
   });
 
-  return (
-    <div className="flex flex-col h-full p-3 gap-2">
+return (
+  <div className="flex w-full h-screen overflow-hidden justify-center">
+    <div className="flex flex-col max-w-[480px] w-full">
       <div className="flex items-center gap-2 px-1">
         <span className="text-xs text-[#b1bac4]">Conversation with</span>
-        <span className="text-sm font-semibold text-[#e6b800]">{peer.username}</span>
+        <span className="text-sm font-semibold text-[#30e24d]">{peer.username}</span>
       </div>
-      <div className="flex-1 bg-[#161b22] border border-[#30363d] rounded p-3 overflow-y-auto flex flex-col gap-2">
+
+      <div className="flex flex-col w-full bg-[#161b22] border border-[#30363d] rounded p-3 overflow-y-auto gap-2">
         {isLoading && <div className="text-xs text-[#8b949e]">Loading messages…</div>}
         {!isLoading && (thread?.length ?? 0) === 0 && (
           <div className="text-xs text-[#8b949e]">No messages yet. Say hi.</div>
@@ -337,14 +366,14 @@ function Thread({ peer, myId }: { peer: { id: string; username: string }; myId: 
         })}
         <div ref={bottomRef} />
       </div>
-      {err && <div className="text-[11px] text-[#f85149]">{err}</div>}
-      <div className="flex gap-2">
+
+      <div className="w-full mt-1">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={`Message ${peer.username}…`}
+          placeholder={`Enter to send. Shift+Enter for new line`}
           rows={2}
-          className="flex-1 bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#c9d1d9] focus:outline-none focus:border-[#58a6ff]"
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#c9d1d9] focus:outline-none focus:border-[#58a6ff]"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && content.trim()) {
               e.preventDefault();
@@ -352,16 +381,12 @@ function Thread({ peer, myId }: { peer: { id: string; username: string }; myId: 
             }
           }}
         />
-        <button
-          onClick={() => send.mutate()}
-          disabled={!content.trim() || send.isPending}
-          className="text-xs border border-[#3fb950] text-[#3fb950] rounded px-3 py-1 hover:bg-[#1a3d1a] disabled:opacity-40"
-        >
-          Send
-        </button>
       </div>
     </div>
-  );
+
+    {err && <div className="text-[11px] text-[#f85149]">{err}</div>}
+  </div>
+);
 }
 
 function ComposeModal({ onClose, onSent }: { onClose: () => void; onSent: (peerId: string) => void }) {

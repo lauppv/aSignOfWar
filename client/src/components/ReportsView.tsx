@@ -186,7 +186,7 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
         </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex w-full h-screen overflow-hidden justify-center">
         {/* Left column: list + action bar */}
         <div className="w-[440px] shrink-0 border-r border-[#30363d] flex flex-col">
           <div className="flex-1 overflow-y-auto">
@@ -228,7 +228,7 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
         </div>
 
         {/* Detail */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="w-[720px] shrink-0 overflow-y-auto p-4">
           <div className="max-w-[720px]">
             {selected ? <ReportDetail report={selected} /> : (
               <div className="text-[#7d8590] text-xs text-center mt-6">Pick a report from the list</div>
