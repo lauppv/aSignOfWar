@@ -6,6 +6,7 @@ import {
   type RankingEntry, type AllianceRankingEntry,
 } from "../api/ranking.ts";
 import { getCurrentUserId } from "../api/client.ts";
+import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 
 type MainTab = "alliances" | "players" | "defeatedAlliance" | "defeatedPlayer";
 type KillCategory = "attacker" | "defender" | "supporter" | "total";
@@ -64,14 +65,14 @@ export default function RankingsPage() {
   const error   = players.error || alliances.error;
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen text-[#b1bac4]">Loading rankings...</div>;
+    return <div className="flex items-center justify-center h-full text-[#b1bac4]">Loading rankings...</div>;
   }
   if (error || !players.data || !alliances.data) {
-    return <div className="flex items-center justify-center h-screen text-[#f85149]">Failed to load rankings</div>;
+    return <div className="flex items-center justify-center h-full text-[#f85149]">Failed to load rankings</div>;
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d1117] text-[#c9d1d9]">
+    <div className="flex flex-col h-full bg-[#0d1117] text-[#c9d1d9]">
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#30363d] bg-[#161b22] shrink-0">
         <span className="text-sm tracking-wide text-[#b1bac4]">Rankings</span>
         <button
@@ -188,6 +189,7 @@ function PlayersTable({ rows, myId }: { rows: RankingEntry[]; myId: string | nul
 
 // ─── Alliances ──────────────────────────────────────────────────────────────────
 function AlliancesTable({ rows }: { rows: AllianceRankingEntry[] }) {
+  const { openAlliance } = useAllianceProfile();
   const sorted = [...rows].sort((a, b) => b.points - a.points);
   return (
     <table className="w-full text-xs border-collapse">
@@ -207,8 +209,14 @@ function AlliancesTable({ rows }: { rows: AllianceRankingEntry[] }) {
           <tr key={r.id} className="border-b border-[#21262d] hover:bg-[#1c2129]">
             <Td mono muted>{i + 1}</Td>
             <Td>
-              <span className="text-[#e6b800] font-semibold">[{r.tag}]</span>{" "}
-              <span className="text-[#c9d1d9]">{r.name}</span>
+              <button
+                type="button"
+                onClick={() => openAlliance(r.id)}
+                className="text-left hover:underline"
+              >
+                <span className="text-[#e6b800] font-semibold">[{r.tag}]</span>{" "}
+                <span className="text-[#c9d1d9]">{r.name}</span>
+              </button>
             </Td>
             <Td mono right className="text-[#e6b800]">{r.points.toLocaleString()}</Td>
             <Td mono right>{r.memberCount}</Td>
@@ -288,13 +296,19 @@ function DefeatedAllianceTable({ rows, cat }: { rows: AllianceRankingEntry[]; ca
 }
 
 // ─── Small primitives ───────────────────────────────────────────────────────────
-function AllianceTag({ alliance }: { alliance: { tag: string; name: string } | null }) {
+function AllianceTag({ alliance }: { alliance: { id: string; tag: string; name: string } | null }) {
+  const { openAlliance } = useAllianceProfile();
   if (!alliance) return <span className="text-[#8b949e]">—</span>;
   return (
-    <span title={alliance.name}>
+    <button
+      type="button"
+      onClick={() => openAlliance(alliance.id)}
+      title={alliance.name}
+      className="text-left hover:underline"
+    >
       <span className="text-[#e6b800] font-semibold">[{alliance.tag}]</span>{" "}
       <span className="text-[#c9d1d9]">{alliance.name}</span>
-    </span>
+    </button>
   );
 }
 

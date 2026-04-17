@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,10 +8,10 @@ import {
   listMyInvitations, acceptInvitation, rejectInvitation,
   submitApplication, getMyApplication, cancelMyApplication,
   listAllianceApplications, acceptApplication, rejectApplication,
-  listMessages, postMessage,
   type AllianceDetail, type AllianceSummary, type AllianceAccess,
 } from "../api/alliance.ts";
 import { getCurrentUserId } from "../api/client.ts";
+import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 
 const ACCESS_LABEL: Record<AllianceAccess, string> = {
   OPEN: "Open",
@@ -42,7 +42,7 @@ export default function AlliancePage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d1117] text-[#c9d1d9]">
+    <div className="flex flex-col h-full bg-[#0d1117] text-[#c9d1d9]">
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#30363d] bg-[#161b22] shrink-0">
         <span className="text-sm tracking-wide text-[#b1bac4]">Alliance</span>
         <button
@@ -67,7 +67,7 @@ export default function AlliancePage() {
 }
 
 // ═══ IN AN ALLIANCE ═════════════════════════════════════════════════════════════
-type MemberTab = "overview" | "members" | "messages" | "settings" | "invitations" | "applications";
+type MemberTab = "overview" | "members" | "settings" | "invitations" | "applications";
 
 function InAllianceView({ alliance, myId, onChanged }: {
   alliance: AllianceDetail; myId: string | null; onChanged: () => void;
@@ -78,7 +78,6 @@ function InAllianceView({ alliance, myId, onChanged }: {
   const TABS: { key: MemberTab; label: string; leaderOnly?: boolean }[] = [
     { key: "overview",     label: "Overview" },
     { key: "members",      label: "Members" },
-    { key: "messages",     label: "Messages" },
     { key: "invitations",  label: "Invitations",  leaderOnly: true },
     { key: "applications", label: "Applications", leaderOnly: true },
     { key: "settings",     label: "Settings",     leaderOnly: true },
@@ -109,7 +108,6 @@ function InAllianceView({ alliance, myId, onChanged }: {
       <div className="p-4 max-w-3xl w-full">
         {tab === "overview"     && <OverviewTab alliance={alliance} isLeader={isLeader} onChanged={onChanged} />}
         {tab === "members"      && <MembersTab alliance={alliance} myId={myId} isLeader={isLeader} onChanged={onChanged} />}
-        {tab === "messages"     && <MessagesTab myId={myId} />}
         {tab === "invitations"  && isLeader && <InvitationsTab onChanged={onChanged} />}
         {tab === "applications" && isLeader && <ApplicationsTab onChanged={onChanged} />}
         {tab === "settings"     && isLeader && <SettingsTab alliance={alliance} onChanged={onChanged} />}
@@ -250,81 +248,7 @@ function MembersTab({ alliance, myId, isLeader, onChanged }: {
   );
 }
 
-function MessagesTab({ myId }: { myId: string | null }) {
-  const qc = useQueryClient();
-  const [content, setContent] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  const { data: messages, isLoading } = useQuery({
-    queryKey: ["alliance", "messages"],
-    queryFn: listMessages,
-    refetchInterval: 10000,
-  });
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages?.length]);
-
-  const post = useMutation({
-    mutationFn: () => postMessage(content),
-    onSuccess: () => {
-      setContent("");
-      setErr(null);
-      qc.invalidateQueries({ queryKey: ["alliance", "messages"] });
-    },
-    onError: (e: Error) => setErr(e.message),
-  });
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="bg-[#161b22] border border-[#30363d] rounded p-3 h-[50vh] overflow-y-auto flex flex-col gap-2">
-        {isLoading && <div className="text-xs text-[#8b949e]">Loading messages…</div>}
-        {!isLoading && (messages?.length ?? 0) === 0 && (
-          <div className="text-xs text-[#8b949e]">No messages yet. Start the conversation.</div>
-        )}
-        {messages?.map(m => {
-          const isMe = m.author.id === myId;
-          return (
-            <div key={m.id} className="flex flex-col">
-              <div className="flex items-baseline gap-2">
-                <span className={`text-[11px] font-semibold ${isMe ? "text-[#e85aad]" : "text-[#58a6ff]"}`}>
-                  {m.author.username}
-                </span>
-                <span className="text-[10px] text-[#8b949e]">{new Date(m.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="text-xs text-[#c9d1d9] whitespace-pre-wrap break-words">{m.content}</div>
-            </div>
-          );
-        })}
-        <div ref={bottomRef} />
-      </div>
-      {err && <div className="text-[11px] text-[#f85149]">{err}</div>}
-      <div className="flex gap-2">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write a message…"
-          rows={2}
-          className="flex-1 bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#c9d1d9] focus:outline-none focus:border-[#58a6ff]"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && content.trim()) {
-              e.preventDefault();
-              post.mutate();
-            }
-          }}
-        />
-        <button
-          onClick={() => post.mutate()}
-          disabled={!content.trim() || post.isPending}
-          className="text-xs border border-[#3fb950] text-[#3fb950] rounded px-3 py-1 hover:bg-[#1a3d1a] disabled:opacity-40"
-        >
-          Send
-        </button>
-      </div>
-    </div>
-  );
-}
+// Alliance messages au fost mutate in pagina dedicata /messages (tab Alliance).
 
 function InvitationsTab({ onChanged }: { onChanged: () => void }) {
   const qc = useQueryClient();
@@ -555,6 +479,7 @@ function SettingsTab({ alliance, onChanged }: { alliance: AllianceDetail; onChan
 function NoAllianceView({ myId, onChanged }: { myId: string | null; onChanged: () => void }) {
   void myId;
   const qc = useQueryClient();
+  const { openAlliance } = useAllianceProfile();
   const [mode, setMode] = useState<"none" | "create">("none");
 
   const { data: alliances, isLoading } = useQuery({
@@ -607,8 +532,15 @@ function NoAllianceView({ myId, onChanged }: { myId: string | null; onChanged: (
         <div className="bg-[#161b22] border border-[#30363d] rounded p-4 flex flex-col gap-2">
           <div className="text-xs text-[#b1bac4]">Your pending application</div>
           <div className="text-xs">
-            To <span className="text-[#e6b800] font-semibold">[{myApp.alliance.tag}]</span>{" "}
-            <span className="text-[#c9d1d9]">{myApp.alliance.name}</span>
+            To{" "}
+            <button
+              type="button"
+              onClick={() => openAlliance(myApp.alliance.id)}
+              className="hover:underline"
+            >
+              <span className="text-[#e6b800] font-semibold">[{myApp.alliance.tag}]</span>{" "}
+              <span className="text-[#c9d1d9]">{myApp.alliance.name}</span>
+            </button>
           </div>
           <div className="text-xs text-[#c9d1d9] whitespace-pre-wrap border border-[#30363d] rounded p-2 bg-[#0d1117]">
             {myApp.message}
@@ -656,9 +588,10 @@ function CancelMyAppButton({ onDone }: { onDone: () => void }) {
 }
 
 function InviteRow({ inv, onChanged }: {
-  inv: { id: string; alliance: { tag: string; name: string; accessMode: AllianceAccess } };
+  inv: { id: string; alliance: { id: string; tag: string; name: string; accessMode: AllianceAccess } };
   onChanged: () => void;
 }) {
+  const { openAlliance } = useAllianceProfile();
   const [err, setErr] = useState<string | null>(null);
   const accept = useMutation({
     mutationFn: () => acceptInvitation(inv.id),
@@ -673,8 +606,14 @@ function InviteRow({ inv, onChanged }: {
   return (
     <div className="flex items-center justify-between py-2 text-xs">
       <span>
-        <span className="text-[#e6b800] font-semibold">[{inv.alliance.tag}]</span>{" "}
-        <span className="text-[#c9d1d9]">{inv.alliance.name}</span>
+        <button
+          type="button"
+          onClick={() => openAlliance(inv.alliance.id)}
+          className="hover:underline"
+        >
+          <span className="text-[#e6b800] font-semibold">[{inv.alliance.tag}]</span>{" "}
+          <span className="text-[#c9d1d9]">{inv.alliance.name}</span>
+        </button>
         {err && <span className="ml-2 text-[10px] text-[#f85149]">{err}</span>}
       </span>
       <span className="flex gap-1">
@@ -700,6 +639,7 @@ function InviteRow({ inv, onChanged }: {
 function BrowseRow({ alliance, hasApplication, onChanged }: {
   alliance: AllianceSummary; hasApplication: boolean; onChanged: () => void;
 }) {
+  const { openAlliance } = useAllianceProfile();
   const [showApply, setShowApply] = useState(false);
   const [message, setMessage] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -719,10 +659,14 @@ function BrowseRow({ alliance, hasApplication, onChanged }: {
     <div className="py-2 flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-xs">
+          <button
+            type="button"
+            onClick={() => openAlliance(alliance.id)}
+            className="text-xs text-left hover:underline"
+          >
             <span className="text-[#e6b800] font-semibold">[{alliance.tag}]</span>{" "}
             <span className="text-[#c9d1d9]">{alliance.name}</span>
-          </span>
+          </button>
           <span className="text-[10px] text-[#8b949e]">
             Leader: {alliance.leader.username} · {alliance.memberCount} member{alliance.memberCount === 1 ? "" : "s"} ·{" "}
             <span style={{ color: ACCESS_COLOR[alliance.accessMode] }}>

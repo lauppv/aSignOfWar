@@ -90,7 +90,11 @@ export interface MapCity {
   name: string;
   x: number;
   y: number;
-  owner: { username: string; allianceId: string | null } | null;
+  owner: {
+    username: string;
+    allianceId: string | null;
+    alliance: { id: string; tag: string; name: string } | null;
+  } | null;
   points: number;
 }
 export interface WorldMap {

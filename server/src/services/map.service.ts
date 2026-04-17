@@ -130,7 +130,13 @@ export const getAllCitiesOnMap = async () => {
       name: true,
       x: true,
       y: true,
-      owner: { select: { username: true, allianceId: true } },
+      owner: {
+        select: {
+          username: true,
+          allianceId: true,
+          alliance: { select: { id: true, tag: true, name: true } },
+        },
+      },
       buildings: { select: { name: true, level: true } },
     },
   });

@@ -18,7 +18,9 @@ interface Props {
   onMap?: () => void;
   onRankings?: () => void;
   onAlliance?: () => void;
+  onMessages?: () => void;
   unreadReports?: number;
+  unreadMessages?: number;
   ownedCities?: { id: string; name: string; x: number; y: number }[];
   activeCityId?: string;
   onSwitchCity?: (cityId: string) => void;
@@ -28,7 +30,7 @@ function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, onRankings, onAlliance, unreadReports = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
+export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, onRankings, onAlliance, onMessages, unreadReports = 0, unreadMessages = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
@@ -143,6 +145,19 @@ export default function ResourceBar({ cityName, cityPoints, money, energy, ammo,
           {unreadReports > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#f85149] text-white text-[10px] font-bold leading-[16px] text-center shadow">
               {unreadReports > 99 ? "99+" : unreadReports}
+            </span>
+          )}
+        </button>
+      )}
+      {onMessages && (
+        <button
+          onClick={onMessages}
+          className="relative text-xs text-[#58a6ff] border border-[#30363d] rounded px-2.5 py-1 hover:border-[#58a6ff] hover:bg-[#1c2129] cursor-pointer shrink-0 transition-colors"
+        >
+          Messages
+          {unreadMessages > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#f85149] text-white text-[10px] font-bold leading-[16px] text-center shadow">
+              {unreadMessages > 99 ? "99+" : unreadMessages}
             </span>
           )}
         </button>

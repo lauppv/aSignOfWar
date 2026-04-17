@@ -1,5 +1,6 @@
 import prisma from "../config/db";
 import type { AllianceAccess } from "@prisma/client";
+import { getBuildingPoints, BuildingName } from "../../../shared/gameConfig";
 
 const NAME_MIN = 3;
 const NAME_MAX = 32;
@@ -45,6 +46,97 @@ export async function getAlliance(allianceId: string) {
     createdAt: a.createdAt,
     leader: a.leader,
     members: a.members,
+  };
+}
+
+export async function getAllianceProfile(allianceId: string) {
+  // Profilul public al aliantei: metrici + rank fata de celelalte aliante.
+  // Calculeaza toate totalurile intr-un singur query (nu folosim getAllianceRankings
+  // ca sa nu mai facem inca un round-trip).
+  const alliances = await prisma.alliance.findMany({
+    include: {
+      leader: { select: { id: true, username: true } },
+      members: {
+        select: {
+          id: true,
+          username: true,
+          killsAsAttacker: true,
+          killsAsDefender: true,
+          killsAsSupporter: true,
+          cities: {
+            select: { buildings: { select: { name: true, level: true } } },
+          },
+        },
+        orderBy: { username: "asc" },
+      },
+    },
+  });
+
+  type Agg = {
+    id: string;
+    points: number;
+    cities: number;
+  };
+  const aggregates: Agg[] = alliances.map((a) => {
+    let points = 0;
+    let cities = 0;
+    for (const m of a.members) {
+      cities += m.cities.length;
+      for (const city of m.cities) {
+        for (const b of city.buildings) {
+          points += getBuildingPoints(b.name as BuildingName, b.level);
+        }
+      }
+    }
+    return { id: a.id, points, cities };
+  });
+
+  aggregates.sort((x, y) => y.points - x.points);
+  const rankIndex = aggregates.findIndex((x) => x.id === allianceId);
+  if (rankIndex === -1) return null;
+
+  const a = alliances.find((x) => x.id === allianceId)!;
+
+  const memberStats = a.members.map((m) => {
+    let mp = 0;
+    for (const city of m.cities) {
+      for (const b of city.buildings) mp += getBuildingPoints(b.name as BuildingName, b.level);
+    }
+    return {
+      id: m.id,
+      username: m.username,
+      points: mp,
+      cities: m.cities.length,
+      totalKills: m.killsAsAttacker + m.killsAsDefender + m.killsAsSupporter,
+    };
+  });
+  memberStats.sort((x, y) => y.points - x.points);
+
+  const totalPoints = aggregates[rankIndex].points;
+  const totalCities = aggregates[rankIndex].cities;
+  const memberCount = a.members.length;
+  const totalKills = a.members.reduce(
+    (s, m) => s + m.killsAsAttacker + m.killsAsDefender + m.killsAsSupporter,
+    0
+  );
+
+  return {
+    id: a.id,
+    name: a.name,
+    tag: a.tag,
+    description: a.description,
+    accessMode: a.accessMode,
+    createdAt: a.createdAt,
+    leader: a.leader,
+    memberCount,
+    cities: totalCities,
+    points: totalPoints,
+    pointsPerMember: memberCount > 0 ? Math.round(totalPoints / memberCount) : 0,
+    pointsPerCity: totalCities > 0 ? Math.round(totalPoints / totalCities) : 0,
+    totalKills,
+    rank: rankIndex + 1,
+    totalAlliances: aggregates.length,
+    members: memberStats,
   };
 }
 
@@ -409,12 +501,24 @@ export async function listMessages(userId: string) {
   const me = await prisma.user.findUnique({ where: { id: userId }, select: { allianceId: true } });
   if (!me?.allianceId) throw new Error("NOT_IN_ALLIANCE");
   const rows = await prisma.allianceMessage.findMany({
-    where: { allianceId: me.allianceId },
+    where: { allianceId: me.allianceId, deleted: false },
     include: { author: { select: { id: true, username: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
   });
   return rows.map(m => ({ id: m.id, author: m.author, content: m.content, createdAt: m.createdAt }));
+}
+
+export async function deleteMessage(userId: string, messageId: string) {
+  const msg = await prisma.allianceMessage.findUnique({
+    where: { id: messageId },
+    select: { authorId: true, allianceId: true, deleted: true },
+  });
+  if (!msg || msg.deleted) throw new Error("MESSAGE_NOT_FOUND");
+  if (msg.authorId !== userId) throw new Error("NOT_MESSAGE_AUTHOR");
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { allianceId: true } });
+  if (me?.allianceId !== msg.allianceId) throw new Error("NOT_IN_ALLIANCE");
+  await prisma.allianceMessage.update({ where: { id: messageId }, data: { deleted: true } });
 }
 
 export async function postMessage(userId: string, rawContent: string) {

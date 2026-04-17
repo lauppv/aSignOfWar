@@ -10,6 +10,7 @@ import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { useNow } from "../context/TickContext.tsx";
 import CancelCommandConfirm from "./CancelCommandConfirm.tsx";
 import { getMyAlliance } from "../api/alliance.ts";
+import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 
 interface Props {
   city: MapCity;
@@ -38,6 +39,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const isOwn     = myCity?.id === city.id;
   const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
 
+  const { openAlliance } = useAllianceProfile();
   const { data: myAlliance } = useQuery({
     queryKey: ["alliance", "me"],
     queryFn: getMyAlliance,
@@ -112,7 +114,23 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
       <Wrapper headerColor={headerColor} title={`${city.name} (${city.x}, ${city.y})`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
         <Row label="Owner"       value={ownerLabel} />
         <Row label="Points"      value={<span className="font-mono">{city.points.toLocaleString()}</span>} />
-        <Row label="Alliance"    value={<span className="text-[#7d8590]">—</span>} />
+        <Row
+          label="Alliance"
+          value={
+            city.owner?.alliance ? (
+              <button
+                type="button"
+                onClick={() => openAlliance(city.owner!.alliance!.id)}
+                className="hover:underline"
+              >
+                <span className="text-[#e6b800] font-semibold">[{city.owner.alliance.tag}]</span>{" "}
+                <span className="text-[#c9d1d9]">{city.owner.alliance.name}</span>
+              </button>
+            ) : (
+              <span className="text-[#7d8590]">—</span>
+            )
+          }
+        />
         {dist !== null && (
           <Row label="Distance" value={<span className="font-mono">{dist.toFixed(1)}</span>} />
         )}

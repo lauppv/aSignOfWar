@@ -3,26 +3,44 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { getMap } from "../api/map.ts";
 import { getMyCity } from "../api/city.ts";
+import { getMyAlliance } from "../api/alliance.ts";
 import { getActiveCityId, setActiveCityId } from "../api/client.ts";
 import type { MapCity } from "../types/index.ts";
 import CityActionPanel from "../components/CityActionPanel.tsx";
 
-const CELL = 80; 
+// Latura unei celule a hartii (px). Folosita peste tot: pozitionarea oraselor,
+// marimea riglelor, grid-ul de fundal, hit-testing pe cursor.
+const CELL = 80;
+// Culoarea liniilor grid-ului suprapus peste imaginea "grass.jpg" a hartii.
 const GRID_LINE = "#3d660e";
 
-const COLOR_ACTIVE   = "#e85aad";
-const COLOR_OWN      = "#e3b341";
-const COLOR_GHOST    = "#ffffff";
-const COLOR_ALLIANCE = "#58a6ff";
-const COLOR_OTHER    = "#7125b8";
+// Paleta conturului oraselor pe harta - fiecare culoare apare si in legenda
+// din bottom-bar-ul hartii (jos-stanga). Ordinea aici = ordinea din legenda.
+const COLOR_ACTIVE   = "#e85aad"; // orasul pe care jucatorul il are selectat ca "activ"
+const COLOR_OWN      = "#e3b341"; // celelalte orase ale jucatorului (non-active)
+const COLOR_GHOST    = "#ffffff"; // orase ghost (fara owner) - pot fi cucerite
+const COLOR_ALLIANCE = "#134ce9d7"; // orase ale colegilor de alianta
+const COLOR_OTHER    = "#7125b8"; // restul jucatorilor (adversari potentiali)
 
+// Clasificarea unui oras din perspectiva jucatorului curent - determina
+// culoarea conturului, glow-ul si butoanele disponibile in CityActionPanel.
 type CityKind = "active" | "own" | "ghost" | "alliance" | "other";
+// Tipul terenului unei celule care NU contine oras (vezi getTileInfo).
 type TileType = "forest" | "mountain" | "lake" | "grass";
 
-function classify(c: MapCity, ownedIds: Set<string>, activeCityId: string | undefined): CityKind {
+// Decide ce categorie primeste un oras pe harta. Ordinea ramurilor conteaza:
+// "active" bate "own" (orasul activ ESTE al meu, dar il vrem cu culoarea roz
+// distincta), iar "alliance" se verifica doar daca orasul are owner.
+function classify(
+  c: MapCity,
+  ownedIds: Set<string>,
+  activeCityId: string | undefined,
+  myAllianceId: string | null | undefined,
+): CityKind {
   if (c.id === activeCityId) return "active";
   if (ownedIds.has(c.id)) return "own";
   if (!c.owner) return "ghost";
+  if (myAllianceId && c.owner.allianceId === myAllianceId) return "alliance";
   return "other";
 }
 
@@ -36,6 +54,10 @@ function colorFor(kind: CityKind): string {
   }
 }
 
+// Alege ilustratia orasului in functie de punctaj (puncte = suma punctelor
+// cladirilor). Pragurile sunt pur vizuale - un oras mic arata ca un sat,
+// unul de 9000+ arata ca o metropola. Trebuie pastrate sincronizate cu
+// imaginile din /public/images/map/.
 function spriteFor(points: number): string {
   if (points >= 9000) return "/images/map/9000-max.jpg";
   if (points >= 3000) return "/images/map/3000-8999.jpg";
@@ -44,12 +66,17 @@ function spriteFor(points: number): string {
   return "/images/map/0-299.jpg";
 }
 
+// Hash deterministic (x, y) -> [0,1). Folosit DOAR pentru decorul hartii, ca
+// terenul sa fie acelasi la fiecare refresh fara sa fie stocat pe server.
 function getPseudoRandom(x: number, y: number) {
   const dot = x * 12.9898 + y * 78.233;
   const val = Math.sin(dot) * 43758.5453123;
   return val - Math.floor(val);
 }
 
+// Imparte celulele goale in tipuri de teren pentru decor. Distributia:
+// 5% mountain, 5% lake, 30% forest, 60% grass. Nu are efect gameplay - doar
+// vizual (iarba e randata prin backgroundul grilei, restul prin imagini).
 function getTileInfo(x: number, y: number) {
   const rand = getPseudoRandom(x, y);
   const seed = rand * 100;
@@ -62,25 +89,55 @@ function getTileInfo(x: number, y: number) {
   return { type };
 }
 
+// Ecranul /map - harta mare scrollabila cu toate orasele din lume.
+// Are rigle X/Y pe stanga si jos, si un bottom-bar cu legenda culorilor +
+// butoanele "Center city" / "Enter current city". Click pe un oras deschide
+// CityActionPanel (panoul flotant cu info si butoane Attack/Support/etc.).
 export default function MapPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // Orasul "activ" al jucatorului - cel pentru care se afiseaza resursele in
+  // header si de la care pleaca comenzile. Persistat in localStorage prin
+  // api/client.ts ca sa supravietuiasca refresh-ului.
   const [activeCityId, setActiveCityIdState] = useState<string | undefined>(() => getActiveCityId() ?? undefined);
+  // Container-ul scrollabil al hartii (div-ul cu overflow:auto).
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Stare pan cu mouse-ul pe harta (null = niciun drag activ).
   const dragState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // Flag ca sa distingem "click" de "drag peste oras": daca user-ul a tras
+  // cu mouse-ul >4px nu mai consideram evenimentul selectare.
   const [hasDragged, setHasDragged] = useState(false);
+  // Celula peste care sta cursorul (coordonate harta x,y, nu pixeli). Folosita
+  // pentru dreptunghiul albastru de highlight si pentru coordonatele din
+  // coltul stanga-jos (intersectia riglelor).
   const [cursorCell, setCursorCell] = useState<{ x: number; y: number } | null>(null);
+  // Snapshot-ul viewport-ului scrollabil. Folosit pentru a randa doar riglele
+  // si tile-urile de teren vizibile, nu toate 100x100 celule.
   const [scroll, setScroll] = useState({ left: 0, top: 0, w: 0, h: 0 });
+  // Orasul pe care user-ul a dat click (null = niciun panou deschis).
+  // px/py = pozitia in pixeli a coltului stanga-sus, ca sa putem aseza
+  // CityActionPanel imediat langa el.
   const [selected, setSelected] = useState<{ city: MapCity; px: number; py: number } | null>(null);
+  // One-shot flag - primul load centreaza harta pe orasul jucatorului.
   const [centered, setCentered] = useState(false);
+  // Offset-ul cumulat al CityActionPanel fata de pozitia default (vine din
+  // drag-ul header-ului panoului). Se reseteaza la schimbarea orasului selectat.
   const [panelOffset, setPanelOffset] = useState({ dx: 0, dy: 0 });
   const panelDragRef = useRef<{ startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Coordonata Y (px, relativ la viewport) unde incepe CityActionPanel.
+  // Recalculata dupa inaltimea reala a panoului ca sa nu iasa in afara
+  // viewport-ului cand orasul selectat e jos in scroll.
   const [panelTop, setPanelTop] = useState(0);
 
+  // Cand user-ul selecteaza alt oras, panoul "revine acasa" (uita drag-ul).
   useEffect(() => { setPanelOffset({ dx: 0, dy: 0 }); }, [selected?.city.id]);
 
+  // Calculeaza Y-ul CityActionPanel: ideal la acelasi Y ca orasul selectat,
+  // dar "ancorat" ca sa nu iasa peste bottom-bar sau peste marginea de sus.
+  // Ruleaza dupa fiecare render ca sa prinda schimbari de continut (de ex.
+  // cand panoul se mareste pentru ca orasul primeste stationed units).
   useEffect(() => {
     if (!selected || !panelRef.current) return;
     const idealTop = selected.py - scroll.top;
@@ -91,6 +148,9 @@ export default function MapPage() {
     setPanelTop(top);
   });
 
+  // Mouse-down pe header-ul CityActionPanel = start drag al panoului.
+  // Ataseaza listeneri globali pe window ca sa putem trage si dincolo de
+  // marginea panoului. Se detaseaza singuri la mouseup.
   function handlePanelHeaderMouseDown(e: React.MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
@@ -116,17 +176,34 @@ export default function MapPage() {
     window.addEventListener("mouseup", onUp);
   }
 
+  // Toate orasele de pe harta (inclusiv ghost). Polling la 15s ca sa se
+  // actualizeze punctele/ownership-ul dupa ce alti jucatori atacă sau cresc.
   const { data: map, isLoading, error } = useQuery({
     queryKey: ["map"],
     queryFn: getMap,
     refetchInterval: 15000,
   });
 
+  // Datele orasului activ - ne trebuie aici pentru: butonul "Center city",
+  // butonul "Enter current city", si pentru a marca cu COLOR_OWN toate
+  // orasele proprii (prin myCity.ownedCities).
   const { data: myCity } = useQuery({
     queryKey: ["city", activeCityId ?? "default"],
     queryFn: () => getMyCity(activeCityId),
   });
 
+  // Alianta jucatorului - folosita DOAR ca sa stim ce orase sa coloram cu
+  // COLOR_ALLIANCE. Daca nu e in nicio alianta, niciun oras nu intra in
+  // categoria "alliance" (vezi functia classify de mai sus).
+  const { data: myAlliance } = useQuery({
+    queryKey: ["alliance", "me"],
+    queryFn: getMyAlliance,
+  });
+  const myAllianceId = myAlliance?.id ?? null;
+
+  // Click pe butonul "Select" din CityActionPanel = schimba orasul activ
+  // fara a parasi harta (user-ul ramane pe /map). Invalideaza queries ca
+  // header-ul de resurse si comenzile sa se re-fetch-uie pentru noul oras.
   function handleSelectCity(cityId: string) {
     setActiveCityId(cityId);
     setActiveCityIdState(cityId);
@@ -135,8 +212,13 @@ export default function MapPage() {
     setSelected(null);
   }
 
+  // Set cu id-urile TUTUROR oraselor jucatorului (nu doar cel activ). Dacă
+  // vei avea 1 singur oras, setul are 1 element. Folosit in classify().
   const ownedCityIds = new Set(myCity?.ownedCities?.map((c) => c.id) ?? []);
 
+  // Sincronizeaza `scroll` state-ul cu container-ul scrollabil (pozitie +
+  // dimensiune). Ruleaza la scroll si la resize (ResizeObserver). Trigger
+  // pentru re-calcularea tile-urilor vizibile si a riglelor.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -150,6 +232,9 @@ export default function MapPage() {
     return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
   }, [map]);
 
+  // Auto-center: la primul load, pozitioneaza orasul jucatorului in mijlocul
+  // viewport-ului. Ruleaza doar o data (`centered` flag) ca sa nu anuleze
+  // scroll-ul manual al user-ului la re-fetch-uri.
   useEffect(() => {
     if (centered || !map || !myCity || !scrollRef.current) return;
     const el = scrollRef.current;
@@ -157,11 +242,16 @@ export default function MapPage() {
     el.scrollTop  = myCity.y * CELL + CELL / 2 - el.clientHeight / 2;
     setCentered(true);
   }, [map, myCity, centered]);
+  // Set cu cheile "x,y" ale tuturor celulelor ocupate de orase - folosit ca
+  // sa NU desenam tile de teren (padure/lac/munte) peste un oras.
   const citySlots = useMemo(() => {
     if (!map) return new Set<string>();
     return new Set(map.cities.map(c => `${c.x},${c.y}`));
   }, [map]);
 
+  // Calculeaza tile-urile de teren "speciale" (non-grass) DOAR pentru zona
+  // vizibila + 1 celula marja. Fara asta am randa 100x100=10k div-uri. La
+  // scroll se recalculeaza in mod natural prin dependenta pe `scroll.*`.
   const visibleSpecialTiles = useMemo(() => {
     if (!map) return [];
     const tiles = [];
@@ -250,31 +340,7 @@ export default function MapPage() {
   `;
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d1117] text-[#c9d1d9]">
-      <div className="flex items-center justify-between p-3 border-b border-[#30363d] bg-[#161b22] shrink-0">
-        <span className="text-sm uppercase tracking-widest text-[#b1bac4]">World map ({map.size}×{map.size})</span>
-        <div className="flex gap-2">
-          {myCity && (
-            <button
-              onClick={() => {
-                if (!scrollRef.current) return;
-                scrollRef.current.scrollLeft = myCity.x * CELL + CELL / 2 - scrollRef.current.clientWidth / 2;
-                scrollRef.current.scrollTop  = myCity.y * CELL + CELL / 2 - scrollRef.current.clientHeight / 2;
-              }}
-              className="text-xs border border-[#30363d] rounded px-3 py-1 hover:bg-[#1c2129]"
-            >
-              ⌖ Center city
-            </button>
-          )}
-          <button
-            onClick={() => navigate(myCity?.id ? `/city?cityId=${encodeURIComponent(myCity.id)}` : "/city")}
-            className="text-xs border border-[#30363d] rounded px-3 py-1 hover:bg-[#1c2129]"
-          >
-            ← Enter current city
-          </button>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-full bg-[#0d1117] text-[#c9d1d9]">
       <div className="relative flex-1">
       <div
         ref={scrollRef}
@@ -335,7 +401,7 @@ export default function MapPage() {
           )}
 
           {map.cities.map((c) => {
-            const kind   = classify(c, ownedCityIds, activeCityId);
+            const kind   = classify(c, ownedCityIds, activeCityId, myAllianceId);
             const accent = colorFor(kind);
             const sprite = spriteFor(c.points);
             return (
@@ -379,7 +445,7 @@ export default function MapPage() {
 
       {selected && (() => {
         const c = selected.city;
-        const kind = classify(c, ownedCityIds, activeCityId);
+        const kind = classify(c, ownedCityIds, activeCityId, myAllianceId);
         const PANEL_W = 260;
         const MARGIN = 8;
         let left = selected.px + CELL + MARGIN - scroll.left;
@@ -492,7 +558,28 @@ export default function MapPage() {
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_ACTIVE }} /> active</span>
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_OWN }} /> mine</span>
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm border border-[#484f58]" style={{ background: COLOR_GHOST }} /> ghost</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_ALLIANCE }} /> alliance</span>
           <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: COLOR_OTHER }} /> other</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {myCity && (
+            <button
+              onClick={() => {
+                if (!scrollRef.current) return;
+                scrollRef.current.scrollLeft = myCity.x * CELL + CELL / 2 - scrollRef.current.clientWidth / 2;
+                scrollRef.current.scrollTop  = myCity.y * CELL + CELL / 2 - scrollRef.current.clientHeight / 2;
+              }}
+              className="text-xs border border-[#30363d] rounded px-2.5 py-1 hover:bg-[#1c2129]"
+            >
+              ⌖ Center city
+            </button>
+          )}
+          <button
+            onClick={() => navigate(myCity?.id ? `/city?cityId=${encodeURIComponent(myCity.id)}` : "/city")}
+            className="text-xs border border-[#30363d] rounded px-2.5 py-1 hover:bg-[#1c2129]"
+          >
+            ← Enter current city
+          </button>
         </div>
       </div>
     </div>

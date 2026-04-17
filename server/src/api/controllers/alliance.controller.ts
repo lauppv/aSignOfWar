@@ -29,6 +29,8 @@ const ERROR_STATUS: Record<string, number> = {
   ALREADY_APPLIED: 409,
   MESSAGE_REQUIRED: 400,
   MESSAGE_TOO_LONG: 400,
+  MESSAGE_NOT_FOUND: 404,
+  NOT_MESSAGE_AUTHOR: 403,
   JOIN_NOT_ALLOWED: 403,
 };
 
@@ -50,6 +52,12 @@ export const getAllianceHandler = async (req: AuthRequest, res: Response) => {
   const a = await svc.getAlliance(req.params.id as string);
   if (!a) return res.status(404).json({ error: "ALLIANCE_NOT_FOUND" });
   res.json(a);
+};
+
+export const getAllianceProfileHandler = async (req: AuthRequest, res: Response) => {
+  const p = await svc.getAllianceProfile(req.params.id as string);
+  if (!p) return res.status(404).json({ error: "ALLIANCE_NOT_FOUND" });
+  res.json(p);
 };
 
 export const createAllianceHandler = async (req: AuthRequest, res: Response) => {
@@ -201,5 +209,12 @@ export const postMessageHandler = async (req: AuthRequest, res: Response) => {
     if (typeof content !== "string") return res.status(400).json({ error: "INVALID_PAYLOAD" });
     const r = await svc.postMessage(req.userId!, content);
     res.status(201).json(r);
+  } catch (e) { handle(res, e); }
+};
+
+export const deleteMessageHandler = async (req: AuthRequest, res: Response) => {
+  try {
+    await svc.deleteMessage(req.userId!, req.params.messageId as string);
+    res.status(204).end();
   } catch (e) { handle(res, e); }
 };

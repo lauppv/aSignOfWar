@@ -34,8 +34,10 @@ router.post("/members/:memberId/transfer", ctrl.transferLeadershipHandler);
 
 router.get("/messages", ctrl.listMessagesHandler);
 router.post("/messages", ctrl.postMessageHandler);
+router.delete("/messages/:messageId", ctrl.deleteMessageHandler);
 
 // Dynamic — keep last
+router.get("/:id/profile", ctrl.getAllianceProfileHandler);
 router.get("/:id", ctrl.getAllianceHandler);
 router.post("/:id/join", ctrl.joinAllianceHandler);
 router.post("/:id/apply", ctrl.submitApplicationHandler);

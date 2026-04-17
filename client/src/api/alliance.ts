@@ -55,6 +55,37 @@ export interface MyApplication {
   createdAt: string;
 }
 
+export interface AllianceProfileMember {
+  id: string;
+  username: string;
+  points: number;
+  cities: number;
+  totalKills: number;
+}
+
+export interface AllianceProfile {
+  id: string;
+  name: string;
+  tag: string;
+  description: string | null;
+  accessMode: AllianceAccess;
+  createdAt: string;
+  leader: { id: string; username: string };
+  memberCount: number;
+  cities: number;
+  points: number;
+  pointsPerMember: number;
+  pointsPerCity: number;
+  totalKills: number;
+  rank: number;
+  totalAlliances: number;
+  members: AllianceProfileMember[];
+}
+
+export function getAllianceProfile(id: string): Promise<AllianceProfile> {
+  return api.get(`/alliances/${encodeURIComponent(id)}/profile`);
+}
+
 export interface AllianceMessage {
   id: string;
   author: { id: string; username: string };
@@ -141,4 +172,7 @@ export function listMessages(): Promise<AllianceMessage[]> {
 }
 export function postMessage(content: string) {
   return api.post<AllianceMessage>("/alliances/messages", { content });
+}
+export function deleteAllianceMessage(id: string): Promise<void> {
+  return api.delete(`/alliances/messages/${encodeURIComponent(id)}`);
 }

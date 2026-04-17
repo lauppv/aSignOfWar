@@ -1,24 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNow } from "../context/TickContext.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import CommandDetailModal from "../components/CommandDetailModal.tsx";
 import CancelCommandConfirm from "../components/CancelCommandConfirm.tsx";
 import { cancelCommand } from "../api/command.ts";
 import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
-import { getReports } from "../api/report.ts";
-import { logout } from "../api/auth.ts";
-import { getCurrentUserId, getActiveCityId, setActiveCityId, clearActiveCityId } from "../api/client.ts";
+import { getActiveCityId, setActiveCityId, clearActiveCityId } from "../api/client.ts";
 import {
-  getHousingCapacity as getMaxPopulation,
-  getWarehouseCapacity,
   getAirDefenseBonus,
-  getResourceProduction,
 } from "@shared/gameConfig.ts";
-import { computePopulation, getBuildingLevel, computeCityPoints } from "../lib/cityHelpers.ts";
-import { GAME_SPEED } from "../lib/gameSpeed.ts";
-import ResourceBar from "../components/ResourceBar.tsx";
+import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import UnitCard from "../components/UnitCard.tsx";
 import { UNIT_ORDER } from "../lib/labels.ts";
 import CityMap from "../components/CityMap.tsx";
@@ -61,6 +54,7 @@ function fmtArrival(iso: string, now: number): string {
 
 export default function CityPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const now = useNow();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCmd, setSelectedCmd] = useState<MergedCommand | null>(null);
@@ -120,14 +114,6 @@ export default function CityPage() {
     if (city?.id) setActiveCityId(city.id);
   }, [city?.id]);
 
-  function switchToCity(cityId: string) {
-    const next = new URLSearchParams(searchParams);
-    next.set("cityId", cityId);
-    next.delete("view");
-    next.delete("name");
-    setSearchParams(next);
-  }
-
   const queryClient = useQueryClient();
   const cancelMutation = useMutation({
     mutationFn: ({ fromCityId, commandId }: { fromCityId: string; commandId: string }) =>
@@ -145,57 +131,22 @@ export default function CityPage() {
     refetchInterval: 5000,
   });
 
-  const { data: reports } = useQuery({
-    queryKey: ["reports"],
-    queryFn: getReports,
-    refetchInterval: 10000,
-  });
-
-  const seenReportsKey = `seenReports:${getCurrentUserId() ?? "anon"}`;
-  const [seenReportIds, setSeenReportIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem(seenReportsKey);
-      return new Set<string>(raw ? JSON.parse(raw) : []);
-    } catch {
-      return new Set<string>();
-    }
-  });
-  // Snapshot-ul "what was already read" la momentul deschiderii listei, ca sa
-  // putem evidentia randurile necitite dupa ce marcam totul ca vazut.
-  const [readSnapshot, setReadSnapshot] = useState<Set<string>>(() => new Set());
-  const unreadReports = (reports ?? []).filter((r) => !seenReportIds.has(r.id)).length;
-
-  function openReports() {
-    setReadSnapshot(new Set(seenReportIds));
-    const allIds = (reports ?? []).map((r) => r.id);
-    const next = new Set<string>(allIds);
-    localStorage.setItem(seenReportsKey, JSON.stringify(Array.from(next)));
-    setSeenReportIds(next);
-    openView("reports");
-  }
-
-  function handleLogout() {
-    logout();
-    queryClient.clear();
-    navigate("/login");
-  }
+  // Snapshot-ul "what was already read" la momentul deschiderii listei vine din
+  // Layout (care marcheaza totul ca vazut inainte de navigare).
+  const navState = location.state as { initiallyRead?: string[] } | null;
+  const readSnapshot = new Set<string>(navState?.initiallyRead ?? []);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen text-[#b1bac4]">Loading city...</div>;
+    return <div className="flex items-center justify-center h-full text-[#b1bac4]">Loading city...</div>;
   }
   if (error || !city) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4 text-[#f85149]">
+      <div className="flex items-center justify-center h-full text-[#f85149]">
         Failed to load city.
-        <button onClick={handleLogout} className="text-sm text-[#b1bac4] border border-[#30363d] rounded px-3 py-1">Logout</button>
       </div>
     );
   }
 
-  const population        = computePopulation(city);
-  const cityPoints        = computeCityPoints(city);
-  const maxPopulation     = getMaxPopulation(getBuildingLevel(city, "HOUSING"));
-  const warehouseCapacity = getWarehouseCapacity(getBuildingLevel(city, "WAREHOUSE"));
   const airDefenseLevel   = getBuildingLevel(city, "AIR_DEFENSE");
   const airDefenseBonus   = getAirDefenseBonus(airDefenseLevel);
   const unitTotals = new Map<UnitName, number>();
@@ -212,31 +163,7 @@ export default function CityPage() {
     .sort((a, b) => new Date(a.arrivalAt).getTime() - new Date(b.arrivalAt).getTime());
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <ResourceBar
-        cityName={city.name}
-        ownedCities={city.ownedCities}
-        activeCityId={city.id}
-        onSwitchCity={switchToCity}
-        cityPoints={cityPoints}
-        money={city.money}
-        energy={city.energy}
-        ammo={city.ammo}
-        capacity={warehouseCapacity}
-        moneyProd={getResourceProduction(getBuildingLevel(city, "BANK"), GAME_SPEED)}
-        energyProd={getResourceProduction(getBuildingLevel(city, "POWER_PLANT"), GAME_SPEED)}
-        ammoProd={getResourceProduction(getBuildingLevel(city, "WEAPONS_FACTORY"), GAME_SPEED)}
-        population={population}
-        maxPopulation={maxPopulation}
-        onLogout={handleLogout}
-        onRankings={() => navigate("/rankings")}
-        onAlliance={() => navigate("/alliance")}
-        onSimulator={() => openView("simulator")}
-        onReports={openReports}
-        onMap={() => navigate("/map")}
-        unreadReports={unreadReports}
-      />
-
+    <div className="flex flex-col h-full overflow-hidden">
       {showSimulator ? (
         <SimulatorView onClose={closeView} />
       ) : showReports ? (

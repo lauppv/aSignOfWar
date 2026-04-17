@@ -12,6 +12,7 @@ import configRoutes from "./api/routes/config.routes";
 import governorRoutes from "./api/routes/governor.routes";
 import rankingRoutes from "./api/routes/ranking.routes";
 import allianceRoutes from "./api/routes/alliance.routes";
+import messageRoutes from "./api/routes/message.routes";
 import { registerBuildingWorker } from "./workers/building.worker";
 import { registerRecruitmentWorker } from "./workers/recruitment.worker";
 import { registerCommandWorker } from "./workers/command.worker";
@@ -38,6 +39,7 @@ app.use("/api/config", configRoutes);
 app.use("/api/governor", governorRoutes);
 app.use("/api/rankings", rankingRoutes);
 app.use("/api/alliances", allianceRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Middleware global de erori — prinde orice eroare neasteptata din controllere
 // Fara el, Express ar return un HTML urat cu tot stack trace-ul vizibil

@@ -6,7 +6,10 @@ import CityPage from "./pages/CityPage.tsx";
 import MapPage from "./pages/MapPage.tsx";
 import RankingsPage from "./pages/RankingsPage.tsx";
 import AlliancePage from "./pages/AlliancePage.tsx";
+import MessagesPage from "./pages/MessagesPage.tsx";
+import Layout from "./components/Layout.tsx";
 import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
+import { AllianceProfileProvider } from "./context/AllianceProfileContext.tsx";
 import { TickProvider } from "./context/TickContext.tsx";
 import { loadGameSpeed } from "./lib/gameSpeed.ts";
 
@@ -52,45 +55,28 @@ export default function App() {
     // poate nici nu vom avea nevoie de context pentru cladiri, notificari, etc
     <TickProvider>
     <UnitInfoProvider>
+    <AllianceProfileProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
-          path="/city"
           element={
             <ProtectedRoute>
-              <CityPage />
+              <Layout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/map"
-          element={
-            <ProtectedRoute>
-              <MapPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/rankings"
-          element={
-            <ProtectedRoute>
-              <RankingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/alliance"
-          element={
-            <ProtectedRoute>
-              <AlliancePage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/city" element={<CityPage />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/rankings" element={<RankingsPage />} />
+          <Route path="/alliance" element={<AlliancePage />} />
+          <Route path="/messages" element={<MessagesPage />} />
+        </Route>
         <Route path="*" element={<Navigate to={isLoggedIn() ? "/city" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
+    </AllianceProfileProvider>
     </UnitInfoProvider>
     </TickProvider>
   );

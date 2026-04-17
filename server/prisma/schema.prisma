@@ -97,6 +97,9 @@ model User {
   allianceApplications AllianceApplication[] @relation("ApplicationUser")
   allianceMessages     AllianceMessage[]    @relation("MessageAuthor")
 
+  directMessagesSent     DirectMessage[] @relation("DirectMessageFrom")
+  directMessagesReceived DirectMessage[] @relation("DirectMessageTo")
+
   cities           City[]
   commandsAttacker Command[] @relation("CommandAttacker")
   commandsDefender Command[] @relation("CommandDefender")
@@ -151,8 +154,30 @@ model AllianceMessage {
   author     User     @relation("MessageAuthor", fields: [authorId], references: [id])
   content    String
   createdAt  DateTime @default(now())
+  deleted    Boolean  @default(false)
 
   @@index([allianceId, createdAt])
+}
+
+model DirectMessage {
+  id         String   @id @default(uuid())
+  fromId     String
+  from       User     @relation("DirectMessageFrom", fields: [fromId], references: [id])
+  toId       String
+  to         User     @relation("DirectMessageTo",   fields: [toId],   references: [id])
+  content    String
+  createdAt  DateTime @default(now())
+
+  // marcam vazut cand destinatarul deschide firul
+  readByRecipient Boolean @default(false)
+
+  // soft-delete per-parte: dispare din view-ul celui care a sters, dar celalalt il mai vede
+  deletedByFrom Boolean @default(false)
+  deletedByTo   Boolean @default(false)
+
+  @@index([fromId, toId, createdAt])
+  @@index([toId, fromId, createdAt])
+  @@index([toId, readByRecipient])
 }
 
 model City {
