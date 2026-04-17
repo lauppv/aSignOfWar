@@ -176,3 +176,6 @@ export function postMessage(content: string) {
 export function deleteAllianceMessage(id: string): Promise<void> {
   return api.delete(`/alliances/messages/${encodeURIComponent(id)}`);
 }
+export function getAllianceUnreadCount(): Promise<{ count: number }> {
+  return api.get("/alliances/messages/unread");
+}

@@ -506,7 +506,27 @@ export async function listMessages(userId: string) {
     orderBy: { createdAt: "asc" },
     take: 200,
   });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { allianceMessagesReadAt: new Date() },
+  });
   return rows.map(m => ({ id: m.id, author: m.author, content: m.content, createdAt: m.createdAt }));
+}
+
+export async function countUnreadAllianceMessages(userId: string) {
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { allianceId: true, allianceMessagesReadAt: true },
+  });
+  if (!me?.allianceId) return 0;
+  return prisma.allianceMessage.count({
+    where: {
+      allianceId: me.allianceId,
+      deleted: false,
+      authorId: { not: userId },
+      ...(me.allianceMessagesReadAt ? { createdAt: { gt: me.allianceMessagesReadAt } } : {}),
+    },
+  });
 }
 
 export async function deleteMessage(userId: string, messageId: string) {

@@ -11,6 +11,7 @@ import { useNow } from "../context/TickContext.tsx";
 import CancelCommandConfirm from "./CancelCommandConfirm.tsx";
 import { getMyAlliance } from "../api/alliance.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
+import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
 interface Props {
   city: MapCity;
@@ -40,6 +41,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
 
   const { openAlliance } = useAllianceProfile();
+  const { openPlayer } = usePlayerProfile();
   const { data: myAlliance } = useQuery({
     queryKey: ["alliance", "me"],
     queryFn: getMyAlliance,
@@ -47,7 +49,15 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const sameAlliance =
     !!myAlliance && !!city.owner?.allianceId && myAlliance.id === city.owner.allianceId;
 
-  const ownerLabel = city.owner ? city.owner.username : "Ghost city";
+  const ownerLabel = city.owner ? (
+    <button
+      type="button"
+      onClick={() => openPlayer(city.owner!.id)}
+      className="text-[#79c0ff] hover:underline"
+    >
+      {city.owner.username}
+    </button>
+  ) : "Ghost city";
   const dist = myCity ? Math.sqrt((city.x - myCity.x) ** 2 + (city.y - myCity.y) ** 2) : null;
 
   const { data: commands } = useQuery({

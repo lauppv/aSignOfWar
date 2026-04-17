@@ -5,6 +5,7 @@ import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { useNow } from "../context/TickContext.tsx";
 import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
+import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
 const ALL_UNITS: UnitName[] = [...UNIT_ORDER, "GOVERNOR"] as UnitName[];
 
@@ -389,6 +390,9 @@ function ConfirmDeleteModal({ count, onCancel, onConfirm }: {
 function ReportDetail({ report: r }: { report: BattleReport }) {
   const cat  = categoryOf(r);
   const meta = CATEGORY_META[cat];
+  const { openPlayer } = usePlayerProfile();
+  const fromOwner = r.fromCity.owner;
+  const toOwner = r.toCity.owner;
 
   return (
     <div className="flex flex-col gap-3">
@@ -404,11 +408,33 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
           <div className="text-[11px] text-[#b1bac4] mt-0.5">
             {r.fromCity.name}
             <span className="text-[#7d8590] font-mono"> ({r.fromCity.x}, {r.fromCity.y})</span>
-            <span className="text-[#7d8590]"> [{r.fromCity.owner?.username ?? "Ghost city"}]</span>
+            {" "}
+            <span className="text-[#7d8590]">
+              [{fromOwner ? (
+                <button
+                  type="button"
+                  onClick={() => openPlayer(fromOwner.id)}
+                  className="text-[#79c0ff] hover:underline"
+                >
+                  {fromOwner.username}
+                </button>
+              ) : "Ghost city"}]
+            </span>
             {" → "}
             {r.toCity.name}
             <span className="text-[#7d8590] font-mono"> ({r.toCity.x}, {r.toCity.y})</span>
-            <span className="text-[#7d8590]"> [{r.toCity.owner?.username ?? "Ghost city"}]</span>
+            {" "}
+            <span className="text-[#7d8590]">
+              [{toOwner ? (
+                <button
+                  type="button"
+                  onClick={() => openPlayer(toOwner.id)}
+                  className="text-[#79c0ff] hover:underline"
+                >
+                  {toOwner.username}
+                </button>
+              ) : "Ghost city"}]
+            </span>
           </div>
         </div>
         <div className="text-[10px] text-[#7d8590] text-right">
@@ -479,24 +505,33 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
             </tbody>
           </table>
       </div>
-
+      
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
           <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Air defense</div>
-          <div className="flex justify-between text-[#c9d1d9]">
-            <span>Level before</span>
-            <span className="font-mono">{data.airDefenseInitialLevel ?? "—"}</span>
-          </div>
-          <div className="flex justify-between text-[#c9d1d9]">
-            <span>Level after</span>
-            <span className="font-mono">{data.newAirDefenseLevel ?? "—"}</span>
-          </div>
-          {(data.airDefenseLevelsDestroyed ?? 0) > 0 && (
-            <div className="flex justify-between text-[#f85149] mt-0.5">
-              <span>Levels destroyed</span>
-              <span className="font-mono">−{data.airDefenseLevelsDestroyed}</span>
+          <div className="flex items-center gap-3">
+            <img
+              src="/images/buildings/air_defense.jpg"
+              alt="Air defense"
+              title="Air defense"
+              className="w-12 h-12 object-contain rounded"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="flex-1 flex flex-col gap-0.5">
+              <div className="flex justify-between text-[#c9d1d9]">
+                <span>Before</span>
+                <span className="font-mono">{data.airDefenseInitialLevel ?? "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#c9d1d9]">After</span>
+                {(data.airDefenseLevelsDestroyed ?? 0) > 0 ? (
+                  <span className="font-mono font-semibold text-[#f85149]">−{data.airDefenseLevelsDestroyed}</span>
+                ) : (
+                  <span className="font-mono font-semibold text-[#c9d1d9]">0</span>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">

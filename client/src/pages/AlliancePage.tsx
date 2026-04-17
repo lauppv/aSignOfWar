@@ -12,6 +12,7 @@ import {
 } from "../api/alliance.ts";
 import { getCurrentUserId } from "../api/client.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
+import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
 const ACCESS_LABEL: Record<AllianceAccess, string> = {
   OPEN: "Open",
@@ -193,6 +194,7 @@ function MembersTab({ alliance, myId, isLeader, onChanged }: {
   alliance: AllianceDetail; myId: string | null; isLeader: boolean; onChanged: () => void;
 }) {
   const [err, setErr] = useState<string | null>(null);
+  const { openPlayer } = usePlayerProfile();
   const kick = useMutation({
     mutationFn: kickMember,
     onSuccess: onChanged,
@@ -214,9 +216,13 @@ function MembersTab({ alliance, myId, isLeader, onChanged }: {
           return (
             <div key={m.id} className="flex items-center justify-between py-1.5 text-xs">
               <span className="flex items-center gap-2">
-                <span className={isMe ? "text-[#e85aad] font-semibold" : "text-[#c9d1d9]"}>
+                <button
+                  type="button"
+                  onClick={() => openPlayer(m.id)}
+                  className={`hover:underline ${isMe ? "text-[#e85aad] font-semibold" : "text-[#c9d1d9]"}`}
+                >
                   {m.username}
-                </span>
+                </button>
                 {isLeaderMember && <span className="text-[10px] text-[#e6b800]">leader</span>}
                 {isMe && !isLeaderMember && <span className="text-[10px] text-[#8b949e]">member</span>}
                 {isMe && <span className="text-[10px] text-[#e85aad]">(you)</span>}

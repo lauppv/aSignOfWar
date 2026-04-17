@@ -72,6 +72,7 @@ model User {
   username  String   @unique
   email     String   @unique
   password  String
+  description String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -93,9 +94,10 @@ model User {
   alliance        Alliance? @relation("AllianceMembers", fields: [allianceId], references: [id])
   leadingAlliance Alliance? @relation("AllianceLeader")
 
-  allianceInvitations AllianceInvitation[] @relation("InviteTarget")
+  allianceInvitations  AllianceInvitation[] @relation("InviteTarget")
   allianceApplications AllianceApplication[] @relation("ApplicationUser")
   allianceMessages     AllianceMessage[]    @relation("MessageAuthor")
+  allianceMessagesReadAt DateTime?
 
   directMessagesSent     DirectMessage[] @relation("DirectMessageFrom")
   directMessagesReceived DirectMessage[] @relation("DirectMessageTo")

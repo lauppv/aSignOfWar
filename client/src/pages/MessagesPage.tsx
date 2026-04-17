@@ -11,6 +11,7 @@ import {
   type DirectConversation, type DirectMessage,
 } from "../api/message.ts";
 import { getMyAlliance } from "../api/alliance.ts";
+import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
 
 
@@ -71,6 +72,7 @@ export default function MessagesPage() {
 
 function AllianceMessages({ myId }: { myId: string | null }) {
   const qc = useQueryClient();
+  const { openPlayer } = usePlayerProfile();
   const [content, setContent] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -122,9 +124,13 @@ function AllianceMessages({ myId }: { myId: string | null }) {
           return (
             <div key={m.id} className="group flex flex-col">
               <div className="flex items-baseline gap-2">
-                <span className={`text-[11px] font-semibold ${isMine ? "text-[#e85aad]" : "text-[#58a6ff]"}`}>
+                <button
+                  type="button"
+                  onClick={() => openPlayer(m.author.id)}
+                  className={`text-[11px] font-semibold hover:underline ${isMine ? "text-[#e85aad]" : "text-[#58a6ff]"}`}
+                >
                   {m.author.username}
-                </span>
+                </button>
                 <span className="text-[10px] text-[#8b949e]">{new Date(m.createdAt).toLocaleString()}</span>
                 {isMine && (
                   <button
@@ -285,6 +291,7 @@ function PrivateMessages({ myId }: { myId: string | null }) {
 
 function Thread({ peer, myId }: { peer: { id: string; username: string }; myId: string | null }) {
   const qc = useQueryClient();
+  const { openPlayer } = usePlayerProfile();
   const [content, setContent] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -329,7 +336,13 @@ return (
     <div className="flex flex-col max-w-[480px] w-full">
       <div className="flex items-center gap-2 px-1">
         <span className="text-xs text-[#b1bac4]">Conversation with</span>
-        <span className="text-sm font-semibold text-[#30e24d]">{peer.username}</span>
+        <button
+          type="button"
+          onClick={() => openPlayer(peer.id)}
+          className="text-sm font-semibold text-[#30e24d] hover:underline"
+        >
+          {peer.username}
+        </button>
       </div>
 
       <div className="flex flex-col w-full bg-[#161b22] border border-[#30363d] rounded p-3 overflow-y-auto gap-2">
@@ -342,9 +355,17 @@ return (
           return (
             <div key={m.id} className={`group flex flex-col ${isMine ? "items-end" : "items-start"}`}>
               <div className="flex items-baseline gap-2">
-                <span className={`text-[11px] font-semibold ${isMine ? "text-[#e85aad]" : "text-[#58a6ff]"}`}>
-                  {isMine ? "You" : m.from.username}
-                </span>
+                {isMine ? (
+                  <span className="text-[11px] font-semibold text-[#e85aad]">You</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openPlayer(m.from.id)}
+                    className="text-[11px] font-semibold text-[#58a6ff] hover:underline"
+                  >
+                    {m.from.username}
+                  </button>
+                )}
                 <span className="text-[10px] text-[#8b949e]">{new Date(m.createdAt).toLocaleString()}</span>
                 <button
                   onClick={() => del.mutate(m.id)}

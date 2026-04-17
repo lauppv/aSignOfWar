@@ -203,6 +203,10 @@ export const listMessagesHandler = async (req: AuthRequest, res: Response) => {
   } catch (e) { handle(res, e); }
 };
 
+export const unreadMessagesHandler = async (req: AuthRequest, res: Response) => {
+  res.json({ count: await svc.countUnreadAllianceMessages(req.userId!) });
+};
+
 export const postMessageHandler = async (req: AuthRequest, res: Response) => {
   try {
     const { content } = req.body ?? {};

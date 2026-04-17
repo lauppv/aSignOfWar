@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyCity } from "../api/city.ts";
 import { getReports } from "../api/report.ts";
 import { getDirectUnreadCount } from "../api/message.ts";
+import { getAllianceUnreadCount } from "../api/alliance.ts";
 import { logout } from "../api/auth.ts";
 import {
   getCurrentUserId,
@@ -78,7 +79,12 @@ export default function Layout() {
     queryFn: getDirectUnreadCount,
     refetchInterval: 3000,
   });
-  const unreadMessages = unreadMsgs?.count ?? 0;
+  const { data: unreadAllianceMsgs } = useQuery({
+    queryKey: ["alliance", "messages", "unread"],
+    queryFn: getAllianceUnreadCount,
+    refetchInterval: 3000,
+  });
+  const unreadMessages = (unreadMsgs?.count ?? 0) + (unreadAllianceMsgs?.count ?? 0);
 
   function openReports() {
     const snapshot = Array.from(seenReportIds);

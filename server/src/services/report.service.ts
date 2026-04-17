@@ -40,13 +40,13 @@ export const getReportsForUser = async (userId: string) => {
       fromCity: {
         select: {
           id: true, name: true, x: true, y: true, ownerId: true,
-          owner: { select: { username: true } },
+          owner: { select: { id: true, username: true } },
         },
       },
       toCity: {
         select: {
           id: true, name: true, x: true, y: true, ownerId: true,
-          owner: { select: { username: true } },
+          owner: { select: { id: true, username: true } },
         },
       },
     },

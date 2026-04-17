@@ -47,7 +47,7 @@ export interface OutgoingCommand {
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
-  toCity: { id: string; name: string; x: number; y: number; owner: { username: string } | null };
+  toCity: { id: string; name: string; x: number; y: number; owner: { id: string; username: string } | null };
 }
 
 export interface IncomingCommand {
@@ -59,7 +59,7 @@ export interface IncomingCommand {
   resourceMoney: number;
   resourceEnergy: number;
   resourceAmmo: number;
-  fromCity: { name: string; x: number; y: number; owner: { username: string } | null };
+  fromCity: { name: string; x: number; y: number; owner: { id: string; username: string } | null };
 }
 
 export interface CityCommands {
@@ -91,6 +91,7 @@ export interface MapCity {
   x: number;
   y: number;
   owner: {
+    id: string;
     username: string;
     allianceId: string | null;
     alliance: { id: string; tag: string; name: string } | null;
@@ -155,7 +156,7 @@ export interface BattleReport {
   resourceAmmo: number;
   direction: "outgoing" | "incoming";
   units: BattleUnitCount[];
-  fromCity: { id: string; name: string; x: number; y: number; owner: { username: string } | null };
-  toCity:   { id: string; name: string; x: number; y: number; owner: { username: string } | null };
+  fromCity: { id: string; name: string; x: number; y: number; owner: { id: string; username: string } | null };
+  toCity:   { id: string; name: string; x: number; y: number; owner: { id: string; username: string } | null };
   report: BattleReportData | SpyReportData | WithdrawalReportData | null;
 }

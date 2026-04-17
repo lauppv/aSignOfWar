@@ -32,6 +32,7 @@ router.post("/applications/:applicationId/reject", ctrl.rejectApplicationHandler
 router.post("/members/:memberId/kick", ctrl.kickMemberHandler);
 router.post("/members/:memberId/transfer", ctrl.transferLeadershipHandler);
 
+router.get("/messages/unread", ctrl.unreadMessagesHandler);
 router.get("/messages", ctrl.listMessagesHandler);
 router.post("/messages", ctrl.postMessageHandler);
 router.delete("/messages/:messageId", ctrl.deleteMessageHandler);

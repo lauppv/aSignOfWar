@@ -328,12 +328,12 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
   const [outgoing, incoming] = await Promise.all([
     prisma.command.findMany({
       where:   { fromCityId: cityId, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
-      include: { units: true, toCity: { select: { id: true, name: true, x: true, y: true, owner: { select: { username: true } } } } },
+      include: { units: true, toCity: { select: { id: true, name: true, x: true, y: true, owner: { select: { id: true, username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
     prisma.command.findMany({
       where:   { toCityId: cityId, status: "TRAVELING" },
-      include: { units: true, fromCity: { select: { name: true, x: true, y: true, owner: { select: { username: true } } } } },
+      include: { units: true, fromCity: { select: { name: true, x: true, y: true, owner: { select: { id: true, username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
   ]);

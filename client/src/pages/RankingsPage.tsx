@@ -7,6 +7,7 @@ import {
 } from "../api/ranking.ts";
 import { getCurrentUserId } from "../api/client.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
+import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
 type MainTab = "alliances" | "players" | "defeatedAlliance" | "defeatedPlayer";
 type KillCategory = "attacker" | "defender" | "supporter" | "total";
@@ -149,6 +150,7 @@ function SubTabs({ value, onChange }: { value: KillCategory; onChange: (v: KillC
 
 // ─── Players ────────────────────────────────────────────────────────────────────
 function PlayersTable({ rows, myId }: { rows: RankingEntry[]; myId: string | null }) {
+  const { openPlayer } = usePlayerProfile();
   const sorted = [...rows].sort((a, b) => b.points - a.points);
   return (
     <table className="w-full text-xs border-collapse">
@@ -171,7 +173,13 @@ function PlayersTable({ rows, myId }: { rows: RankingEntry[]; myId: string | nul
                 style={{ background: isMe ? "rgba(232,90,173,0.08)" : undefined }}>
               <Td mono muted>{i + 1}</Td>
               <Td>
-                <span className={isMe ? "text-[#e85aad] font-semibold" : "text-[#c9d1d9]"}>{r.username}</span>
+                <button
+                  type="button"
+                  onClick={() => openPlayer(r.id)}
+                  className={`hover:underline ${isMe ? "text-[#e85aad] font-semibold" : "text-[#c9d1d9]"}`}
+                >
+                  {r.username}
+                </button>
                 {isMe && <span className="ml-1.5 text-[10px] text-[#e85aad] tracking-wide">(you)</span>}
               </Td>
               <Td><AllianceTag alliance={r.alliance} /></Td>
@@ -233,6 +241,7 @@ function AlliancesTable({ rows }: { rows: AllianceRankingEntry[] }) {
 
 // ─── Defeated enemies (player) ──────────────────────────────────────────────────
 function DefeatedPlayerTable({ rows, myId, cat }: { rows: RankingEntry[]; myId: string | null; cat: KillCategory }) {
+  const { openPlayer } = usePlayerProfile();
   const sorted = [...rows].sort((a, b) => playerKills(b, cat) - playerKills(a, cat));
   return (
     <table className="w-full text-xs border-collapse">
@@ -252,7 +261,13 @@ function DefeatedPlayerTable({ rows, myId, cat }: { rows: RankingEntry[]; myId: 
                 style={{ background: isMe ? "rgba(232,90,173,0.08)" : undefined }}>
               <Td mono muted>{i + 1}</Td>
               <Td>
-                <span className={isMe ? "text-[#e85aad] font-semibold" : "text-[#c9d1d9]"}>{r.username}</span>
+                <button
+                  type="button"
+                  onClick={() => openPlayer(r.id)}
+                  className={`hover:underline ${isMe ? "text-[#e85aad] font-semibold" : "text-[#c9d1d9]"}`}
+                >
+                  {r.username}
+                </button>
                 {isMe && <span className="ml-1.5 text-[10px] text-[#e85aad] tracking-wide">(you)</span>}
               </Td>
               <Td><AllianceTag alliance={r.alliance} /></Td>

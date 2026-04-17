@@ -10,6 +10,7 @@ import MessagesPage from "./pages/MessagesPage.tsx";
 import Layout from "./components/Layout.tsx";
 import { UnitInfoProvider } from "./context/UnitInfoContext.tsx";
 import { AllianceProfileProvider } from "./context/AllianceProfileContext.tsx";
+import { PlayerProfileProvider } from "./context/PlayerProfileContext.tsx";
 import { TickProvider } from "./context/TickContext.tsx";
 import { loadGameSpeed } from "./lib/gameSpeed.ts";
 
@@ -56,6 +57,7 @@ export default function App() {
     <TickProvider>
     <UnitInfoProvider>
     <AllianceProfileProvider>
+    <PlayerProfileProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -76,6 +78,7 @@ export default function App() {
         <Route path="*" element={<Navigate to={isLoggedIn() ? "/city" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
+    </PlayerProfileProvider>
     </AllianceProfileProvider>
     </UnitInfoProvider>
     </TickProvider>

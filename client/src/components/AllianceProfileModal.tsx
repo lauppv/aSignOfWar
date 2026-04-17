@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAllianceProfile, type AllianceProfile } from "../api/alliance.ts";
+import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
 const ACCESS_LABEL: Record<AllianceProfile["accessMode"], string> = {
   OPEN: "Open",
@@ -56,6 +57,7 @@ export default function AllianceProfileModal({ allianceId, onClose }: Props) {
 }
 
 function ProfileContent({ p }: { p: AllianceProfile }) {
+  const { openPlayer } = usePlayerProfile();
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -63,7 +65,14 @@ function ProfileContent({ p }: { p: AllianceProfile }) {
           [{p.tag}] {p.name}
         </div>
         <div className="text-[11px] text-[#8b949e] mt-0.5">
-          Leader: {p.leader.username} ·{" "}
+          Leader:{" "}
+          <button
+            type="button"
+            onClick={() => openPlayer(p.leader.id)}
+            className="hover:underline text-[#79c0ff]"
+          >
+            {p.leader.username}
+          </button>{" "}·{" "}
           <span style={{ color: ACCESS_COLOR[p.accessMode] }}>{ACCESS_LABEL[p.accessMode]}</span>{" "}
           · Founded {new Date(p.createdAt).toLocaleDateString()}
         </div>
@@ -100,7 +109,13 @@ function ProfileContent({ p }: { p: AllianceProfile }) {
                 <tr key={m.id} className="border-b border-[#21262d] last:border-0">
                   <td className="py-1.5 px-2 text-[#8b949e] font-mono">{i + 1}</td>
                   <td className="py-1.5 px-2 text-[#c9d1d9]">
-                    {m.username}
+                    <button
+                      type="button"
+                      onClick={() => openPlayer(m.id)}
+                      className="hover:underline text-[#79c0ff]"
+                    >
+                      {m.username}
+                    </button>
                     {m.id === p.leader.id && (
                       <span className="ml-1.5 text-[10px] text-[#e6b800]">(leader)</span>
                     )}
