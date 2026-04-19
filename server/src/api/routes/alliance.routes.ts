@@ -1,6 +1,9 @@
 import { Router } from "express";
+import multer from "multer";
 import { authMiddleware } from "../../middleware/auth";
 import * as ctrl from "../controllers/alliance.controller";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -38,6 +41,7 @@ router.post("/messages", ctrl.postMessageHandler);
 router.delete("/messages/:messageId", ctrl.deleteMessageHandler);
 
 // Dynamic — keep last
+router.post("/:id/avatar", upload.single("avatar"), ctrl.uploadAllianceAvatarHandler);
 router.get("/:id/profile", ctrl.getAllianceProfileHandler);
 router.get("/:id", ctrl.getAllianceHandler);
 router.post("/:id/join", ctrl.joinAllianceHandler);

@@ -37,11 +37,8 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
   const mbLevel = getBuildingLevel(city, "MILITARY_BASE");
   const unitCountMap = new Map<UnitName, number>(city.units.map(u => [u.name, u.quantity]));
   const population    = computePopulation(city);
-  const pendingPop    = city.recruitmentOrders
-    .filter((o) => new Date(o.finishAt).getTime() > now)
-    .reduce((sum, o) => sum + o.quantity * (UNITS[o.unitName]?.population ?? 1), 0);
   const maxPopulation = getMaxPopulation(getBuildingLevel(city, "HOUSING"));
-  const availablePop  = maxPopulation - population - pendingPop;
+  const availablePop  = maxPopulation - population;
 
   function isUnlocked(name: UnitName): boolean {
     if (mbLevel === 0) return false;

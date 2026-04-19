@@ -114,9 +114,14 @@ export interface BattleReportData {
   attackerSurvivors: BattleUnitCount[];
   defenderInitial?: BattleUnitCount[];
   defenderSurvivors?: BattleUnitCount[];
-  airDefenseInitialLevel: number;
-  newAirDefenseLevel: number;
-  airDefenseLevelsDestroyed: number;
+  attackerLosses?: BattleUnitCount[];
+  defenderLosses?: BattleUnitCount[];
+  airDefenseInitialLevel?: number;
+  newAirDefenseLevel?: number;
+  airDefenseLevelsDestroyed?: number;
+  targetBuilding?: string;
+  targetBuildingInitialLevel?: number;
+  buildingLevelsDestroyed?: number;
   stolenMoney: number;
   stolenEnergy: number;
   stolenAmmo: number;

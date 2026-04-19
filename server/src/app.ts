@@ -1,3 +1,4 @@
+import path from "path";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import env from "./config/env";
@@ -28,6 +29,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/buildings", buildingRoutes);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getReports, deleteReport } from "../api/report.ts";
+import { getReports, deleteReport, shareReport } from "../api/report.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { useNow } from "../context/TickContext.tsx";
 import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
@@ -393,6 +393,9 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
   const { openPlayer } = usePlayerProfile();
   const fromOwner = r.fromCity.owner;
   const toOwner = r.toCity.owner;
+  const [sharing, setSharing] = useState(false);
+
+  const canShare = r.report && !isWithdrawalReport(r.report);
 
   return (
     <div className="flex flex-col gap-3">
@@ -437,9 +440,19 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
             </span>
           </div>
         </div>
-        <div className="text-[10px] text-[#7d8590] text-right">
-          <div>{new Date(reportTimestamp(r) ?? r.arrivalAt).toLocaleString()}</div>
-          <div className="uppercase tracking-widest mt-0.5">{r.direction}</div>
+        <div className="flex items-start gap-3">
+          {canShare && (
+            <button
+              onClick={() => setSharing(true)}
+              className="text-[10px] text-[#b1bac4] border border-[#30363d] rounded px-2 py-0.5 hover:bg-[#1c2129] hover:text-[#c9d1d9]"
+            >
+              Share
+            </button>
+          )}
+          <div className="text-[10px] text-[#7d8590] text-right">
+            <div>{new Date(reportTimestamp(r) ?? r.arrivalAt).toLocaleString()}</div>
+            <div className="uppercase tracking-widest mt-0.5">{r.direction}</div>
+          </div>
         </div>
       </div>
 
@@ -451,6 +464,8 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
       )}
       {r.type === "RESOURCES" && <ResourcesDetail money={r.resourceMoney} energy={r.resourceEnergy} ammo={r.resourceAmmo} />}
       {r.type === "SPY"       && isSpyReport(r.report) && <SpyDetail report={r.report} direction={r.direction} />}
+
+      {sharing && <ShareReportModal report={r} onClose={() => setSharing(false)} />}
     </div>
   );
 }
@@ -462,6 +477,7 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
   const defInit = asMap(data.defenderInitial);
   const defSurv = asMap(data.defenderSurvivors);
   const defenderHidden = !data.defenderInitial;
+  const airDefenseHidden = data.airDefenseInitialLevel == null;
 
   return (
     <>
@@ -509,29 +525,36 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
           <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Air defense</div>
-          <div className="flex items-center gap-3">
-            <img
-              src="/images/buildings/air_defense.jpg"
-              alt="Air defense"
-              title="Air defense"
-              className="w-12 h-12 object-contain rounded"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-            <div className="flex-1 flex flex-col gap-0.5">
-              <div className="flex justify-between text-[#c9d1d9]">
-                <span>Before</span>
-                <span className="font-mono">{data.airDefenseInitialLevel ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#c9d1d9]">After</span>
-                {(data.airDefenseLevelsDestroyed ?? 0) > 0 ? (
-                  <span className="font-mono font-semibold text-[#f85149]">−{data.airDefenseLevelsDestroyed}</span>
-                ) : (
-                  <span className="font-mono font-semibold text-[#c9d1d9]">0</span>
-                )}
+          {airDefenseHidden ? (
+            <div className="flex items-center justify-center gap-2 text-[#b1bac4] italic py-2">
+              <span className="text-sm">❓</span>
+              <span className="text-[11px]">Air defense unknown</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <img
+                src="/images/buildings/air_defense.jpg"
+                alt="Air defense"
+                title="Air defense"
+                className="w-12 h-12 object-contain rounded"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+              <div className="flex-1 flex flex-col gap-0.5">
+                <div className="flex justify-between text-[#c9d1d9]">
+                  <span>Before</span>
+                  <span className="font-mono">{data.airDefenseInitialLevel ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#c9d1d9]">After</span>
+                  {(data.airDefenseLevelsDestroyed ?? 0) > 0 ? (
+                    <span className="font-mono font-semibold text-[#f85149]">−{data.airDefenseLevelsDestroyed}</span>
+                  ) : (
+                    <span className="font-mono font-semibold text-[#c9d1d9]">0</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
@@ -547,6 +570,33 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
           )}
         </div>
       </div>
+
+      {data.targetBuilding && (data.buildingLevelsDestroyed ?? 0) > 0 && (
+        <div className="rounded border border-[#d2a8ff] bg-[#2a1f3d] p-3 text-xs">
+          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Building demolished</div>
+          <div className="flex items-center gap-3">
+            <img
+              src={`/images/buildings/${data.targetBuilding.toLowerCase()}.jpg`}
+              alt={BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}
+              className="w-10 h-10 object-contain rounded"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="flex-1 flex flex-col gap-0.5">
+              <span className="text-[#c9d1d9]">{BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}</span>
+              <div className="flex justify-between">
+                <span className="text-[#c9d1d9]">Level {data.targetBuildingInitialLevel} → {(data.targetBuildingInitialLevel ?? 0) - (data.buildingLevelsDestroyed ?? 0)}</span>
+                <span className="font-mono font-semibold text-[#d2a8ff]">−{data.buildingLevelsDestroyed}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {data.targetBuilding && (data.buildingLevelsDestroyed ?? 0) === 0 && (
+        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs text-[#7d8590]">
+          Target: {BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding} — no damage dealt
+        </div>
+      )}
 
       {data.loyaltyDamage > 0 && (
         <div className="rounded border border-[#d29922] bg-[#3d2e0a] p-3 text-xs flex justify-between text-[#d29922]">
@@ -784,8 +834,15 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
           {BUILDING_ORDER.map(name => {
             const lvl = buildingByName.get(name) ?? 0;
             return (
-              <div key={name} className="flex items-center justify-between bg-[#0d1117] border border-[#21262d] rounded px-2 py-1">
-                <span className="text-[#c9d1d9] truncate">{BUILDING_DISPLAY[name]}</span>
+              <div key={name} className="flex items-center gap-2 bg-[#0d1117] border border-[#21262d] rounded px-2 py-1">
+                <img
+                  src={`/images/buildings/${name.toLowerCase()}.jpg`}
+                  alt={BUILDING_DISPLAY[name]}
+                  title={BUILDING_DISPLAY[name]}
+                  className="w-8 h-8 object-contain rounded shrink-0"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+                <span className="text-[#c9d1d9] truncate flex-1">{BUILDING_DISPLAY[name]}</span>
                 <span className={`font-mono ${lvl > 0 ? "text-[#e6b800]" : "text-[#7d8590]"}`}>
                   {lvl > 0 ? lvl : "—"}
                 </span>
@@ -795,32 +852,137 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
         </div>
       </div>
 
-      <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+      <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs overflow-x-auto">
         <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Units in target city</div>
         {activeUnits.length === 0 ? (
           <div className="text-[#7d8590] text-[11px]">No units defending.</div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {activeUnits.map(u => (
-              <div
-                key={u.name}
-                onClick={() => openUnit(u.name)}
-                className="flex items-center gap-1.5 bg-[#0d1117] border border-[#21262d] rounded px-2 py-1 cursor-pointer hover:border-[#484f58]"
-              >
-                <img
-                  src={`/images/units/${u.name.toLowerCase()}.jpg`}
-                  alt={UNIT_DISPLAY[u.name]}
-                  className="w-6 h-6 object-contain rounded"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                />
-                <span className="text-[#c9d1d9]">{UNIT_DISPLAY[u.name]}</span>
-                <span className="text-[#e6b800] font-mono">×{u.quantity.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr>
+                <th className="w-16"></th>
+                {ALL_UNITS.map(name => (
+                  <th key={name} className="px-1 pb-1 text-center">
+                    <img
+                      src={`/images/units/${name.toLowerCase()}.jpg`}
+                      alt={UNIT_DISPLAY[name]}
+                      title={UNIT_DISPLAY[name]}
+                      className="w-10 h-10 object-contain rounded mx-auto cursor-pointer hover:brightness-125 transition-[filter]"
+                      onClick={() => openUnit(name)}
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="py-1 pr-2 text-right whitespace-nowrap">
+                  <span className="text-[10px] text-[#7d8590]">Units:</span>
+                </td>
+                {ALL_UNITS.map(name => {
+                  const u = activeUnits.find(x => x.name === name);
+                  const q = u?.quantity ?? 0;
+                  return (
+                    <td key={name} className={`py-1 text-center ${q > 0 ? "text-[#c9d1d9]" : "text-[#7d8590]"}`}>
+                      {q.toLocaleString()}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
         )}
       </div>
     </>
+  );
+}
+
+function ShareReportModal({ report: r, onClose }: { report: BattleReport; onClose: () => void }) {
+  const isBattle = r.type === "ATTACK" && r.report && !isSpyReport(r.report);
+  const isSpy = r.type === "SPY" && r.report && isSpyReport(r.report);
+  const hasOptions = isBattle || isSpy;
+
+  const [hideOwnTroops, setHideOwnTroops] = useState(false);
+  const [hideOwnInitial, setHideOwnInitial] = useState(false);
+  const [hideEnemyTroops, setHideEnemyTroops] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleShare() {
+    setPending(true);
+    setError(null);
+    try {
+      const { id } = await shareReport(r.id, { hideOwnTroops, hideOwnInitial, hideEnemyTroops });
+      const tag = `[report:${id}]`;
+      await navigator.clipboard.writeText(tag);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      setError("Failed to create share link");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-[#161b22] border border-[#30363d] rounded p-5 w-[360px] text-xs"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-sm text-[#c9d1d9] font-semibold mb-3">Share report</div>
+
+        {hasOptions && (
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="text-[10px] uppercase tracking-widest text-[#7d8590] mb-1">Visibility options</div>
+            <label className="flex items-center gap-2 text-[#b1bac4] cursor-pointer select-none">
+              <input type="checkbox" checked={hideOwnTroops} onChange={(e) => { setHideOwnTroops(e.target.checked); if (e.target.checked) setHideOwnInitial(false); }} />
+              Hide own troops
+            </label>
+            {isBattle && !hideOwnTroops && (
+              <label className="flex items-center gap-2 text-[#b1bac4] cursor-pointer select-none ml-4">
+                <input type="checkbox" checked={hideOwnInitial} onChange={(e) => setHideOwnInitial(e.target.checked)} />
+                Show only own losses (hide initial count)
+              </label>
+            )}
+            <label className="flex items-center gap-2 text-[#b1bac4] cursor-pointer select-none">
+              <input type="checkbox" checked={hideEnemyTroops} onChange={(e) => setHideEnemyTroops(e.target.checked)} />
+              {isSpy ? "Hide intel (buildings, units, resources)" : "Hide enemy troops"}
+            </label>
+          </div>
+        )}
+
+        {!hasOptions && (
+          <div className="text-[#7d8590] mb-4">This report will be shared as-is.</div>
+        )}
+
+        {error && <div className="text-[#f85149] mb-2">{error}</div>}
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1 text-[#b1bac4] border border-[#30363d] rounded hover:bg-[#1c2129]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleShare}
+            disabled={pending}
+            className="px-3 py-1 text-[#0d1117] bg-[#d2a8ff] rounded font-semibold hover:bg-[#b87aff] disabled:opacity-40"
+          >
+            {copied ? "Copied to clipboard!" : pending ? "Sharing..." : "Share"}
+          </button>
+        </div>
+
+        {copied && (
+          <div className="mt-3 text-[11px] text-[#7d8590]">
+            Paste the tag into any message (private or alliance) to share this report.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

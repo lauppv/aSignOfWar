@@ -12,6 +12,7 @@ export interface PlayerProfile {
   id: string;
   username: string;
   description: string | null;
+  avatarUrl: string | null;
   alliance: { id: string; name: string; tag: string } | null;
   cities: PlayerProfileCity[];
   totalCities: number;
@@ -27,4 +28,20 @@ export function getPlayerProfile(userId: string): Promise<PlayerProfile> {
 
 export function updateMyDescription(description: string | null): Promise<void> {
   return api.patch("/users/me/description", { description });
+}
+
+export async function uploadMyAvatar(file: File): Promise<{ avatarUrl: string }> {
+  const form = new FormData();
+  form.append("avatar", file);
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/users/me/avatar", {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any).error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
 }

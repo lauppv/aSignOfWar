@@ -8,6 +8,7 @@ import {
   getFieldDistance,
   getSlowestUnitSpeed,
   getUnitTravelTimeSec,
+  calcBuildingDamage,
 } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { syncResources } from "../services/city.service";
@@ -125,7 +126,8 @@ async function processAttackArrival(command: any) {
     airDefenseLevel,
     toCity.money,
     toCity.energy,
-    toCity.ammo
+    toCity.ammo,
+    command.targetBuilding ?? undefined
   );
 
   // Distribuie supravietuitorii proportional intre stack-ul propriu si fiecare sprijin
@@ -221,6 +223,37 @@ async function processAttackArrival(command: any) {
         where: { cityId: command.toCityId, name: "AIR_DEFENSE" },
         data:  { level: result.newAirDefenseLevel },
       });
+    }
+
+    // Demolarea cladirii tinta de drone (PRE-bătălie, cu drone INIȚIALE, ca în TW)
+    let buildingLevelsDestroyed = 0;
+    let targetBuildingName: string | null = command.targetBuilding;
+    let targetBuildingInitialLevel = 0;
+    const initialDrones = attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0;
+    if (command.targetBuilding && initialDrones > 0) {
+      if (command.targetBuilding === "AIR_DEFENSE") {
+        // Dronele pe AIR_DEFENSE: damage suplimentar peste cel de la calcAirDefenseDamage
+        targetBuildingInitialLevel = result.newAirDefenseLevel;
+        buildingLevelsDestroyed = calcBuildingDamage(result.newAirDefenseLevel, initialDrones);
+        if (buildingLevelsDestroyed > 0) {
+          await tx.building.updateMany({
+            where: { cityId: command.toCityId, name: "AIR_DEFENSE" },
+            data:  { level: result.newAirDefenseLevel - buildingLevelsDestroyed },
+          });
+        }
+      } else {
+        const targetBld = toCity.buildings.find(b => b.name === command.targetBuilding);
+        if (targetBld && targetBld.level > 0) {
+          targetBuildingInitialLevel = targetBld.level;
+          buildingLevelsDestroyed = calcBuildingDamage(targetBld.level, initialDrones);
+          if (buildingLevelsDestroyed > 0) {
+            await tx.building.updateMany({
+              where: { cityId: command.toCityId, name: command.targetBuilding },
+              data:  { level: { decrement: buildingLevelsDestroyed } },
+            });
+          }
+        }
+      }
     }
 
     // Scade resursele furate, seteaza loyalty (clampat la 0 sau resetat la 25
@@ -351,6 +384,9 @@ async function processAttackArrival(command: any) {
           attackerInitial:        attackerUnits,
           defenderInitial:        defenderUnits,
           airDefenseInitialLevel: airDefenseLevel,
+          targetBuilding:              targetBuildingName,
+          targetBuildingInitialLevel,
+          buildingLevelsDestroyed,
           battleAt:               new Date().toISOString(),
         } as any,
       },

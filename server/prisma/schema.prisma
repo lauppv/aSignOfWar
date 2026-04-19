@@ -73,6 +73,7 @@ model User {
   email     String   @unique
   password  String
   description String?
+  avatarUrl   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -105,6 +106,7 @@ model User {
   cities           City[]
   commandsAttacker Command[] @relation("CommandAttacker")
   commandsDefender Command[] @relation("CommandDefender")
+  sharedReports    SharedReport[] @relation("SharedReportAuthor")
 }
 
 model Alliance {
@@ -112,6 +114,7 @@ model Alliance {
   name        String         @unique
   tag         String         @unique
   description String?
+  avatarUrl   String?
   accessMode  AllianceAccess @default(OPEN)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -254,6 +257,22 @@ model Unit {
   @@unique([cityId, name])
 }
 
+model SharedReport {
+  id        String   @id @default(uuid())
+  commandId String
+  command   Command  @relation(fields: [commandId], references: [id])
+  userId    String
+  user      User     @relation("SharedReportAuthor", fields: [userId], references: [id])
+
+  hideOwnTroops   Boolean @default(false)
+  hideOwnInitial  Boolean @default(false)
+  hideEnemyTroops Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([commandId])
+}
+
 model Command {
   id          String        @id @default(uuid())
   type        CommandType
@@ -265,6 +284,9 @@ model Command {
   resourceMoney  Float @default(0)
   resourceEnergy Float @default(0)
   resourceAmmo   Float @default(0)
+
+  // cladirea tinta pentru drone (optional, doar ATTACK cu drone)
+  targetBuilding BuildingName?
 
   // raport de lupta (completat dupa sosire, pentru ATTACK)
   report Json?
@@ -288,7 +310,8 @@ model Command {
   defenderUserId String?
   defender       User?   @relation("CommandDefender", fields: [defenderUserId], references: [id])
 
-  units CommandUnit[]
+  units         CommandUnit[]
+  sharedReports SharedReport[]
 }
 
 model CommandUnit {

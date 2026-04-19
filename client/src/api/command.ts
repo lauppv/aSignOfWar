@@ -8,6 +8,7 @@ export interface SendCommandBody {
   targetCityId: string;
   units?: Partial<Record<UnitName, number>>;
   resources?: { money: number; energy: number; ammo: number };
+  targetBuilding?: string;
 }
 
 export interface SendCommandResult {

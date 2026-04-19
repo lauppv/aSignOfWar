@@ -94,6 +94,9 @@ export const getCityOverview = async (userId: string, cityId?: string) => {
       totalPopulation += u.quantity * (UNITS[u.name]?.population ?? 1);
     }
   }
+  for (const o of city.recruitmentOrders) {
+    totalPopulation += o.quantity * (UNITS[o.unitName]?.population ?? 1);
+  }
 
   const ownedCities = await prisma.city.findMany({
     where:   { ownerId: userId },

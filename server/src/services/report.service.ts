@@ -59,7 +59,7 @@ export const getReportsForUser = async (userId: string) => {
 
     // Atacatorul care a pierdut nu vede compozitia aparatorului
     if (report && r.type === "ATTACK" && direction === "outgoing" && !(report as any).attackerWon) {
-      const { defenderInitial, defenderSurvivors, ...rest } = report;
+      const { defenderInitial, defenderSurvivors, airDefenseInitialLevel, airDefenseLevelsDestroyed, newAirDefenseLevel, ...rest } = report;
       report = rest;
     }
 

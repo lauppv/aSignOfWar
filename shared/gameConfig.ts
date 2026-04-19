@@ -397,3 +397,8 @@ export const calcAirDefenseDamage = (airDefenseLevel: number, mlCount: number, d
   const levels = Math.floor((totalDmg - threshold) / (2 * threshold) + 1);
   return Math.max(0, Math.min(Math.floor(W / 2), levels));
 };
+
+export const calcBuildingDamage = (buildingLevel: number, survivingDrones: number): number => {
+  if (buildingLevel <= 0 || survivingDrones <= 0) return 0;
+  return Math.min(buildingLevel, Math.floor(Math.pow(survivingDrones, 0.8) / 6));
+};

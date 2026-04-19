@@ -68,6 +68,7 @@ export interface AllianceProfile {
   name: string;
   tag: string;
   description: string | null;
+  avatarUrl: string | null;
   accessMode: AllianceAccess;
   createdAt: string;
   leader: { id: string; username: string };
@@ -84,6 +85,22 @@ export interface AllianceProfile {
 
 export function getAllianceProfile(id: string): Promise<AllianceProfile> {
   return api.get(`/alliances/${encodeURIComponent(id)}/profile`);
+}
+
+export async function uploadAllianceAvatar(allianceId: string, file: File): Promise<{ avatarUrl: string }> {
+  const form = new FormData();
+  form.append("avatar", file);
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/alliances/${encodeURIComponent(allianceId)}/avatar`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any).error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 export interface AllianceMessage {

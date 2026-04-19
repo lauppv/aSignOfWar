@@ -18,7 +18,8 @@ export const sendCommand = async (
   type: CommandType,
   userId: string,
   unitCounts: Partial<Record<UnitName, number>>,
-  resources: { money: number; energy: number; ammo: number }
+  resources: { money: number; energy: number; ammo: number },
+  targetBuilding?: string
 ) => {
   if (fromCityId === toCityId) throw new Error("SAME_CITY");
 
@@ -68,6 +69,12 @@ export const sendCommand = async (
   // ATTACK/SUPPORT: hackerii nu pot fi trimisi (nu participa la bataliile normale)
   if (type === "ATTACK" || type === "SUPPORT") {
     if (units.some(u => u.name === "HACKER")) throw new Error("HACKERS_CANNOT_JOIN_BATTLE");
+  }
+
+  // targetBuilding doar cu drone in ATTACK
+  if (targetBuilding) {
+    if (type !== "ATTACK") throw new Error("TARGET_BUILDING_ONLY_FOR_ATTACK");
+    if (!units.some(u => u.name === "DRONE" && u.quantity > 0)) throw new Error("TARGET_BUILDING_REQUIRES_DRONES");
   }
 
   // Validare resurse (RESOURCES)
@@ -133,6 +140,7 @@ export const sendCommand = async (
         arrivalAt,
         attackerUserId: fromCity.ownerId!,
         defenderUserId: toCity.ownerId,
+        targetBuilding: targetBuilding as any ?? null,
         resourceMoney:  type === "RESOURCES" ? resources.money  : 0,
         resourceEnergy: type === "RESOURCES" ? resources.energy : 0,
         resourceAmmo:   type === "RESOURCES" ? resources.ammo   : 0,

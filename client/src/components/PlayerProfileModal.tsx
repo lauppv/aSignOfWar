@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getPlayerProfile, updateMyDescription, type PlayerProfile } from "../api/user.ts";
+import { getPlayerProfile, updateMyDescription, uploadMyAvatar, type PlayerProfile } from "../api/user.ts";
 import { getCurrentUserId } from "../api/client.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 
@@ -38,7 +38,7 @@ export default function PlayerProfileModal({ userId, onClose }: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {isLoading && <div className="text-xs text-[#8b949e]">Loading…</div>}
+          {isLoading && <div className="text-xs text-[#8b949e]">Loading...</div>}
           {error && <div className="text-xs text-[#f85149]">Failed to load player profile.</div>}
           {data && <ProfileContent p={data} onClose={onClose} />}
         </div>
@@ -55,7 +55,7 @@ function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-4">
-        <Avatar />
+        <Avatar userId={p.id} avatarUrl={p.avatarUrl} editable={isMe} />
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="text-lg font-semibold text-[#e6b800]">{p.username}</div>
           <div className="text-[11px] text-[#8b949e] mt-0.5">
@@ -124,14 +124,64 @@ function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void 
   );
 }
 
-function Avatar() {
+function Avatar({ userId, avatarUrl, editable }: { userId: string; avatarUrl: string | null; editable: boolean }) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const upload = useMutation({
+    mutationFn: (file: File) => uploadMyAvatar(file),
+    onSuccess: () => {
+      setErr(null);
+      qc.invalidateQueries({ queryKey: ["user", "profile", userId] });
+    },
+    onError: (e: Error) => setErr(e.message),
+  });
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setErr(null);
+    upload.mutate(file);
+    e.target.value = "";
+  }
+
   return (
-    <div
-      className="shrink-0 bg-[#0d1117] border border-[#30363d] rounded flex items-center justify-center text-[#484f58] font-bold"
-      style={{ width: 240, height: 180, fontSize: 96 }}
-      title="Default avatar"
-    >
-      ?
+    <div className="shrink-0 flex flex-col items-center gap-1">
+      <div
+        className="bg-[#0d1117] border border-[#30363d] rounded overflow-hidden flex items-center justify-center"
+        style={{ width: 240, height: 180 }}
+      >
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt="Avatar"
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <span className="text-[#484f58] font-bold" style={{ fontSize: 96 }}>?</span>
+        )}
+      </div>
+      {editable && (
+        <>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={upload.isPending}
+            className="text-[11px] text-[#79c0ff] hover:underline disabled:opacity-40"
+          >
+            {upload.isPending ? "Uploading..." : "Change avatar"}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={handleFile}
+            className="hidden"
+          />
+          {err && <div className="text-[10px] text-[#f85149]">{err}</div>}
+        </>
+      )}
     </div>
   );
 }
@@ -205,7 +255,7 @@ function DescriptionSection({ userId, initial, editable }: {
             onChange={(e) => setDraft(e.target.value.slice(0, DESCRIPTION_MAX))}
             rows={4}
             className="w-full bg-[#0d1117] border border-[#30363d] rounded p-2 text-xs text-[#c9d1d9] resize-none focus:outline-none focus:border-[#58a6ff]"
-            placeholder="Tell other players about yourself…"
+            placeholder="Tell other players about yourself..."
           />
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-[#8b949e]">{draft.length} / {DESCRIPTION_MAX}</span>
@@ -224,7 +274,7 @@ function DescriptionSection({ userId, initial, editable }: {
                 disabled={save.isPending}
                 className="text-[11px] px-2 py-1 border border-[#3fb950] rounded text-[#3fb950] hover:bg-[#0e2a14] disabled:opacity-40"
               >
-                {save.isPending ? "Saving…" : "Save"}
+                {save.isPending ? "Saving..." : "Save"}
               </button>
             </div>
           </div>

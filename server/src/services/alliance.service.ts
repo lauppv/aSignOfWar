@@ -125,6 +125,7 @@ export async function getAllianceProfile(allianceId: string) {
     name: a.name,
     tag: a.tag,
     description: a.description,
+    avatarUrl: a.avatarUrl,
     accessMode: a.accessMode,
     createdAt: a.createdAt,
     leader: a.leader,

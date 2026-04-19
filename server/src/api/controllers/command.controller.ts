@@ -7,9 +7,9 @@ export const sendCommandHandler = async (req: AuthRequest, res: Response, next: 
     // Body deja validat de Zod (sendCommandSchema)
     const userId     = req.userId!;
     const fromCityId = req.params.cityId as string;
-    const { type, targetCityId, units, resources } = req.body;
+    const { type, targetCityId, units, resources, targetBuilding } = req.body;
 
-    const result = await sendCommand(fromCityId, targetCityId, type, userId, units, resources);
+    const result = await sendCommand(fromCityId, targetCityId, type, userId, units, resources, targetBuilding);
     res.status(201).json(result);
   } catch (err: any) {
     const code = err.message;

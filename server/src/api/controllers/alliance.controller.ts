@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import * as svc from "../../services/alliance.service";
+import { uploadAllianceAvatar } from "../../services/avatar.service";
 
 const ERROR_STATUS: Record<string, number> = {
   USER_NOT_FOUND: 404,
@@ -26,6 +27,10 @@ const ERROR_STATUS: Record<string, number> = {
   INVITATION_NOT_FOUND: 404,
   APPLICATION_NOT_FOUND: 404,
   APPLICATIONS_CLOSED: 403,
+  FORBIDDEN: 403,
+  FILE_TOO_LARGE: 400,
+  INVALID_IMAGE: 400,
+  IMAGE_TOO_SMALL: 400,
   ALREADY_APPLIED: 409,
   MESSAGE_REQUIRED: 400,
   MESSAGE_TOO_LONG: 400,
@@ -58,6 +63,15 @@ export const getAllianceProfileHandler = async (req: AuthRequest, res: Response)
   const p = await svc.getAllianceProfile(req.params.id as string);
   if (!p) return res.status(404).json({ error: "ALLIANCE_NOT_FOUND" });
   res.json(p);
+};
+
+export const uploadAllianceAvatarHandler = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "NO_FILE" });
+    const allianceId = req.params.id as string;
+    const avatarUrl = await uploadAllianceAvatar(allianceId, req.userId!, req.file);
+    res.json({ avatarUrl });
+  } catch (e) { handle(res, e); }
 };
 
 export const createAllianceHandler = async (req: AuthRequest, res: Response) => {

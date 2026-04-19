@@ -4,7 +4,7 @@ import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/
 import { sendCommand, getCityCommands, withdrawStationedSupport, cancelCommand, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import { getHarborCapacity, getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec, getFieldDistance } from "@shared/gameConfig.ts";
-import { UNIT_DISPLAY } from "../lib/labels.ts";
+import { UNIT_DISPLAY, BUILDING_DISPLAY, BUILDING_ORDER } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { useNow } from "../context/TickContext.tsx";
@@ -33,6 +33,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const [type, setType] = useState<CommandType>("ATTACK");
   const [unitCounts, setUnitCounts] = useState<Partial<Record<UnitName, number>>>({});
   const [resources, setResources] = useState({ money: 0, energy: 0, ammo: 0 });
+  const [targetBuilding, setTargetBuilding] = useState<string | undefined>(undefined);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
 
@@ -89,6 +90,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
         targetCityId: city.id,
         units: type === "RESOURCES" ? {} : unitCounts,
         resources: type === "RESOURCES" ? resources : { money: 0, energy: 0, ammo: 0 },
+        targetBuilding: type === "ATTACK" && hasDrones ? targetBuilding : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["city"] });
@@ -100,10 +102,13 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
     },
   });
 
+  const hasDrones = (unitCounts.DRONE ?? 0) > 0;
+
   function openForm(t: CommandType) {
     setType(t);
     setUnitCounts({});
     setResources({ money: 0, energy: 0, ammo: 0 });
+    setTargetBuilding(undefined);
     setErrorMsg(null);
     setMode("form");
   }
@@ -356,6 +361,22 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
               onChange={(v) => setUnitCount(u.name, v, u.quantity)}
             />
           ))}
+        </div>
+      )}
+
+      {type === "ATTACK" && hasDrones && (
+        <div className="mt-2">
+          <div className="text-[10px] text-[#b1bac4] mb-1">Target building (drone demolition)</div>
+          <select
+            value={targetBuilding ?? ""}
+            onChange={(e) => setTargetBuilding(e.target.value || undefined)}
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#c9d1d9] focus:outline-none focus:border-[#d2a8ff]"
+          >
+            <option value="">None</option>
+            {BUILDING_ORDER.map(name => (
+              <option key={name} value={name}>{BUILDING_DISPLAY[name]}</option>
+            ))}
+          </select>
         </div>
       )}
 

@@ -1,10 +1,3 @@
-// Logica pura de calcul al bataliei — fara acces la baza de date
-// Formula confirmata din teste Tribal Wars (luck=0, air defense=0):
-//   pierderi_castigator = (forta_perdant / forta_castigator) ^ 1.5
-// Atacatorii pierd per categorie (INFANTRY/RANGE/MECHANIZED).
-// Aparatorii pierd uniform, calculat prin compararea fortei totale de atac
-// cu apararea medie ponderata dupa compozitia armatei atacatoare.
-
 import { UNITS, getAirDefenseBonus, calcAirDefenseDamage } from "./gameConfig";
 import type { UnitName } from "./gameConfig";
 
@@ -25,8 +18,6 @@ export interface BattleResult {
   loyaltyDamage: number;
 }
 
-// Categorii de atac: SIEGE si CONQUER sunt tratate ca INFANTRY
-// (GOVERNOR are attack=0, deci nu contribuie la forta)
 type AtkCat = "INFANTRY" | "RANGE" | "MECHANIZED";
 
 function toAtkCat(name: UnitName): AtkCat {
@@ -42,18 +33,24 @@ export function calculateBattle(
   airDefenseLevel: number,
   defenderMoney: number,
   defenderEnergy: number,
-  defenderAmmo: number
+  defenderAmmo: number,
+  targetBuilding?: string
 ): BattleResult {
-  // 0. Filtram hackerii — nu participa la bataliile normale (mecanica separata SPY)
+  // 0. Separăm hackerii — au mini-bătălie proprie
+  const atkHackers = attackerUnits.find(u => UNITS[u.name].category === "SPY")?.quantity ?? 0;
+  const defHackers = defenderUnits.find(u => UNITS[u.name].category === "SPY")?.quantity ?? 0;
   attackerUnits = attackerUnits.filter(u => UNITS[u.name].category !== "SPY");
   defenderUnits = defenderUnits.filter(u => UNITS[u.name].category !== "SPY");
 
-  // 1. Damage zid (inainte de lupta)
+  // 1. Air defense damage PRE-bătălie (cu unitățile INIȚIALE, ca în TW)
+  //    Dronele contribuie doar dacă vizează AIR_DEFENSE sau nu au target
   const mlCount    = attackerUnits.find(u => u.name === "MISSILE_LAUNCHER")?.quantity ?? 0;
-  const droneCount = attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0;
-  const levelsDestroyed    = calcAirDefenseDamage(airDefenseLevel, mlCount, droneCount);
-  const newAirDefenseLevel = airDefenseLevel - levelsDestroyed;
-  const defenseBonus       = getAirDefenseBonus(newAirDefenseLevel) / 100;
+  const dronesForAD = (!targetBuilding || targetBuilding === "AIR_DEFENSE")
+    ? (attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0)
+    : 0;
+  const airDefLevelsDestroyed = calcAirDefenseDamage(airDefenseLevel, mlCount, dronesForAD);
+  const newAirDefenseLevel = airDefenseLevel - airDefLevelsDestroyed;
+  const defenseBonus = getAirDefenseBonus(newAirDefenseLevel) / 100;
 
   // 2. Forta de atac per categorie
   const A: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
@@ -61,7 +58,7 @@ export function calculateBattle(
     A[toAtkCat(name)] += UNITS[name].attack * quantity;
   }
 
-  // 3. Aparare per categorie de atac (cu bonus Air Defense)
+  // 3. Aparare per categorie de atac (cu bonus Air Defense redus)
   const D: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of defenderUnits) {
     const cfg  = UNITS[name];
@@ -71,7 +68,7 @@ export function calculateBattle(
     D.MECHANIZED += cfg.defenseVsMechanized * quantity * mult;
   }
 
-  // 4. Forta totala de atac si aparare ponderata (formula Tribal Wars)
+  // 4. Forta totala de atac si aparare ponderata
   const A_total = A.INFANTRY + A.RANGE + A.MECHANIZED;
   let D_eff = 0;
   if (A_total > 0) {
@@ -79,12 +76,9 @@ export function calculateBattle(
           + (A.RANGE      / A_total) * D.RANGE
           + (A.MECHANIZED / A_total) * D.MECHANIZED;
   }
-  // >= gestioneaza cazul 0 atacatori vs 0 aparatori (Governor vs oras gol)
   const attackerWon = A_total >= D_eff;
 
-  // 5. Pierderi atacator per categorie (formula Tribal Wars):
-  //    loss_rate[cat] = (D[cat] / A_total)^1.5
-  //    Apărarea contra categoriei se compară cu atacul TOTAL, nu cu atacul categoriei.
+  // 5. Pierderi atacator per categorie
   const atkLoss: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   if (attackerWon && A_total > 0) {
     for (const cat of ["INFANTRY", "RANGE", "MECHANIZED"] as AtkCat[]) {
@@ -101,8 +95,7 @@ export function calculateBattle(
     };
   });
 
-  // 6. Pierderi aparator: rata uniforma (castigatorul pierde tot,
-  //    perdantul pierde (A_total/D_eff)^1.5 din toate unitatile)
+  // 6. Pierderi aparator
   const defLossRate = attackerWon
     ? 1.0
     : (A_total > 0 ? Math.pow(A_total / D_eff, 1.5) : 0);
@@ -112,7 +105,27 @@ export function calculateBattle(
     quantity: Math.round(quantity * (1 - defLossRate)),
   }));
 
-  // 8. Resurse furate (daca atacatorul castiga)
+  // 7. Mini-bătălie hackeri
+  if (atkHackers > 0) {
+    const hackerLossRate = defHackers > 0
+      ? Math.min(1, Math.pow(defHackers / atkHackers, 1.5))
+      : 0;
+    attackerSurvivors.push({
+      name: "HACKER" as UnitName,
+      quantity: Math.round(atkHackers * (1 - hackerLossRate)),
+    });
+  }
+  if (defHackers > 0) {
+    const hackerLossRate = atkHackers > 0
+      ? Math.min(1, Math.pow(atkHackers / defHackers, 1.5))
+      : 0;
+    defenderSurvivors.push({
+      name: "HACKER" as UnitName,
+      quantity: Math.round(defHackers * (1 - hackerLossRate)),
+    });
+  }
+
+  // 8. Resurse furate
   let stolenMoney = 0, stolenEnergy = 0, stolenAmmo = 0;
   if (attackerWon) {
     const totalCarry = attackerSurvivors.reduce(
@@ -124,9 +137,7 @@ export function calculateBattle(
     stolenAmmo   = Math.floor(Math.min(defenderAmmo,   perResource));
   }
 
-  // 9. Efect Governor (reduce loyalty)
-  // Indiferent cati guvernatori sunt in atac, doar UNUL reduce loyalty: 20-35%.
-  // Daca vrei sa cuceresti mai repede, trimite atacuri separate cu cate un Governor.
+  // 9. Efect Governor
   const govSurvivors = attackerSurvivors.find(u => u.name === "GOVERNOR")?.quantity ?? 0;
   const allDefDead   = defenderSurvivors.every(u => u.quantity === 0);
   let loyaltyDamage  = 0;
@@ -139,7 +150,7 @@ export function calculateBattle(
     attackerSurvivors,
     defenderSurvivors,
     newAirDefenseLevel,
-    airDefenseLevelsDestroyed: levelsDestroyed,
+    airDefenseLevelsDestroyed: airDefLevelsDestroyed,
     stolenMoney,
     stolenEnergy,
     stolenAmmo,

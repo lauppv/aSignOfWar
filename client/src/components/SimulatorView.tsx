@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UNITS } from "@shared/gameConfig.ts";
+import { UNITS, calcBuildingDamage } from "@shared/gameConfig.ts";
 import type { UnitName } from "@shared/gameConfig.ts";
 import { calculateBattle } from "@shared/battleCalc.ts";
 import type { BattleResult } from "@shared/battleCalc.ts";
@@ -22,7 +22,9 @@ export default function SimulatorView({ onClose }: Props) {
   const [defMoney, setDefMoney] = useState(0);
   const [defEnergy, setDefEnergy] = useState(0);
   const [defAmmo, setDefAmmo] = useState(0);
+  const [targetBuildingLevel, setTargetBuildingLevel] = useState(0);
   const [result, setResult] = useState<BattleResult | null>(null);
+  const [buildingDamageResult, setBuildingDamageResult] = useState<number>(0);
 
   const { openUnit } = useUnitInfo();
 
@@ -36,7 +38,16 @@ export default function SimulatorView({ onClose }: Props) {
 
     if (atkUnits.length === 0 && defUnits.length === 0) return;
 
-    setResult(calculateBattle(atkUnits, defUnits, airDefenseLevel, defMoney, defEnergy, defAmmo));
+    const simTargetBuilding = targetBuildingLevel > 0 ? "HEADQUARTERS" : undefined;
+    const battleResult = calculateBattle(atkUnits, defUnits, airDefenseLevel, defMoney, defEnergy, defAmmo, simTargetBuilding);
+    setResult(battleResult);
+
+    if (battleResult.attackerWon && targetBuildingLevel > 0) {
+      const survivingDrones = battleResult.attackerSurvivors.find(u => u.name === "DRONE")?.quantity ?? 0;
+      setBuildingDamageResult(calcBuildingDamage(targetBuildingLevel, survivingDrones));
+    } else {
+      setBuildingDamageResult(0);
+    }
   }
 
   function reset() {
@@ -46,7 +57,9 @@ export default function SimulatorView({ onClose }: Props) {
     setDefMoney(0);
     setDefEnergy(0);
     setDefAmmo(0);
+    setTargetBuildingLevel(0);
     setResult(null);
+    setBuildingDamageResult(0);
   }
 
   function setUnit(side: "atk" | "def", name: UnitName, value: string) {
@@ -148,6 +161,12 @@ export default function SimulatorView({ onClose }: Props) {
             {result.loyaltyDamage > 0 && (
               <span>Loyalty: <span className="text-[#f85149] font-semibold">-{result.loyaltyDamage}</span></span>
             )}
+            {buildingDamageResult > 0 && (
+              <span>Building: {targetBuildingLevel} → {targetBuildingLevel - buildingDamageResult} <span className="text-[#d2a8ff]">(-{buildingDamageResult})</span></span>
+            )}
+            {targetBuildingLevel > 0 && buildingDamageResult === 0 && result.attackerWon && (
+              <span className="text-[#7d8590]">Building: no damage</span>
+            )}
           </div>
         </div>
       )}
@@ -187,6 +206,17 @@ export default function SimulatorView({ onClose }: Props) {
               type="text" inputMode="numeric" min={0} value={defAmmo}
               onChange={e => setDefAmmo(Math.max(0, parseInt(e.target.value) || 0))}
               className="w-20 bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-right text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
+            />
+          </label>
+        </div>
+        <div className="flex gap-4 mb-3 items-center">
+          <span className="text-[10px] uppercase tracking-widest text-[#d2a8ff]">Drone target:</span>
+          <label className="flex items-center gap-1.5 text-xs text-[#c9d1d9]">
+            Building level
+            <input
+              type="text" inputMode="numeric" min={0} max={30} value={targetBuildingLevel}
+              onChange={e => setTargetBuildingLevel(Math.min(30, Math.max(0, parseInt(e.target.value) || 0)))}
+              className="w-14 bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-right text-xs text-[#c9d1d9] focus:border-[#d2a8ff] outline-none"
             />
           </label>
         </div>

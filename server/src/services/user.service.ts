@@ -15,6 +15,7 @@ export interface PlayerProfile {
   id: string;
   username: string;
   description: string | null;
+  avatarUrl: string | null;
   alliance: { id: string; name: string; tag: string } | null;
   cities: PlayerProfileCity[];
   totalCities: number;
@@ -31,6 +32,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
       id: true,
       username: true,
       description: true,
+      avatarUrl: true,
       createdAt: true,
       alliance: { select: { id: true, name: true, tag: true } },
       cities: {
@@ -75,6 +77,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
     id: target.id,
     username: target.username,
     description: target.description,
+    avatarUrl: target.avatarUrl,
     alliance: target.alliance,
     cities: targetCities,
     totalCities: targetCities.length,
