@@ -1,4 +1,6 @@
-// Helpers specifice UI-ului (nu config — config-ul e in shared/gameConfig.ts)
+// Helperi specifici UI-ului — nu config (config-ul e in shared/gameConfig.ts).
+// computeCityPoints replica calculul serverului pe client — asta inseamna ca punctele
+// din resource bar se actualizeaza instant fara sa astepte refetch-ul de 30s al rankings.
 
 import type { UnitName } from "@shared/gameConfig.ts";
 import { UNITS, getBuildingPoints } from "@shared/gameConfig.ts";

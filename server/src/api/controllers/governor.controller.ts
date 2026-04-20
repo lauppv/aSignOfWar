@@ -11,7 +11,7 @@ export const getGovernor = async (req: AuthRequest, res: Response) => {
 export const deposit = async (req: AuthRequest, res: Response) => {
   const parsed = depositGovernorSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ mesaj: "Invalid body" });
+    return res.status(400).json({ error: "INVALID_PAYLOAD" });
   }
   try {
     const result = await depositGovernor(
@@ -33,10 +33,10 @@ export const deposit = async (req: AuthRequest, res: Response) => {
         INSUFFICIENT_POPULATION:  400,
       };
       if (code.startsWith("HQ_REQUIRED")) {
-        return res.status(400).json({ mesaj: code });
+        return res.status(400).json({ error: code });
       }
       if (bad[code] != null) {
-        return res.status(bad[code]).json({ mesaj: code });
+        return res.status(bad[code]).json({ error: code });
       }
     }
     throw err;
@@ -46,7 +46,7 @@ export const deposit = async (req: AuthRequest, res: Response) => {
 export const recruit = async (req: AuthRequest, res: Response) => {
   const parsed = recruitGovernorSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ mesaj: "Invalid body" });
+    return res.status(400).json({ error: "INVALID_PAYLOAD" });
   }
   try {
     const result = await recruitGovernor(req.userId!, parsed.data.cityId);
@@ -63,10 +63,10 @@ export const recruit = async (req: AuthRequest, res: Response) => {
         USER_NOT_FOUND:             404,
       };
       if (code.startsWith("HQ_REQUIRED")) {
-        return res.status(400).json({ mesaj: code });
+        return res.status(400).json({ error: code });
       }
       if (bad[code] != null) {
-        return res.status(bad[code]).json({ mesaj: code });
+        return res.status(bad[code]).json({ error: code });
       }
     }
     throw err;

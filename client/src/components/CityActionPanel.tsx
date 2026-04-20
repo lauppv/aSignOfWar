@@ -4,7 +4,7 @@ import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/
 import { sendCommand, getCityCommands, withdrawStationedSupport, cancelCommand, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import { getHarborCapacity, getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec, getFieldDistance } from "@shared/gameConfig.ts";
-import { UNIT_DISPLAY, BUILDING_DISPLAY, BUILDING_ORDER } from "../lib/labels.ts";
+import { UNIT_DISPLAY, BUILDING_DISPLAY, BUILDING_ORDER, CMD_COLORS, CMD_LABEL } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { useNow } from "../context/TickContext.tsx";
@@ -37,6 +37,10 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
 
+  // Panoul serveste dublu scop: info oras (populatie, cladiri, trupe stationate)
+  // si formular comanda (trimite atac/suport/resurse/spion). Mode toggle comuta intre ele.
+  // Panoul traieste pe MapPage ca overlay draggable, nu ca modal — ca sa poti vedea
+  // contextul hartii in timp ce planifici un atac.
   const now = useNow();
   const isOwn     = myCity?.id === city.id;
   const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
@@ -281,13 +285,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   // ─── FORM MODE ───────────────────────────────────────────────────────────────
   const availableUnits = (myCity?.units.filter(u => u.quantity > 0) ?? [])
     .filter(u => type === "SPY" ? u.name === "HACKER" : u.name !== "HACKER");
-  const typeColors: Record<CommandType, { fg: string; bg: string; border: string }> = {
-    ATTACK:    { fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
-    SUPPORT:   { fg: "#58a6ff", bg: "#0c2744", border: "#58a6ff" },
-    RESOURCES: { fg: "#d29922", bg: "#3d2e0a", border: "#d29922" },
-    SPY:       { fg: "#a371f7", bg: "#2e1a3d", border: "#a371f7" },
-  };
-  const tc = typeColors[type];
+  const tc = CMD_COLORS[type];
 
   const canSubmit = (() => {
     if (mutation.isPending) return false;
@@ -397,7 +395,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
           className="flex-1 text-[10px] uppercase tracking-wide border rounded py-1 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
           style={{
             color: tc.fg,
-            borderColor: tc.border,
+            borderColor: tc.fg,
             background: canSubmit ? tc.bg : undefined,
           }}
         >
@@ -435,12 +433,7 @@ function Wrapper({
   );
 }
 
-const ORDER_META: Record<CommandType, { label: string; fg: string; border: string }> = {
-  ATTACK:    { label: "Attack",    fg: "#f85149", border: "#3d1a1a" },
-  SUPPORT:   { label: "Support",   fg: "#58a6ff", border: "#0c2744" },
-  RESOURCES: { label: "Resources", fg: "#d29922", border: "#3d2e0a" },
-  SPY:       { label: "Spy",       fg: "#a371f7", border: "#2e1a3d" },
-};
+// Reuses CMD_COLORS + CMD_LABEL from labels.ts — ORDER_META was a local duplicate.
 
 function fmtEta(cmd: OutgoingCommand, now: number): string {
   if (cmd.status === "ARRIVED")   return "stationed";
@@ -564,18 +557,18 @@ function OrderRow({
   cmd, onCancel, cancelPending, now,
 }: { cmd: OutgoingCommand; onCancel?: () => void; cancelPending?: boolean; now: number }) {
   const { openUnit } = useUnitInfo();
-  const meta = ORDER_META[cmd.type];
+  const colors = CMD_COLORS[cmd.type];
   const activeUnits = cmd.units.filter(u => u.quantity > 0);
   const cancelable = !!onCancel && canCancelCmd(cmd, now);
 
   return (
     <div
       className="flex flex-col gap-1 rounded px-2 py-1.5 bg-[#0d1117] border"
-      style={{ borderColor: meta.border }}
+      style={{ borderColor: colors.bg }}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: meta.fg }}>
-          {meta.label}
+        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: colors.fg }}>
+          {CMD_LABEL[cmd.type]}
         </span>
         <span className="text-[10px] text-[#b1bac4] font-mono">{fmtEta(cmd, now)}</span>
       </div>

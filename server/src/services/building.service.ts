@@ -35,8 +35,9 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
   let startAt!: Date;
   let finishAt!: Date;
 
-  // lastOrder si calculul startAt/finishAt sunt in interiorul tranzactiei
-  // pentru a evita race conditions intre request-uri simultane
+  // Prevenire race condition: lookup-ul lastOrder + deducerea resurselor se fac intr-o
+  // singura tranzactie Prisma. Fara asta, doua click-uri rapide de upgrade ar putea vedea
+  // ambele acelasi lastOrder si se suprapune in coada, sau ambele trec verificarea de resurse.
   await prisma.$transaction(async (tx) => {
     const lastOrder = await tx.buildingUpgradeOrder.findFirst({
       where:   { cityId: building.city.id },
@@ -70,6 +71,10 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     orderId = order.id;
   });
 
+  // Compensating transaction: daca BullMQ esueaza sa programeze job-ul, refundam
+  // resursele si stergem order-ul. E un pattern saga simplificat — un sistem distribuit
+  // real ar folosi outbox sau 2PC, dar pentru un joc single-server catch-and-rollback
+  // e suficient si mult mai simplu. YAGNI.
   const delay = finishAt.getTime() - Date.now();
 
   try {

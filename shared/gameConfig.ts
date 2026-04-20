@@ -1,5 +1,11 @@
-// Sursa unica de adevar pentru toate datele statice ale jocului
-// Importat de server SI client 
+// Sursa unica de adevar pentru toate datele statice ale jocului — importat de server SI client.
+// Asta garanteaza ca simulatorul din frontend arata exact ce calculeaza serverul.
+// Orice schimbare de balans se face DOAR aici, nu exista riscul de desync.
+//
+// Am ales lookup tables (array-uri) in loc de formule (base * growth^level) pentru ca
+// imi dau control total asupra curbei la fiecare nivel — o formula nu poate exprima
+// platourile si salturile pe care le vreau la anumite nivele. Trade-off: mentenanta
+// manuala, dar cu max 30 nivele e gestionabil.
 
 // ─── Tipuri ──────────────────────────────────────────────────────────────────
 

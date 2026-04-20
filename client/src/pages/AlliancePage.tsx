@@ -13,19 +13,7 @@ import {
 import { getCurrentUserId } from "../api/client.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
-
-const ACCESS_LABEL: Record<AllianceAccess, string> = {
-  OPEN: "Open",
-  CLOSED: "Closed",
-  INVITE_ONLY: "Invite only",
-  APPLICATION: "Application",
-};
-const ACCESS_COLOR: Record<AllianceAccess, string> = {
-  OPEN: "#3fb950",
-  CLOSED: "#8b949e",
-  INVITE_ONLY: "#58a6ff",
-  APPLICATION: "#d29922",
-};
+import { ACCESS_LABEL, ACCESS_COLOR } from "../lib/labels.ts";
 
 export default function AlliancePage() {
   const navigate = useNavigate();
@@ -60,7 +48,7 @@ export default function AlliancePage() {
         {!myQuery.isLoading && !myQuery.error && (
           myQuery.data
             ? <InAllianceView alliance={myQuery.data} myId={myId} onChanged={invalidateAll} />
-            : <NoAllianceView myId={myId} onChanged={invalidateAll} />
+            : <NoAllianceView onChanged={invalidateAll} />
         )}
       </div>
     </div>
@@ -282,6 +270,7 @@ function InvitationsTab({ onChanged }: { onChanged: () => void }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["alliance", "invitations", "leader"] });
     },
+    onError: (e: Error) => setErr(e.message),
   });
 
   return (
@@ -482,8 +471,7 @@ function SettingsTab({ alliance, onChanged }: { alliance: AllianceDetail; onChan
 }
 
 // ═══ NOT IN AN ALLIANCE ═════════════════════════════════════════════════════════
-function NoAllianceView({ myId, onChanged }: { myId: string | null; onChanged: () => void }) {
-  void myId;
+function NoAllianceView({ onChanged }: { onChanged: () => void }) {
   const qc = useQueryClient();
   const { openAlliance } = useAllianceProfile();
   const [mode, setMode] = useState<"none" | "create">("none");

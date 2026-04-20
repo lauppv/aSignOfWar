@@ -13,7 +13,7 @@ import {
 } from "@shared/gameConfig.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import UnitCard from "../components/UnitCard.tsx";
-import { UNIT_ORDER } from "../lib/labels.ts";
+import { UNIT_ORDER, CMD_COLORS, fmtArrival } from "../lib/labels.ts";
 import CityMap from "../components/CityMap.tsx";
 import BuildingsView from "../components/BuildingsView.tsx";
 import MilitaryBaseView from "../components/MilitaryBaseView.tsx";
@@ -27,32 +27,17 @@ type MergedCommand =
   | ({ direction: "outgoing" } & OutgoingCommand)
   | ({ direction: "incoming" } & IncomingCommand);
 
-const CMD_COLORS = {
-  ATTACK:    { border: "#f85149", badgeBg: "#3d1a1a", badgeText: "#f85149" },
-  SUPPORT:   { border: "#58a6ff", badgeBg: "#0c2744", badgeText: "#58a6ff" },
-  RESOURCES: { border: "#d29922", badgeBg: "#3d2e0a", badgeText: "#d29922" },
-  SPY:       { border: "#a371f7", badgeBg: "#2e1a3d", badgeText: "#a371f7" },
-};
-
 const CANCEL_WINDOW_MS = 5 * 60 * 1000;
 
 function canCancel(cmd: OutgoingCommand, now: number): boolean {
   return now - new Date(cmd.departureAt).getTime() <= CANCEL_WINDOW_MS;
 }
 
-function fmtArrival(iso: string, now: number): string {
-  const diff = new Date(iso).getTime() - now;
-  if (diff <= 0) return "arriving...";
-  const s = Math.floor(diff / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
-
 export default function CityPage() {
+  // Dashboard principal oras: layout 3 coloane (stanga=aparare+comenzi, centru=harta oras, dreapta=unitati).
+  // Sub-view-urile (cladiri, baza militara, rapoarte, simulator) inlocuiesc tot continutul
+  // prin URL search params — asta inseamna ca browser back/forward merge natural intre view-uri
+  // fara management custom de history.
   const navigate = useNavigate();
   const location = useLocation();
   const now = useNow();
@@ -238,14 +223,14 @@ export default function CityPage() {
                     className="p-2 rounded flex items-center gap-2 shrink-0 cursor-pointer hover:brightness-125"
                     style={{
                       background: isIncomingAttack ? "#2a0e0e" : "#0d1117",
-                      borderLeft:  isOut ? `4px solid ${colors.border}` : undefined,
-                      borderRight: !isOut ? `4px solid ${colors.border}` : undefined,
+                      borderLeft:  isOut ? `4px solid ${colors.fg}` : undefined,
+                      borderRight: !isOut ? `4px solid ${colors.fg}` : undefined,
                       boxShadow: isIncomingAttack ? "0 0 10px rgba(248,81,73,0.35)" : undefined,
                     }}
                   >
                     <span
                       className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
-                      style={{ background: colors.badgeBg, color: colors.badgeText }}
+                      style={{ background: colors.bg, color: colors.fg }}
                     >
                       {cmd.type}
                     </span>

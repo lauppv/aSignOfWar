@@ -52,24 +52,25 @@ export default function Layout() {
     refetchInterval: 10000,
   });
 
+  // Tin evidenta rapoartelor deja vazute in localStorage ca sa supravietuiasca refresh-ului.
+  // La navigarea catre Reports, trimit snapshot-ul ca route state ca ReportsView sa poata
+  // evidentia "rapoarte noi de la ultima vizita".
   const seenReportsKey = `seenReports:${getCurrentUserId() ?? "anon"}`;
-  const [seenReportIds, setSeenReportIds] = useState<Set<string>>(() => {
+
+  function readSeenIds(): Set<string> {
     try {
       const raw = localStorage.getItem(seenReportsKey);
       return new Set<string>(raw ? JSON.parse(raw) : []);
     } catch {
       return new Set<string>();
     }
-  });
+  }
+
+  const [seenReportIds, setSeenReportIds] = useState<Set<string>>(readSeenIds);
 
   // Re-sync if the user changed (rare; defensive).
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(seenReportsKey);
-      setSeenReportIds(new Set<string>(raw ? JSON.parse(raw) : []));
-    } catch {
-      setSeenReportIds(new Set<string>());
-    }
+    setSeenReportIds(readSeenIds());
   }, [seenReportsKey]);
 
   const unreadReports = (reports ?? []).filter((r) => !seenReportIds.has(r.id)).length;

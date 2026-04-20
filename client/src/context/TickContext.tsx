@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-// Un singur setInterval global pentru toata aplicatia. Componentele care au
-// nevoie de "acum" pentru countdown-uri apeleaza useNow() si primesc un numar
-// (Date.now()) care se actualizeaza o data pe secunda. Un singur rerender/sec
-// declansat de provider se propaga catre toti consumerii — fara interval-uri
-// per component.
+// Un singur tick global (1 Hz) partajat de toate componentele cu countdown. Fara asta,
+// fiecare rand de comanda, fiecare timer de recrutare, fiecare progress bar de cladire
+// ar rula propriul setInterval — adica 50+ timere pe o pagina activa. Un provider,
+// un rerender/sec, React diffing se ocupa de rest. Trade-off: TOTI consumatorii se
+// rerandeaza in fiecare secunda chiar daca nimic nu s-a schimbat pentru ei.
+// La complexitatea UI-ului actual, e neglijabil.
 const TickContext = createContext<number>(Date.now());
 
 export function TickProvider({ children }: { children: ReactNode }) {

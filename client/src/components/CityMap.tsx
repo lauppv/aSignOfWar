@@ -10,6 +10,10 @@ interface Hotspot {
   points: string; // Zona clickabilă a clădirii
 }
 
+// Coordonate SVG polygon trasate manual din ilustratia orasului. Fiecare cladire are
+// un hotspot clickable overlaid pe imagine. Nu sunt auto-generate — daca schimb imaginea,
+// coordonatele necesita update manual. Alternativa ar fi CSS image maps, dar SVG imi da
+// hover effects si styling dinamic gratis.
 const HOTSPOTS: Hotspot[] = [
   { 
     name: "HEADQUARTERS",    

@@ -49,11 +49,9 @@ export default function App() {
   }
 
   return (
-    // daca vom avea mai multe context providers, vom face un context/AppProviders.tsx
-    // care sa le includa pe toate, pentru a nu avea un nesting prea adanc in acest fisier
-
-    // mergem pe principiul YAGNI - You Aren't Gonna Need It, adica nu facem lucruri care nu sunt necesare acum
-    // poate nici nu vom avea nevoie de context pentru cladiri, notificari, etc
+    // Nesting de context providers: TickProvider trebuie sa fie cel mai exterior pentru ca
+    // hook-urile de countdown depind de el. Restul pot fi reordonate liber. Daca creste
+    // peste 5-6 provideri, as extrage un <Providers> wrapper — dar cu 4 nu merita indirectia.
     <TickProvider>
     <UnitInfoProvider>
     <AllianceProfileProvider>

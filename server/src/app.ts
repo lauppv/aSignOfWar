@@ -20,6 +20,15 @@ import { registerRecruitmentWorker } from "./workers/recruitment.worker";
 import { registerCommandWorker } from "./workers/command.worker";
 import { startGhostTicker } from "./services/ghost.service";
 
+// Entry point Express. Arhitectura:
+//   Controllers -> Services -> Prisma (DB) + BullMQ (cozi)
+//   Workers proceseaza job-uri async (upgrade cladiri, recrutare, sosire comenzi)
+//   Shared config (gameConfig.ts) e sursa unica de adevar pentru balansul jocului
+//
+// De ce nu NestJS? YAGNI — Express + layering manual e mai usor pentru un proiect
+// portofoliu cu ~12 endpoint-uri. Decoratorii NestJS adauga ceremonie fara beneficiu
+// la scala asta. Daca as scala la 50+ endpoint-uri, as migra.
+
 const app = express();
 
 app.use(cors({
@@ -49,7 +58,7 @@ app.use("/api/users", userRoutes);
 // Fara el, Express ar return un HTML urat cu tot stack trace-ul vizibil
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
-  res.status(500).json({ mesaj: "Eroare interna de server" });
+  res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
 });
 
 registerBuildingWorker();

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getPlayerProfile, updateMyDescription, uploadMyAvatar, type PlayerProfile } from "../api/user.ts";
 import { getCurrentUserId } from "../api/client.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
@@ -49,8 +50,14 @@ export default function PlayerProfileModal({ userId, onClose }: Props) {
 
 function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void }) {
   const { openAlliance } = useAllianceProfile();
+  const navigate = useNavigate();
   const myId = getCurrentUserId();
   const isMe = myId === p.id;
+
+  function goToCity(cityId: string) {
+    onClose();
+    navigate(`/map?selectCityId=${encodeURIComponent(cityId)}`);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,7 +72,7 @@ function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void 
                 {" · Alliance: "}
                 <button
                   type="button"
-                  onClick={() => { onClose(); openAlliance(p.alliance!.id); }}
+                  onClick={() => { onClose(); if (p.alliance) openAlliance(p.alliance.id); }}
                   className="text-[#79c0ff] hover:underline"
                 >
                   [{p.alliance.tag}] {p.alliance.name}
@@ -106,9 +113,13 @@ function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void 
               </thead>
               <tbody>
                 {p.cities.map((c, i) => (
-                  <tr key={c.id} className="border-b border-[#21262d] last:border-0">
+                  <tr
+                    key={c.id}
+                    onClick={() => goToCity(c.id)}
+                    className="border-b border-[#21262d] last:border-0 cursor-pointer hover:bg-[#1c2129]"
+                  >
                     <td className="py-1.5 px-2 text-[#8b949e] font-mono">{i + 1}</td>
-                    <td className="py-1.5 px-2 text-[#c9d1d9]">{c.name}</td>
+                    <td className="py-1.5 px-2 text-[#e6b800] hover:underline">{c.name}</td>
                     <td className="py-1.5 px-2 text-[#8b949e] font-mono">({c.x}, {c.y})</td>
                     <td className="py-1.5 px-2 text-right font-mono text-[#e6b800]">
                       {c.points.toLocaleString()}

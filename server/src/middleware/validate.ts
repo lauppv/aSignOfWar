@@ -12,9 +12,8 @@ export const validate = (schema: z.ZodType) =>
         path: i.path.join("."),
         message: i.message,
       }));
-      // Mesajul va fi primul error, concis si specific
-      const mesaj = errors.map((e) => e.path ? `${e.path}: ${e.message}` : e.message).join("; ");
-      return res.status(400).json({ mesaj, errors });
+      const error = errors.map((e) => e.path ? `${e.path}: ${e.message}` : e.message).join("; ");
+      return res.status(400).json({ error, errors });
     }
     req.body = result.data;
     next();

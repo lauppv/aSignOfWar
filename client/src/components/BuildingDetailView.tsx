@@ -12,6 +12,7 @@ import {
   getHousingCapacity as getMaxPopulation,
   getHarborCapacity,
   getAirDefenseBonus,
+  getRecruitmentTime,
 } from "@shared/gameConfig.ts";
 import { getBuildingLevel, fmtDuration } from "../lib/cityHelpers.ts";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
@@ -66,12 +67,18 @@ function getStats(name: BuildingName, level: number, hqLevel: number): StatRow[]
         { label: "Build time reduction", current: `${Math.round((1 - Math.max(0.1, 1 - level * 0.02)) * 100)}%`, next: `${Math.round((1 - Math.max(0.1, 1 - nextLvl * 0.02)) * 100)}%` },
         ...base,
       ];
-    case "MILITARY_BASE":
+    case "MILITARY_BASE": {
+      // Speed bonus = how much faster recruitment is compared to no Military Base.
+      // getRecruitmentTime uses the MILITARY_BASE_SPEED_FACTOR lookup table from gameConfig —
+      // we compare against base time (MB level 0) to show the percentage improvement.
+      const baseTime = getRecruitmentTime("LIGHT_INFANTRY", 0);
+      const curBonus = level > 0 ? Math.round((1 - getRecruitmentTime("LIGHT_INFANTRY", level) / baseTime) * 100) : 0;
+      const nxtBonus = Math.round((1 - getRecruitmentTime("LIGHT_INFANTRY", nextLvl) / baseTime) * 100);
       return [
-        { label: "Recruit speed bonus", current: level > 0 ? `${100 - [63,59,56,53,50,47,44,42,39,37,35,33,31,29,28,26,25,23,22,21,20,19,17,16,16][level-1]}%` : "—",
-                                         next:             `${100 - [63,59,56,53,50,47,44,42,39,37,35,33,31,29,28,26,25,23,22,21,20,19,17,16,16][nextLvl-1]}%` },
+        { label: "Recruit speed bonus", current: level > 0 ? `${curBonus}%` : "—", next: `${nxtBonus}%` },
         ...base,
       ];
+    }
     default:
       return base;
   }

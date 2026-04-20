@@ -32,6 +32,9 @@ export interface AllianceRankingEntry {
   totalKills: number;
 }
 
+// O(n*m*k) la fiecare request: loopuri users x cities x buildings. La ~100 playeri
+// e ok (<50ms). La 1000+ as cache-ui rankings in Redis cu TTL 60s sau as recalcula
+// pe un cron — dar acum YAGNI, optimizare prematura pentru un proiect portofoliu.
 export async function getRankings(): Promise<PlayerRankingEntry[]> {
   const users = await prisma.user.findMany({
     select: {

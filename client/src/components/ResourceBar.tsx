@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useClickOutside } from "../hooks/useClickOutside.ts";
 
 interface Props {
   cityName: string;
@@ -31,46 +32,18 @@ function fmt(n: number): string {
 }
 
 export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, onRankings, onAlliance, onMessages, unreadReports = 0, unreadMessages = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
+  // 27 de props e mult — intr-o aplicatie mai mare as inlocui cu un NavigationContext
+  // sau un useNavigation() hook ca ResourceBar sa nu trebuiasca sa stie de fiecare pagina.
+  // Pentru un proiect portofoliu cu 5 pagini, prop-drilling e mai clar decat context. KISS.
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const cityMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDocClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (!cityMenuOpen) return;
-    function onDocClick(e: MouseEvent) {
-      if (cityMenuRef.current && !cityMenuRef.current.contains(e.target as Node)) {
-        setCityMenuOpen(false);
-      }
-    }
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setCityMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [cityMenuOpen]);
+  const closeMenu     = useCallback(() => setMenuOpen(false), []);
+  const closeCityMenu = useCallback(() => setCityMenuOpen(false), []);
+  useClickOutside(menuRef, menuOpen, closeMenu);
+  useClickOutside(cityMenuRef, cityMenuOpen, closeCityMenu);
 
   const hasMultipleCities = (ownedCities?.length ?? 0) > 1;
 

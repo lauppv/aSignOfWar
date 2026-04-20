@@ -2,7 +2,7 @@ import prisma from "../config/db";
 import { recruitmentQueue } from "../config/queue";
 import { UNITS, getRecruitmentTime, getHousingCapacity, getGovernorCost } from "../../../shared/gameConfig";
 import env from "../config/env";
-import { UnitName } from "@prisma/client";
+import { UnitName, Prisma } from "@prisma/client";
 import { syncResources } from "./city.service";
 
 export const startRecruitment = async (
@@ -56,8 +56,8 @@ export const startRecruitment = async (
   let startAt!: Date;
   let finishAt!: Date;
 
-  // lastOrder si calculul startAt/finishAt sunt in interiorul tranzactiei
-  // pentru a evita race conditions intre request-uri simultane
+  // Aceeasi prevenire race condition ca la upgrade-urile de cladiri — vezi building.service.ts.
+  // Lookup-ul lastOrder + deducerea resurselor trebuie sa fie atomice.
   await prisma.$transaction(async (tx) => {
     const lastOrder = await tx.recruitmentOrder.findFirst({
       where: { cityId },
@@ -137,6 +137,9 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
     };
   }
 
+  // Refund 75% la anulare — penalizeaza cancel-spamming dar ramane fair.
+  // Aceeasi formula ca in building.service.ts. As fi putut extrage un calcRefund() helper,
+  // dar cu doar 2 call sites nu merita indirectia. KISS.
   const refund = {
     money:  Math.floor(cost.money  * 0.75),
     energy: Math.floor(cost.energy * 0.75),
@@ -148,7 +151,7 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
     if (job) await job.remove();
   }
 
-  const ops: any[] = [
+  const ops: Prisma.PrismaPromise<unknown>[] = [
     prisma.recruitmentOrder.delete({ where: { id: orderId } }),
     prisma.city.update({
       where: { id: order.cityId },

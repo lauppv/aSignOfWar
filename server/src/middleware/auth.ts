@@ -10,7 +10,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ mesaj: "Token lipsa" });
+    return res.status(401).json({ error: "TOKEN_MISSING" });
   }
 
   const token = authHeader.split(" ")[1];
@@ -20,6 +20,6 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     req.userId = decoded.id;
     next();
   } catch {
-    return res.status(401).json({ mesaj: "Token invalid sau expirat" });
+    return res.status(401).json({ error: "TOKEN_INVALID" });
   }
 };

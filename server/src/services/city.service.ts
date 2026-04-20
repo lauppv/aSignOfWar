@@ -6,8 +6,11 @@ import { pickFreeSlot } from "./map.service";
 
 type TransactionClient = Prisma.TransactionClient;
 
-// Calculeaza resursele generate de la lastResourceUpdate pana acum si actualizeaza DB-ul.
-// Apeleaza inainte de orice operatie care citeste sau scade resurse.
+// Calculeaza resursele generate de la lastResourceUpdate pana acum si flush in DB.
+// Trebuie apelat inainte de orice operatie care citeste sau scade resurse — altfel
+// un jucator ar putea cheltui resurse care nu au fost inca produse ("time travel exploit").
+// As fi putut folosi un cron care sync-eaza toate orasele periodic, dar on-demand sync
+// e mai simplu si evita acumularea fantasma pe conturile inactive. YAGNI.
 export const syncResources = async (cityId: string): Promise<void> => {
   const city = await prisma.city.findUnique({
     where: { id: cityId },
@@ -79,8 +82,9 @@ export const getCityOverview = async (userId: string, cityId?: string) => {
   }
   const supportUnits = Array.from(supportMap.entries()).map(([name, quantity]) => ({ name, quantity }));
 
-  // Population = toate unitatile proprii inca in viata, oriunde s-ar afla:
-  // acasa + in drum/stationate in comenzi pornite din acest oras.
+  // Populatie totala = unitati acasa + unitati in tranzit/stationate. Previne un jucator
+  // sa recruteze max pop, sa trimita unitati, si sa recruteze din nou.
+  // Serverul calculeaza asta live — nu ne bazam pe ce trimite clientul.
   const ownCommands = await prisma.command.findMany({
     where:  { fromCityId: city.id, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
     select: { units: { select: { name: true, quantity: true } } },

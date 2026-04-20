@@ -1,5 +1,5 @@
 import type { OutgoingCommand, IncomingCommand } from "../types/index.ts";
-import { UNIT_DISPLAY } from "../lib/labels.ts";
+import { UNIT_DISPLAY, CMD_COLORS, CMD_LABEL, fmtArrival } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { useNow } from "../context/TickContext.tsx";
 
@@ -12,30 +12,11 @@ interface Props {
   onClose: () => void;
 }
 
-const TYPE_META = {
-  ATTACK:    { label: "Attack",    fg: "#f85149", bg: "#3d1a1a" },
-  SUPPORT:   { label: "Support",   fg: "#58a6ff", bg: "#0c2744" },
-  RESOURCES: { label: "Resources", fg: "#d29922", bg: "#3d2e0a" },
-  SPY:       { label: "Spy",       fg: "#a371f7", bg: "#2e1a3d" },
-} as const;
-
-function fmtArrival(iso: string, now: number): string {
-  const diff = new Date(iso).getTime() - now;
-  if (diff <= 0) return "arriving...";
-  const s = Math.floor(diff / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
-
 export default function CommandDetailModal({ cmd, onClose }: Props) {
   const { openUnit } = useUnitInfo();
   const now = useNow();
   const isOut  = cmd.direction === "outgoing";
-  const meta   = TYPE_META[cmd.type];
+  const meta   = CMD_COLORS[cmd.type];
   const other  = isOut
     ? (cmd as OutgoingCommand & { direction: "outgoing" }).toCity
     : (cmd as IncomingCommand & { direction: "incoming" }).fromCity;
@@ -65,7 +46,7 @@ export default function CommandDetailModal({ cmd, onClose }: Props) {
         >
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wide" style={{ color: meta.fg }}>
-              {meta.label}
+              {CMD_LABEL[cmd.type]}
             </span>
             <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">
               {directionLabel}

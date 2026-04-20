@@ -37,6 +37,17 @@ export function calculateBattle(
   defenderAmmo: number,
   targetBuilding?: string
 ): BattleResult {
+  // Sistemul de lupta inspirat din Tribal Wars. Decizii de design:
+  //   1. Atacul e split pe categorii (INF/RANGE/MECH), apararea e ponderata dupa
+  //      compozitia atacatorului — asta recompenseaza armatele echilibrate.
+  //   2. Air defense damage e calculat PRE-batalie dar scalat cu battleRatio —
+  //      atacatorii care pierd tot dau ceva damage de siege, nu e all-or-nothing.
+  //   3. Hackerii au mini-batalie proprie (spy vs spy) — sunt invizibili pentru
+  //      unitatile normale. Asta creeaza un meta-game dedicat de spionaj.
+  //   4. Prada se imparte egal pe 3 resurse (carry / 3) — previne cherry-picking.
+  //   5. Governor loyalty damage: 20 + random(0-15). Randomness-ul previne calculul
+  //      exact "am nevoie de N guvernatori", adaugand incertitudine strategica.
+
   // 0. Separăm hackerii — au mini-bătălie proprie
   const atkHackers = attackerUnits.find(u => UNITS[u.name].category === "SPY")?.quantity ?? 0;
   const defHackers = defenderUnits.find(u => UNITS[u.name].category === "SPY")?.quantity ?? 0;

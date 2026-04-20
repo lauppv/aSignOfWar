@@ -1,4 +1,52 @@
+// String-uri de afisare centralizate si palete de culori pentru UI. Toate numele vizibile
+// (cladiri, unitati, comenzi) stau aici ca sa evit magic strings imprastiate in 20+ componente.
+// NU e i18n — jocul e doar in engleza. Daca as avea nevoie de multi-language, as inlocui
+// aceste record-uri cu o librarie propriu-zisa (react-intl, i18next).
 import type { BuildingName, UnitName, UnitCategory } from "../types/index.ts";
+import type { CommandType } from "../api/command.ts";
+import type { AllianceAccess } from "../api/alliance.ts";
+
+// ── Command type colors ────────────────────────────────────────────────────
+// Every command type has a consistent color palette across the UI:
+// command rows (CityPage), detail modal, action panel (MapPage), reports.
+// fg = foreground text, bg = subtle badge/header background.
+
+export const CMD_COLORS: Record<CommandType, { fg: string; bg: string }> = {
+  ATTACK:    { fg: "#f85149", bg: "#3d1a1a" },
+  SUPPORT:   { fg: "#58a6ff", bg: "#0c2744" },
+  RESOURCES: { fg: "#d29922", bg: "#3d2e0a" },
+  SPY:       { fg: "#a371f7", bg: "#2e1a3d" },
+};
+
+export const CMD_LABEL: Record<CommandType, string> = {
+  ATTACK: "Attack", SUPPORT: "Support", RESOURCES: "Resources", SPY: "Spy",
+};
+
+// ── Alliance access mode labels ────────────────────────────────────────────
+// Used in AlliancePage and AllianceProfileModal.
+
+export const ACCESS_LABEL: Record<AllianceAccess, string> = {
+  OPEN: "Open", CLOSED: "Closed", INVITE_ONLY: "Invite only", APPLICATION: "Application",
+};
+export const ACCESS_COLOR: Record<AllianceAccess, string> = {
+  OPEN: "#3fb950", CLOSED: "#8b949e", INVITE_ONLY: "#58a6ff", APPLICATION: "#d29922",
+};
+
+// ── Time formatting ────────────────────────────────────────────────────────
+// fmtArrival: countdown from now to an ISO timestamp (command arrival).
+// Duplicated between CityPage and CommandDetailModal before extraction.
+
+export function fmtArrival(iso: string, now: number): string {
+  const diff = new Date(iso).getTime() - now;
+  if (diff <= 0) return "arriving...";
+  const s = Math.floor(diff / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
 
 // ── Building labels ─────────────────────────────────────────────────────────
 

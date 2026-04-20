@@ -10,7 +10,7 @@ export const getMyCity = async (req: AuthRequest, res: Response) => {
     return res.json(city);
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "CITY_NOT_FOUND") {
-      return res.status(404).json({ mesaj: "Nu ai niciun oras" });
+      return res.status(404).json({ error: "CITY_NOT_FOUND" });
     }
     throw err;
   }
@@ -19,7 +19,7 @@ export const getMyCity = async (req: AuthRequest, res: Response) => {
 export const renameCity = async (req: AuthRequest, res: Response) => {
   const parsed = renameCitySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ mesaj: "Invalid name" });
+    return res.status(400).json({ error: "INVALID_NAME" });
   }
   try {
     const cityId = typeof req.body.cityId === "string" ? req.body.cityId : undefined;
@@ -27,7 +27,7 @@ export const renameCity = async (req: AuthRequest, res: Response) => {
     return res.json({ id: city.id, name: city.name });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "CITY_NOT_FOUND") {
-      return res.status(404).json({ mesaj: "Nu ai niciun oras" });
+      return res.status(404).json({ error: "CITY_NOT_FOUND" });
     }
     throw err;
   }

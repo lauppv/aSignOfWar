@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { getMap } from "../api/map.ts";
 import { getMyCity } from "../api/city.ts";
@@ -77,6 +77,9 @@ function getPseudoRandom(x: number, y: number) {
 // Imparte celulele goale in tipuri de teren pentru decor. Distributia:
 // 5% mountain, 5% lake, 30% forest, 60% grass. Nu are efect gameplay - doar
 // vizual (iarba e randata prin backgroundul grilei, restul prin imagini).
+// Teren pseudo-random determinist: aspectul tile-ului e derivat din coordonate printr-o
+// functie hash, deci acelasi (x,y) produce mereu acelasi tile. Nu e nevoie de state pe
+// server pentru teren — e pur cosmetic. Hash-ul evita stocarea unui grid 200x200 in memorie.
 function getTileInfo(x: number, y: number) {
   const rand = getPseudoRandom(x, y);
   const seed = rand * 100;
@@ -96,6 +99,7 @@ function getTileInfo(x: number, y: number) {
 export default function MapPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   // Orasul "activ" al jucatorului - cel pentru care se afiseaza resursele in
   // header si de la care pleaca comenzile. Persistat in localStorage prin
   // api/client.ts ca sa supravietuiasca refresh-ului.
@@ -242,6 +246,25 @@ export default function MapPage() {
     el.scrollTop  = myCity.y * CELL + CELL / 2 - el.clientHeight / 2;
     setCentered(true);
   }, [map, myCity, centered]);
+
+  // Deep-link: /map?selectCityId=<id> — centreaza harta pe orasul dat si deschide panoul.
+  // Folosit din rapoarte si profilul jucatorului ca sa poti ataca/sprijini direct din acolo.
+  const selectCityIdParam = searchParams.get("selectCityId");
+  useEffect(() => {
+    if (!selectCityIdParam || !map || !scrollRef.current) return;
+    const city = map.cities.find(c => c.id === selectCityIdParam);
+    if (!city) return;
+    const el = scrollRef.current;
+    el.scrollLeft = city.x * CELL + CELL / 2 - el.clientWidth / 2;
+    el.scrollTop  = city.y * CELL + CELL / 2 - el.clientHeight / 2;
+    setSelected({ city, px: city.x * CELL, py: city.y * CELL });
+    setCentered(true);
+    // Stergem param-ul din URL ca sa nu re-selecteze la re-render
+    const next = new URLSearchParams(searchParams);
+    next.delete("selectCityId");
+    setSearchParams(next, { replace: true });
+  }, [selectCityIdParam, map]);
+
   // Set cu cheile "x,y" ale tuturor celulelor ocupate de orase - folosit ca
   // sa NU desenam tile de teren (padure/lac/munte) peste un oras.
   const citySlots = useMemo(() => {
@@ -252,6 +275,9 @@ export default function MapPage() {
   // Calculeaza tile-urile de teren "speciale" (non-grass) DOAR pentru zona
   // vizibila + 1 celula marja. Fara asta am randa 100x100=10k div-uri. La
   // scroll se recalculeaza in mod natural prin dependenta pe `scroll.*`.
+  // Randez doar tile-urile vizibile in viewport — fara asta, 200x200 = 40,000 elemente
+  // DOM ar omori browserul. Calculez range-ul vizibil din pozitia scroll-ului si adaug
+  // un buffer de 2 celule pe fiecare parte pentru scrolling smooth.
   const visibleSpecialTiles = useMemo(() => {
     if (!map) return [];
     const tiles = [];

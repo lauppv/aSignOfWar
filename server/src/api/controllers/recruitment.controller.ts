@@ -11,23 +11,21 @@ export const recruitUnits = async (req: AuthRequest, res: Response) => {
     return res.json(result);
   } catch (err: unknown) {
     if (!(err instanceof Error)) {
-      return res.status(500).json({ mesaj: "Eroare necunoscuta" });
+      return res.status(500).json({ error: "UNKNOWN_ERROR" });
     }
 
-    if (err.message === "CITY_NOT_FOUND")           return res.status(404).json({ mesaj: "Orasul nu exista" });
-    if (err.message === "UNAUTHORIZED")              return res.status(403).json({ mesaj: "Nu ai acces la acest oras" });
-    if (err.message === "INVALID_QUANTITY")          return res.status(400).json({ mesaj: "Cantitate invalida" });
-    if (err.message === "MILITARY_BASE_REQUIRED")    return res.status(400).json({ mesaj: "Necesita Baza militara nivel 1" });
-    if (err.message === "INSUFFICIENT_RESOURCES")    return res.status(400).json({ mesaj: "Resurse insuficiente" });
-    if (err.message === "INSUFFICIENT_POPULATION")   return res.status(400).json({ mesaj: "Populatie insuficienta" });
+    if (err.message === "CITY_NOT_FOUND")           return res.status(404).json({ error: "CITY_NOT_FOUND" });
+    if (err.message === "UNAUTHORIZED")              return res.status(403).json({ error: "UNAUTHORIZED" });
+    if (err.message === "INVALID_QUANTITY")          return res.status(400).json({ error: "INVALID_QUANTITY" });
+    if (err.message === "MILITARY_BASE_REQUIRED")    return res.status(400).json({ error: "MILITARY_BASE_REQUIRED" });
+    if (err.message === "INSUFFICIENT_RESOURCES")    return res.status(400).json({ error: "INSUFFICIENT_RESOURCES" });
+    if (err.message === "INSUFFICIENT_POPULATION")   return res.status(400).json({ error: "INSUFFICIENT_POPULATION" });
 
     if (err.message.startsWith("HQ_REQUIRED:")) {
-      const level = err.message.split(":")[1];
-      return res.status(400).json({ mesaj: `Necesita Headquarters nivel ${level}` });
+      return res.status(400).json({ error: err.message });
     }
     if (err.message.startsWith("MB_REQUIRED:")) {
-      const level = err.message.split(":")[1];
-      return res.status(400).json({ mesaj: `Necesita Baza militara nivel ${level}` });
+      return res.status(400).json({ error: err.message });
     }
 
     throw err;
@@ -41,10 +39,10 @@ export const cancelRecruitmentOrder = async (req: AuthRequest, res: Response) =>
     return res.json(result);
   } catch (err: unknown) {
     if (!(err instanceof Error)) {
-      return res.status(500).json({ mesaj: "Eroare necunoscuta" });
+      return res.status(500).json({ error: "UNKNOWN_ERROR" });
     }
-    if (err.message === "ORDER_NOT_FOUND") return res.status(404).json({ mesaj: "Comanda nu exista" });
-    if (err.message === "UNAUTHORIZED")    return res.status(403).json({ mesaj: "Nu ai acces" });
+    if (err.message === "ORDER_NOT_FOUND") return res.status(404).json({ error: "ORDER_NOT_FOUND" });
+    if (err.message === "UNAUTHORIZED")    return res.status(403).json({ error: "UNAUTHORIZED" });
     throw err;
   }
 };

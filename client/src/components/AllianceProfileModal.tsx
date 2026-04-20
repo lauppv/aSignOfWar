@@ -3,19 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllianceProfile, uploadAllianceAvatar, type AllianceProfile } from "../api/alliance.ts";
 import { getCurrentUserId } from "../api/client.ts";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
-
-const ACCESS_LABEL: Record<AllianceProfile["accessMode"], string> = {
-  OPEN: "Open",
-  CLOSED: "Closed",
-  INVITE_ONLY: "Invite only",
-  APPLICATION: "Application",
-};
-const ACCESS_COLOR: Record<AllianceProfile["accessMode"], string> = {
-  OPEN: "#3fb950",
-  CLOSED: "#8b949e",
-  INVITE_ONLY: "#58a6ff",
-  APPLICATION: "#d29922",
-};
+import { ACCESS_LABEL, ACCESS_COLOR } from "../lib/labels.ts";
 
 interface Props {
   allianceId: string;

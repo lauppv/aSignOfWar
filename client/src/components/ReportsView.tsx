@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getReports, deleteReport, shareReport } from "../api/report.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { useNow } from "../context/TickContext.tsx";
@@ -174,6 +175,10 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
     else            setCheckedIds(new Set(list.map(r => r.id)));
   }
 
+  // Layout pe 2 coloane: lista rapoarte (stanga) + detaliu raport (dreapta). Panoul de detaliu
+  // randeaza breakdown-ul complet: pierderi, prada, damage cladiri, snapshot-uri spy.
+  // Am considerat un modal, dar side-by-side iti permite sa scanezi mai multe rapoarte
+  // fara sa tot deschizi/inchizi.
   return (
     <div className="relative flex flex-col flex-1 overflow-hidden bg-[#0d1117]">
       {/* Header */}
@@ -391,9 +396,14 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
   const cat  = categoryOf(r);
   const meta = CATEGORY_META[cat];
   const { openPlayer } = usePlayerProfile();
+  const navigate = useNavigate();
   const fromOwner = r.fromCity.owner;
   const toOwner = r.toCity.owner;
   const [sharing, setSharing] = useState(false);
+
+  function goToCity(cityId: string) {
+    navigate(`/map?selectCityId=${encodeURIComponent(cityId)}`);
+  }
 
   const canShare = r.report && !isWithdrawalReport(r.report);
 
@@ -409,7 +419,9 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
             {meta.label}
           </div>
           <div className="text-[11px] text-[#b1bac4] mt-0.5">
-            {r.fromCity.name}
+            <button type="button" onClick={() => goToCity(r.fromCity.id)} className="text-[#e6b800] hover:underline">
+              {r.fromCity.name}
+            </button>
             <span className="text-[#7d8590] font-mono"> ({r.fromCity.x}, {r.fromCity.y})</span>
             {" "}
             <span className="text-[#7d8590]">
@@ -424,7 +436,9 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
               ) : "Ghost city"}]
             </span>
             {" → "}
-            {r.toCity.name}
+            <button type="button" onClick={() => goToCity(r.toCity.id)} className="text-[#e6b800] hover:underline">
+              {r.toCity.name}
+            </button>
             <span className="text-[#7d8590] font-mono"> ({r.toCity.x}, {r.toCity.y})</span>
             {" "}
             <span className="text-[#7d8590]">

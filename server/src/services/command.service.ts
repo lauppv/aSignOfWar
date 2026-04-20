@@ -9,8 +9,13 @@ import {
   getResourceTravelTimeSec,
 } from "../../../shared/gameConfig";
 import env from "../config/env";
-import { CommandType, UnitName } from "@prisma/client";
+import { CommandType, UnitName, BuildingName } from "@prisma/client";
 import { syncResources } from "./city.service";
+
+// Lifecycle-ul unei comenzi: TRAVELING -> ARRIVING (worker) -> RETURNING -> COMPLETED
+// Fereastra de anulare: 5 min dupa plecare, intoarcerea e simetrica (mers X sec = retur X sec).
+// Toate deducerile de resurse/unitati folosesc optimistic locking (updateMany cu WHERE >= qty)
+// pentru a preveni race conditions intre request-uri concurente fara lock-uri explicite pe DB.
 
 export const sendCommand = async (
   fromCityId: string,
@@ -104,7 +109,9 @@ export const sendCommand = async (
   let commandId!: string;
 
   await prisma.$transaction(async (tx) => {
-    // Scade unitatile din oras
+    // Optimistic locking: WHERE quantity >= X face ca doua comenzi concurente sa nu poata
+    // deduce din acelasi pool. Daca updateMany.count === 0, altcineva a luat unitatile
+    // primul — aruncam eroare si tranzactia se face rollback.
     for (const { name, quantity } of units) {
       const updated = await tx.unit.updateMany({
         where: { cityId: fromCityId, name, quantity: { gte: quantity } },
@@ -140,7 +147,7 @@ export const sendCommand = async (
         arrivalAt,
         attackerUserId: fromCity.ownerId!,
         defenderUserId: toCity.ownerId,
-        targetBuilding: targetBuilding as any ?? null,
+        targetBuilding: (targetBuilding as BuildingName) ?? null,
         resourceMoney:  type === "RESOURCES" ? resources.money  : 0,
         resourceEnergy: type === "RESOURCES" ? resources.energy : 0,
         resourceAmmo:   type === "RESOURCES" ? resources.ammo   : 0,

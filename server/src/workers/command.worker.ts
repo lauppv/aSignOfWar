@@ -12,8 +12,18 @@ import {
 } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { syncResources } from "../services/city.service";
-import { UnitName } from "@prisma/client";
+import { UnitName, CommandType, BuildingName } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
+// Prisma result type for a command with its units included.
+// Using Prisma's inference avoids maintaining a manual interface that could drift.
+type CommandWithUnits = Prisma.CommandGetPayload<{ include: { units: true } }>;
+
+// Worker BullMQ care proceseaza sosirile si intoarcerile comenzilor. Fiecare comanda
+// calatoreste un timp calculat (distanta / viteza), apoi worker-ul rezolva outcome-ul:
+// livrare resurse, stationare suport, calcul batalie, sau operatiune de spionaj.
+// Stats-urile (kills, loot) se actualizeaza fire-and-forget dupa tranzactia principala
+// pentru ca nu sunt critice — un stats update esuat nu trebuie sa faca rollback la batalie.
 export const registerCommandWorker = () => {
   new Worker<{ commandId: string }>(
     "command-travel",
@@ -45,7 +55,7 @@ async function processArrival(commandId: string) {
 
 // ─── Resurse: adauga in orasul destinatie ────────────────────────────────────
 
-async function processResourceArrival(command: any) {
+async function processResourceArrival(command: CommandWithUnits) {
   await prisma.$transaction([
     prisma.city.update({
       where: { id: command.toCityId },
@@ -66,7 +76,7 @@ async function processResourceArrival(command: any) {
 // Ele contribuie la apararea orasului in caz de atac, dar nu pot fi folosite de
 // proprietarul orasului — doar rechemate acasa de expeditor.
 
-async function processSupportArrival(command: any) {
+async function processSupportArrival(command: CommandWithUnits) {
   await prisma.command.update({
     where: { id: command.id },
     data:  { status: "ARRIVED" },
@@ -75,7 +85,7 @@ async function processSupportArrival(command: any) {
 
 // ─── Atac: calculeaza lupta ───────────────────────────────────────────────────
 
-async function processAttackArrival(command: any) {
+async function processAttackArrival(command: CommandWithUnits) {
   await syncResources(command.toCityId);
 
   const toCity = await prisma.city.findUnique({
@@ -101,7 +111,7 @@ async function processAttackArrival(command: any) {
   const airDefenseBuilding = toCity.buildings.find(b => b.name === "AIR_DEFENSE");
   const airDefenseLevel    = airDefenseBuilding?.level ?? 0;
 
-  const attackerUnits  = command.units.map((u: any) => ({ name: u.name as UnitName, quantity: u.quantity }));
+  const attackerUnits  = command.units.map(u => ({ name: u.name, quantity: u.quantity }));
 
   // Agregam apararea: unitatile proprii + toate unitatile trimise ca sprijin
   const nativeStack  = new Map<UnitName, number>(toCity.units.map(u => [u.name, u.quantity]));
@@ -130,7 +140,10 @@ async function processAttackArrival(command: any) {
     command.targetBuilding ?? undefined
   );
 
-  // Distribuie supravietuitorii proportional intre stack-ul propriu si fiecare sprijin
+  // Distributia supravietuitorilor: cand stack-urile de suport lupta alaturi de aparatori nativi,
+  // supravietuitorii se impart proportional dupa contributie. Folosesc floor + largest-remainder
+  // (ca alocarea de locuri in alegeri) pentru a nu pierde unitati la rotunjire.
+  // Edge case: verificarea shares[i].q > shares[i].floor previne supra-alocarea.
   const survivorByName = new Map<UnitName, number>(
     result.defenderSurvivors.map(u => [u.name as UnitName, u.quantity])
   );
@@ -161,6 +174,9 @@ async function processAttackArrival(command: any) {
     : 0;
   const returnArrivalAt = new Date(Date.now() + returnDelayMs);
 
+  // Cucerire: atacatorul castiga + toti aparatorii morti + governor supravietuieste + loyalty = 0.
+  // Un governor se consuma (lovitura finala). Restul raman ca garnizoana.
+  // Loyalty reset la 25 inseamna ca noul proprietar trebuie sa apere sau risca pierderea rapida.
   // ── Cucerire ───────────────────────────────────────────────────────────────
   // Conditii: atac castigat (allDefDead implicit), loialitate ≤ 0 dupa damage,
   // si cel putin un Governor supravietuitor. Un Governor se consuma (cel care
@@ -378,6 +394,10 @@ async function processAttackArrival(command: any) {
         resourceMoney:  result.stolenMoney,
         resourceEnergy: result.stolenEnergy,
         resourceAmmo:   result.stolenAmmo,
+        // Raportul e stocat ca JSON (Prisma JsonValue). Tipat ca `any` pentru ca Prisma
+        // nu suporta discriminated union pe campuri JSON. Fix-ul corect ar fi un tabel
+        // separat BattleReport, dar JSON-ul pastreaza query-urile simple si evita join-uri.
+        // YAGNI — nu am nevoie de query-uri pe campuri individuale din raport.
         report: {
           ...result,
           conquered,
@@ -499,7 +519,7 @@ async function processAttackArrival(command: any) {
 // Hackerii defenderului NU mor niciodata (plan.txt).
 // Resursele, zidurile, loyalty — neatinse.
 
-async function processSpyArrival(command: any) {
+async function processSpyArrival(command: CommandWithUnits) {
   const toCity = await prisma.city.findUnique({
     where:   { id: command.toCityId },
     include: { units: true, buildings: { orderBy: { name: "asc" } } },
@@ -507,8 +527,8 @@ async function processSpyArrival(command: any) {
   if (!toCity) return;
 
   const attackerHackers = command.units
-    .filter((u: any) => u.name === "HACKER")
-    .reduce((s: number, u: any) => s + u.quantity, 0);
+    .filter(u => u.name === "HACKER")
+    .reduce((s, u) => s + u.quantity, 0);
 
   // Hackerii defenderului: cei din oras + cei stationati ca SUPPORT
   const nativeDefenders = toCity.units
@@ -589,6 +609,7 @@ async function processSpyArrival(command: any) {
         arrivalAt: hasSurvivors ? returnArrivalAt : command.arrivalAt,
         // Defenderul afla doar daca spionajul a esuat. La succes, nu e notificat.
         reportHiddenByDefender: success,
+        // Acelasi trade-off JSON ca la rapoartele de batalie — vezi processAttackArrival.
         report: {
           spyReport:       true,
           success,
