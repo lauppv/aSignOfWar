@@ -234,7 +234,7 @@ async function processAttackArrival(command: any) {
       if (command.targetBuilding === "AIR_DEFENSE") {
         // Dronele pe AIR_DEFENSE: damage suplimentar peste cel de la calcAirDefenseDamage
         targetBuildingInitialLevel = result.newAirDefenseLevel;
-        buildingLevelsDestroyed = calcBuildingDamage(result.newAirDefenseLevel, initialDrones);
+        buildingLevelsDestroyed = calcBuildingDamage(result.newAirDefenseLevel, initialDrones, result.battleRatio);
         if (buildingLevelsDestroyed > 0) {
           await tx.building.updateMany({
             where: { cityId: command.toCityId, name: "AIR_DEFENSE" },
@@ -245,7 +245,7 @@ async function processAttackArrival(command: any) {
         const targetBld = toCity.buildings.find(b => b.name === command.targetBuilding);
         if (targetBld && targetBld.level > 0) {
           targetBuildingInitialLevel = targetBld.level;
-          buildingLevelsDestroyed = calcBuildingDamage(targetBld.level, initialDrones);
+          buildingLevelsDestroyed = calcBuildingDamage(targetBld.level, initialDrones, result.battleRatio);
           if (buildingLevelsDestroyed > 0) {
             await tx.building.updateMany({
               where: { cityId: command.toCityId, name: command.targetBuilding },

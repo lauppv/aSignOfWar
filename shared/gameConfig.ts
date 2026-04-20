@@ -391,14 +391,19 @@ export const getResourceTravelTimeSec = (
 
 export const calcAirDefenseDamage = (airDefenseLevel: number, mlCount: number, droneCount: number): number => {
   if (airDefenseLevel <= 0 || (mlCount === 0 && droneCount === 0)) return 0;
-  const totalDmg = mlCount * 60 + droneCount * 15;
+  const totalCount = mlCount + droneCount;
   const W = airDefenseLevel;
-  const threshold = 2 * Math.pow(1.09, W);
-  const levels = Math.floor((totalDmg - threshold) / (2 * threshold) + 1);
-  return Math.max(0, Math.min(Math.floor(W / 2), levels));
+  const threshold = 1.7 * Math.pow(1.09, W);
+  const levels = Math.floor((totalCount - threshold) / (2 * threshold) + 1);
+  return Math.max(0, Math.min(W, levels));
 };
 
-export const calcBuildingDamage = (buildingLevel: number, survivingDrones: number): number => {
-  if (buildingLevel <= 0 || survivingDrones <= 0) return 0;
-  return Math.min(buildingLevel, Math.floor(Math.pow(survivingDrones, 0.8) / 6));
+export const calcBuildingDamage = (buildingLevel: number, droneCount: number, battleRatio: number = 1): number => {
+  if (buildingLevel <= 0 || droneCount <= 0) return 0;
+  const effective = Math.floor(droneCount * battleRatio);
+  if (effective <= 0) return 0;
+  const B = buildingLevel;
+  const threshold = 2.5 * Math.pow(1.09, B);
+  const levels = Math.floor((effective - threshold) / (2 * threshold) + 1);
+  return Math.max(0, Math.min(B, levels));
 };

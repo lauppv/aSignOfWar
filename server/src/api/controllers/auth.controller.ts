@@ -18,6 +18,9 @@ export const register = async (req: Request, res: Response) => {
     if (err.message === "EMAIL_TAKEN") {
       return res.status(409).json({ mesaj: "Email is already registered by another player" });
     }
+    if (err.message === "MAP_FULL") {
+      return res.status(503).json({ mesaj: "The world map is full. No new cities can be placed right now" });
+    }
     throw err;
   }
 };

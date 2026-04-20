@@ -42,9 +42,9 @@ export default function SimulatorView({ onClose }: Props) {
     const battleResult = calculateBattle(atkUnits, defUnits, airDefenseLevel, defMoney, defEnergy, defAmmo, simTargetBuilding);
     setResult(battleResult);
 
-    if (battleResult.attackerWon && targetBuildingLevel > 0) {
-      const survivingDrones = battleResult.attackerSurvivors.find(u => u.name === "DRONE")?.quantity ?? 0;
-      setBuildingDamageResult(calcBuildingDamage(targetBuildingLevel, survivingDrones));
+    const initialDrones = attacker["DRONE"] ?? 0;
+    if (targetBuildingLevel > 0 && initialDrones > 0) {
+      setBuildingDamageResult(calcBuildingDamage(targetBuildingLevel, initialDrones, battleResult.battleRatio));
     } else {
       setBuildingDamageResult(0);
     }
@@ -164,7 +164,7 @@ export default function SimulatorView({ onClose }: Props) {
             {buildingDamageResult > 0 && (
               <span>Building: {targetBuildingLevel} → {targetBuildingLevel - buildingDamageResult} <span className="text-[#d2a8ff]">(-{buildingDamageResult})</span></span>
             )}
-            {targetBuildingLevel > 0 && buildingDamageResult === 0 && result.attackerWon && (
+            {targetBuildingLevel > 0 && buildingDamageResult === 0 && (
               <span className="text-[#7d8590]">Building: no damage</span>
             )}
           </div>

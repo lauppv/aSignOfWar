@@ -16,6 +16,7 @@ export interface BattleResult {
   stolenEnergy: number;
   stolenAmmo: number;
   loyaltyDamage: number;
+  battleRatio: number;
 }
 
 type AtkCat = "INFANTRY" | "RANGE" | "MECHANIZED";
@@ -42,23 +43,47 @@ export function calculateBattle(
   attackerUnits = attackerUnits.filter(u => UNITS[u.name].category !== "SPY");
   defenderUnits = defenderUnits.filter(u => UNITS[u.name].category !== "SPY");
 
-  // 1. Air defense damage PRE-bătălie (cu unitățile INIȚIALE, ca în TW)
-  //    Dronele contribuie doar dacă vizează AIR_DEFENSE sau nu au target
-  const mlCount    = attackerUnits.find(u => u.name === "MISSILE_LAUNCHER")?.quantity ?? 0;
-  const dronesForAD = (!targetBuilding || targetBuilding === "AIR_DEFENSE")
-    ? (attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0)
-    : 0;
-  const airDefLevelsDestroyed = calcAirDefenseDamage(airDefenseLevel, mlCount, dronesForAD);
-  const newAirDefenseLevel = airDefenseLevel - airDefLevelsDestroyed;
-  const defenseBonus = getAirDefenseBonus(newAirDefenseLevel) / 100;
-
-  // 2. Forta de atac per categorie
+  // 1. Forta de atac per categorie
   const A: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of attackerUnits) {
     A[toAtkCat(name)] += UNITS[name].attack * quantity;
   }
+  const A_total = A.INFANTRY + A.RANGE + A.MECHANIZED;
 
-  // 3. Aparare per categorie de atac (cu bonus Air Defense redus)
+  // 2. Aparare cu air defense ORIGINAL (pentru a calcula battleRatio)
+  const origDefenseBonus = getAirDefenseBonus(airDefenseLevel) / 100;
+  const D_orig: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
+  for (const { name, quantity } of defenderUnits) {
+    const cfg  = UNITS[name];
+    const mult = 1 + origDefenseBonus;
+    D_orig.INFANTRY   += cfg.defenseVsInfantry   * quantity * mult;
+    D_orig.RANGE      += cfg.defenseVsRange      * quantity * mult;
+    D_orig.MECHANIZED += cfg.defenseVsMechanized * quantity * mult;
+  }
+  let D_eff_orig = 0;
+  if (A_total > 0) {
+    D_eff_orig = (A.INFANTRY / A_total) * D_orig.INFANTRY
+               + (A.RANGE   / A_total) * D_orig.RANGE
+               + (A.MECHANIZED / A_total) * D_orig.MECHANIZED;
+  }
+
+  // 3. Battle ratio — scalează eficacitatea siege-ului (ca în TW)
+  //    A/D (capped la 1): când câștigi siege-ul e la putere maximă,
+  //    când pierzi e proporțional cu raportul de forțe
+  const battleRatio = D_eff_orig > 0 ? Math.min(1, A_total / D_eff_orig) : (A_total > 0 ? 1 : 0);
+
+  // 4. Air defense damage PRE-bătălie, scalat cu battleRatio
+  const mlCount    = attackerUnits.find(u => u.name === "MISSILE_LAUNCHER")?.quantity ?? 0;
+  const dronesForAD = (!targetBuilding || targetBuilding === "AIR_DEFENSE")
+    ? (attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0)
+    : 0;
+  const effectiveML = Math.floor(mlCount * battleRatio);
+  const effectiveDronesAD = Math.floor(dronesForAD * battleRatio);
+  const airDefLevelsDestroyed = calcAirDefenseDamage(airDefenseLevel, effectiveML, effectiveDronesAD);
+  const newAirDefenseLevel = airDefenseLevel - airDefLevelsDestroyed;
+
+  // 5. Aparare cu air defense REDUS (pentru bătălia propriu-zisă)
+  const defenseBonus = getAirDefenseBonus(newAirDefenseLevel) / 100;
   const D: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of defenderUnits) {
     const cfg  = UNITS[name];
@@ -68,8 +93,7 @@ export function calculateBattle(
     D.MECHANIZED += cfg.defenseVsMechanized * quantity * mult;
   }
 
-  // 4. Forta totala de atac si aparare ponderata
-  const A_total = A.INFANTRY + A.RANGE + A.MECHANIZED;
+  // 6. Forta totala de aparare ponderata
   let D_eff = 0;
   if (A_total > 0) {
     D_eff = (A.INFANTRY   / A_total) * D.INFANTRY
@@ -155,5 +179,6 @@ export function calculateBattle(
     stolenEnergy,
     stolenAmmo,
     loyaltyDamage,
+    battleRatio,
   };
 }
