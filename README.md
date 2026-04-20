@@ -65,8 +65,14 @@ CREATE DATABASE asow OWNER asow;
 ```bash
 git clone https://github.com/your-username/aSignOfWar.git
 cd aSignOfWar
-cd server && npm install
-cd ../client && npm install
+
+cd server
+npm install
+cd ..
+
+cd client
+npm install
+cd ..
 ```
 
 2. Copy and configure environment variables (the `.env` file must live in `server/`):
@@ -92,16 +98,19 @@ GAME_SPEED=1
 ```bash
 cd server
 npx prisma migrate dev
+cd ..
 ```
 
 4. Start the development server and client (two terminals):
 
 ```bash
-# Terminal 1 — server (auto-reload via tsx watch)
-cd server && npm run dev
+# Terminal 1 — server
+cd server
+npm run dev
 
-# Terminal 2 — client (Vite dev server)
-cd client && npm run dev
+# Terminal 2 — client
+cd client
+npm run dev
 ```
 
 Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
@@ -119,25 +128,9 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 | `GAME_SPEED` | Game speed multiplier (1 = normal, higher = faster) | No | `1` |
 | `CLIENT_URL` | Frontend URL (production CORS origin) | Production only | — |
 
-## Scripts
+## Admin Scripts
 
-**Server** (`server/`):
-
-```bash
-npm run dev      # Start with tsx watch (auto-reload on file changes)
-npm run build    # Compile TypeScript to dist/
-npm start        # Run compiled build (node dist/app.js)
-```
-
-**Client** (`client/`):
-
-```bash
-npm run dev      # Vite dev server with HMR
-npm run build    # Type-check + Vite production build
-npm run preview  # Preview production build locally
-```
-
-**Admin/maintenance scripts** (`server/scripts/`):
+Located in `server/scripts/`, run from the `server/` directory:
 
 ```bash
 npx tsx scripts/dev-cheats.ts <command> [args]   # Dev cheats (refill resources, set units, etc.)
