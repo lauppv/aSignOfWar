@@ -282,7 +282,8 @@ aSignOfWar/
 │           ├── MessageContent.tsx    # Message rendering (shared reports, rich text)
 │           └── ConfirmModal.tsx      # Generic confirmation dialog
 ├── plan.txt                           # Game design document (Romanian)
-└── simulations.txt                    # Tribal Wars battle simulations used as reference for balancing
+├── simulations.txt                    # Tribal Wars battle simulations used as reference for balancing
+└── locustfile.py                      # Load test (Locust) — simulates concurrent players
 ```
 
 ## API Endpoints
@@ -561,6 +562,34 @@ Three workers process async game events via Redis-backed queues:
 | `command.worker.ts` | `command-travel` | Processes command arrivals: battle resolution, resource delivery, spy missions, support stationing, return trips |
 
 Additionally, `ghost.service.ts` runs a periodic ticker (not BullMQ) that auto-upgrades ghost city buildings.
+
+## Load Testing
+
+Load tests are written with [Locust](https://locust.io/) (Python). The test file `locustfile.py` simulates concurrent players performing heavy game operations: building upgrades, unit recruitment, attack/spy/resource commands, and direct messages.
+
+### Running
+
+```bash
+pip install locust
+locust -f locustfile.py --host http://localhost:3000
+```
+
+Open `http://localhost:8089` in the browser, set number of users and spawn rate, and start the test.
+
+### Results (20 concurrent users, 1–3s think time)
+
+Tested on a low-spec machine (5.7 GB RAM, running both the server and the load test simultaneously):
+
+| Operation | Requests | Failures | Median | p95 |
+|-----------|----------|----------|--------|-----|
+| Building upgrade | 41 | 0% | 29ms | 39ms |
+| Unit recruitment | 32 | 0% | 10ms | 12ms |
+| Attack command | 28 | 0% | 26ms | 37ms |
+| Spy command | 5 | 0% | 10ms | 12ms |
+| Resource transfer | 10 | 0% | 10ms | 12ms |
+| Direct messages | 32 | 0% | 18ms | 24ms |
+
+0% failure rate on all gameplay operations. All responses under 40ms at p95. The server comfortably handles 20 simultaneous players at ~6 req/s with minimal resource consumption (~200 MB overhead).
 
 ## Architecture Decisions
 
