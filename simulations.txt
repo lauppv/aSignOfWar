@@ -1,0 +1,118 @@
+toate simularile de mai jos sunt pe zid 0
+
+Agresor	Unităţi:	20000	0	0	0	0	0	0	0	0	0	0	0	0
+Pierderi:	20000	0	0	0	0	0	0	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	463	463	0	463	0	0	0	93	0	0	0	0	0
+
+Agresor	Unităţi:	0	20000	0	0	0	0	0	0	0	0	0	0	0
+Pierderi:	0	20000	0	0	0	0	0	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	1832	1832	0	1832	0	0	0	366	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	20000	0	0	0	0	0	0	0	0	0	0
+Pierderi:	0	0	20000	0	0	0	0	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	3708	3708	0	3708	0	0	0	742	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	0	20000	0	0	0	0	0	0	0	0	0
+Pierderi:	0	0	0	20000	0	0	0	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	1619	1619	0	1619	0	0	0	324	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	0	0	0	5000	0	0	0	0	0	0	0
+Pierderi:	0	0	0	0	0	5000	0	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	4194	4194	0	4194	0	0	0	839	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	0	0	0	0	4000	0	0	0	0	0	0
+Pierderi:	0	0	0	0	0	0	4000	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	3276	3276	0	3276	0	0	0	655	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	0	0	0	0	0	4000	0	0	0	0	0
+Pierderi:	0	0	0	0	0	0	0	4000	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	3720	3720	0	3720	0	0	0	744	0	0	0	0	0
+
+Agresor	Unităţi:	3000	3000	3000	3000	0	3000	3000	3000	0	0	0	0	0
+Pierderi:	3000	3000	3000	1715	0	2108	1715	2108	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Pierderi:	0	0	5222	0	0	2117	0	0	348	0	0	0	0
+Apărător	Unităţi:	5000	5000	0	5000	0	0	0	0	0	0	0	0	0
+Pierderi:	5000	5000	0	5000	0	0	0	0	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Pierderi:	0	0	2219	0	0	984	0	0	148	0	0	0	0
+Apărător	Unităţi:	5000	5000	0	0	0	0	0	0	0	0	0	0	0
+Pierderi:	5000	5000	0	0	0	0	0	0	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Pierderi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	3470	3470	0	3470	0	0	0	694	0	0	0	0	0
+
+acum cateva simulari cu zid 20 si fara berbeci
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	0	0	0	0	0
+Pierderi:	0	0	6000	0	0	3000	0	0	0	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	1164	1164	0	1164	0	0	0	233	0	0	0	0	0
+
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	0	0	0	0	0
+Pierderi:	0	0	2188	0	0	710	0	0	0	0	0	0	0
+Apărător	Unităţi:	1000	1000	0	1000	0	0	0	200	0	0	0	0	0
+Pierderi:	1000	1000	0	1000	0	0	0	200	0	0	0	0	0
+
+acum cu zid si berbeci
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Pierderi:	0	0	1266	0	0	410	0	0	84	0	0	0	0
+Apărător	Unităţi:	1000	1000	0	1000	0	0	0	200	0	0	0	0	0
+Pierderi:	1000	1000	0	1000	0	0	0	200	0	0	0	0	0
+Zidul a fost distrus de la nivelul 20 la nivelul 0
+	
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Pierderi:	0	0	6000	0	0	3000	0	0	400	0	0	0	0
+Apărător	Unităţi:	10000	10000	0	10000	0	0	0	2000	0	0	0	0	0
+Pierderi:	2011	2011	0	2011	0	0	0	402	0	0	0	0	0
+Zidul a fost distrus de la nivelul 20 la nivelul 16
+
+cu catapulte
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	300	0	0	0
+Pierderi:	0	0	1181	0	0	383	0	0	79	59	0	0	0
+Apărător	Unităţi:	1000	1000	0	1000	0	0	0	200	0	0	0	0	0
+Pierderi:	1000	1000	0	1000	0	0	0	200	0	0	0	0	0
+Distrugere prin berbeci: 	Zidul a fost distrus de la nivelul 20 la nivelul 0
+Distrugere prin foc de catapultă: 	Clădirea a fost distrusă de la nivelul 20 la nivelul 4
+
+Agresor	Unităţi:	0	0	6000	0	0	3000	0	0	400	300	0	0	0
+Pierderi:	0	0	6000	0	0	3000	0	0	400	300	0	0	0
+Apărător	Unităţi:	10000	10000	0	1000	0	0	0	200	0	0	0	0	0
+Pierderi:	5460	5460	0	546	0	0	0	109	0	0	0	0	0
+Distrugere prin berbeci: 	Zidul a fost distrus de la nivelul 20 la nivelul 10
+Distrugere prin foc de catapultă: 	Clădirea a fost distrusă de la nivelul 20 la nivelul 15
+
+gresor	Unităţi:	0	0	600	0	0	300	0	0	400	300	0	0	0
+Pierderi:	0	0	600	0	0	300	0	0	400	300	0	0	0
+Apărător	Unităţi:	10000	10000	0	1000	0	0	0	200	0	0	0	0	0
+Pierderi:	283	283	0	28	0	0	0	6	0	0	0	0	0
+Distrugere prin berbeci: 	Zidul a fost distrus de la nivelul 20 la nivelul 19
+(catapultele nu au facut pagube)
+
+	
+Agresor	Unităţi:	0	0	0	0	0	0	0	0	400	300	0	0	0
+Pierderi:	0	0	0	0	0	0	0	0	400	300	0	0	0
+Apărător	Unităţi:	10000	10000	0	1000	0	0	0	200	0	0	0	0	0
+Pierderi:	49	49	0	5	0	0	0	1	0	0	0	0	0
+(fara trupe insotitoare de atac, berbecii si catapultele sunt aproape inutile)
+
+Agresor	Unităţi:	0	0	0	0	0	0	0	0	400	300	0	0	0
+Pierderi:	0	0	0	0	0	0	0	0	1	1	0	0	0
+Apărător	Unităţi:	0	0	0	0	0	0	0	0	0	0	0	0	0
+Pierderi:	0	0	0	0	0	0	0	0	0	0	0	0	0
+Distrugere prin berbeci: 	Zidul a fost distrus de la nivelul 20 la nivelul 0
+Distrugere prin foc de catapultă: 	Clădirea a fost distrusă de la nivelul 20 la nivelul 2
+(dar daca aparatorul nu are nimic, va fi vai de el :D)
+
