@@ -197,7 +197,7 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
         <div className="w-[440px] shrink-0 border-r border-[#30363d] flex flex-col">
           <div className="flex-1 overflow-y-auto">
             {list.length === 0 ? (
-              <div className="text-[11px] text-[#7d8590] text-center mt-6 px-3">
+              <div className="text-[11px] text-[#dddddd] text-center mt-6 px-3">
                 No reports yet.
               </div>
             ) : (
@@ -237,7 +237,7 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
         <div className="w-[720px] shrink-0 overflow-y-auto p-4">
           <div className="max-w-[720px]">
             {selected ? <ReportDetail report={selected} /> : (
-              <div className="text-[#7d8590] text-xs text-center mt-6">Pick a report from the list</div>
+              <div className="text-[#dddddd] text-xs text-center mt-6">Pick a report from the list</div>
             )}
           </div>
         </div>
@@ -422,9 +422,9 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
             <button type="button" onClick={() => goToCity(r.fromCity.id)} className="text-[#e6b800] hover:underline">
               {r.fromCity.name}
             </button>
-            <span className="text-[#7d8590] font-mono"> ({r.fromCity.x}, {r.fromCity.y})</span>
+            <span className="text-[#dddddd] font-mono"> ({r.fromCity.x}, {r.fromCity.y})</span>
             {" "}
-            <span className="text-[#7d8590]">
+            <span className="text-[#dddddd]">
               [{fromOwner ? (
                 <button
                   type="button"
@@ -439,9 +439,9 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
             <button type="button" onClick={() => goToCity(r.toCity.id)} className="text-[#e6b800] hover:underline">
               {r.toCity.name}
             </button>
-            <span className="text-[#7d8590] font-mono"> ({r.toCity.x}, {r.toCity.y})</span>
+            <span className="text-[#dddddd] font-mono"> ({r.toCity.x}, {r.toCity.y})</span>
             {" "}
-            <span className="text-[#7d8590]">
+            <span className="text-[#dddddd]">
               [{toOwner ? (
                 <button
                   type="button"
@@ -455,17 +455,17 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
           </div>
         </div>
         <div className="flex items-start gap-3">
-          {canShare && (
+
+          <div className="text-[10px] text-[#dddddd] text-right">
+            {canShare && (
             <button
               onClick={() => setSharing(true)}
-              className="text-[10px] text-[#b1bac4] border border-[#30363d] rounded px-2 py-0.5 hover:bg-[#1c2129] hover:text-[#c9d1d9]"
+              className="text-[12px] font-bold text-[#36bacf] border border-[#30363d] rounded px-2 py-0.5 hover:bg-[#1caf4d] hover:text-[#c9d1d9]"
             >
               Share
             </button>
           )}
-          <div className="text-[10px] text-[#7d8590] text-right">
             <div>{new Date(reportTimestamp(r) ?? r.arrivalAt).toLocaleString()}</div>
-            <div className="uppercase tracking-widest mt-0.5">{r.direction}</div>
           </div>
         </div>
       </div>
@@ -574,7 +574,7 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
           <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Loot</div>
           {data.stolenMoney + data.stolenEnergy + data.stolenAmmo === 0 ? (
-            <div className="text-[#7d8590] text-[11px]">Nothing was taken.</div>
+            <div className="text-[#dddddd] text-[11px]">Nothing was taken.</div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
               <LootCell label="Money"  color="#7ee787" value={data.stolenMoney}  />
@@ -607,7 +607,7 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
       )}
 
       {data.targetBuilding && (data.buildingLevelsDestroyed ?? 0) === 0 && (
-        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs text-[#7d8590]">
+        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs text-[#dddddd]">
           Target: {BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding} — no damage dealt
         </div>
       )}
@@ -636,7 +636,7 @@ function WithdrawalDetail({ units, direction }: { units: BattleUnitCount[]; dire
     <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
       <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">{heading}</div>
       {present.length === 0 ? (
-        <div className="text-[#7d8590] text-[11px]">No units</div>
+        <div className="text-[#dddddd] text-[11px]">No units</div>
       ) : (
         <div className="flex flex-wrap gap-2">
           {present.map(u => (
@@ -668,7 +668,7 @@ function SupportDetail({ units }: { units: BattleUnitCount[] }) {
     <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
       <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Units transferred</div>
       {present.length === 0 ? (
-        <div className="text-[#7d8590] text-[11px]">No units</div>
+        <div className="text-[#dddddd] text-[11px]">No units</div>
       ) : (
         <div className="flex flex-wrap gap-2">
           {present.map(u => (
@@ -698,7 +698,7 @@ function ResourcesDetail({ money, energy, ammo }: { money: number; energy: numbe
     <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
       <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Resources transferred</div>
       {money + energy + ammo === 0 ? (
-        <div className="text-[#7d8590] text-[11px]">Nothing was sent.</div>
+        <div className="text-[#dddddd] text-[11px]">Nothing was sent.</div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           <LootCell label="Money"  color="#7ee787" value={money}  />
@@ -724,24 +724,24 @@ function BattleRow({ label, labelColor, sublabel, units, values, initial, kind, 
     <tr className={borderBottom ? "border-b border-[#30363d]" : ""}>
       <td className="py-1 pr-2 text-right whitespace-nowrap">
         {label && <span className="font-semibold text-xs" style={{ color: labelColor }}>{label}</span>}
-        <span className="text-[10px] text-[#7d8590] ml-1">{sublabel}:</span>
+        <span className="text-[10px] text-[#dddddd] ml-1">{sublabel}:</span>
       </td>
       {units.map(name => {
         const v = values.get(name) ?? 0;
         if (kind === "losses") {
           const sent = initial?.get(name) ?? 0;
           if (sent === 0) {
-            return <td key={name} className="py-1 text-center font-semibold text-[#7d8590]">0</td>;
+            return <td key={name} className="py-1 text-center font-semibold text-[#dddddd]">0</td>;
           }
           const lost = sent - v;
           return (
-            <td key={name} className={`py-1 text-center font-semibold ${lost > 0 ? "text-[#f85149]" : "text-[#7d8590]"}`}>
+            <td key={name} className={`py-1 text-center font-semibold ${lost > 0 ? "text-[#f85149]" : "text-[#dddddd]"}`}>
               {lost > 0 ? `-${lost.toLocaleString()}` : "0"}
             </td>
           );
         }
         return (
-          <td key={name} className={`py-1 text-center ${v > 0 ? "text-[#c9d1d9]" : "text-[#7d8590]"}`}>
+          <td key={name} className={`py-1 text-center ${v > 0 ? "text-[#c9d1d9]" : "text-[#dddddd]"}`}>
             {v.toLocaleString()}
           </td>
         );
@@ -857,7 +857,7 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
                 <span className="text-[#c9d1d9] truncate flex-1">{BUILDING_DISPLAY[name]}</span>
-                <span className={`font-mono ${lvl > 0 ? "text-[#e6b800]" : "text-[#7d8590]"}`}>
+                <span className={`font-mono ${lvl > 0 ? "text-[#e6b800]" : "text-[#dddddd]"}`}>
                   {lvl > 0 ? lvl : "—"}
                 </span>
               </div>
@@ -869,7 +869,7 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
       <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs overflow-x-auto">
         <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Units in target city</div>
         {activeUnits.length === 0 ? (
-          <div className="text-[#7d8590] text-[11px]">No units defending.</div>
+          <div className="text-[#dddddd] text-[11px]">No units defending.</div>
         ) : (
           <table className="w-full text-xs">
             <thead>
@@ -892,13 +892,13 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
             <tbody>
               <tr>
                 <td className="py-1 pr-2 text-right whitespace-nowrap">
-                  <span className="text-[10px] text-[#7d8590]">Units:</span>
+                  <span className="text-[10px] text-[#dddddd]">Units:</span>
                 </td>
                 {ALL_UNITS.map(name => {
                   const u = activeUnits.find(x => x.name === name);
                   const q = u?.quantity ?? 0;
                   return (
-                    <td key={name} className={`py-1 text-center ${q > 0 ? "text-[#c9d1d9]" : "text-[#7d8590]"}`}>
+                    <td key={name} className={`py-1 text-center ${q > 0 ? "text-[#c9d1d9]" : "text-[#dddddd]"}`}>
                       {q.toLocaleString()}
                     </td>
                   );
@@ -950,7 +950,7 @@ function ShareReportModal({ report: r, onClose }: { report: BattleReport; onClos
 
         {hasOptions && (
           <div className="flex flex-col gap-2 mb-4">
-            <div className="text-[10px] uppercase tracking-widest text-[#7d8590] mb-1">Visibility options</div>
+            <div className="text-[10px] uppercase tracking-widest text-[#dddddd] mb-1">Visibility options</div>
             <label className="flex items-center gap-2 text-[#b1bac4] cursor-pointer select-none">
               <input type="checkbox" checked={hideOwnTroops} onChange={(e) => { setHideOwnTroops(e.target.checked); if (e.target.checked) setHideOwnInitial(false); }} />
               Hide own troops
@@ -969,7 +969,7 @@ function ShareReportModal({ report: r, onClose }: { report: BattleReport; onClos
         )}
 
         {!hasOptions && (
-          <div className="text-[#7d8590] mb-4">This report will be shared as-is.</div>
+          <div className="text-[#dddddd] mb-4">This report will be shared as-is.</div>
         )}
 
         {error && <div className="text-[#f85149] mb-2">{error}</div>}
@@ -991,7 +991,7 @@ function ShareReportModal({ report: r, onClose }: { report: BattleReport; onClos
         </div>
 
         {copied && (
-          <div className="mt-3 text-[11px] text-[#7d8590]">
+          <div className="mt-3 text-[11px] text-[#dddddd]">
             Paste the tag into any message (private or alliance) to share this report.
           </div>
         )}
