@@ -95,6 +95,7 @@ function asMap(units: BattleUnitCount[] | undefined): Map<UnitName, number> {
 export default function ReportsView({ onClose, initiallyRead }: Props) {
   const now = useNow();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [readIds, setReadIds] = useState<Set<string>>(() => new Set(initiallyRead ?? []));
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const [confirming, setConfirming] = useState(false);
   const queryClient = useQueryClient();
@@ -208,8 +209,8 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
                   now={now}
                   active={selected?.id === r.id}
                   checked={checkedIds.has(r.id)}
-                  unread={!initiallyRead?.has(r.id)}
-                  onClick={() => setSelectedId(r.id)}
+                  unread={!readIds.has(r.id)}
+                  onClick={() => { setSelectedId(r.id); setReadIds(prev => new Set(prev).add(r.id)); }}
                   onToggleChecked={() => toggleChecked(r.id)}
                 />
               ))
@@ -336,7 +337,7 @@ function ReportRow({ report: r, now, active, checked, unread, onClick, onToggleC
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">
-        <span className="text-[11px] text-[#b1bac4] whitespace-nowrap">{fmtTimeAgo(r.arrivalAt, now)}</span>
+        <span className="text-[11px] text-[#b1bac4] whitespace-nowrap">{fmtTimeAgo(reportTimestamp(r) ?? r.arrivalAt, now)}</span>
         <input
           type="checkbox"
           checked={checked}

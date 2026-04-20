@@ -4,7 +4,7 @@ import type { MapCity, CityOverview, UnitName, OutgoingCommand } from "../types/
 import { sendCommand, getCityCommands, withdrawStationedSupport, cancelCommand, type CommandType } from "../api/command.ts";
 import { getBuildingLevel } from "../lib/cityHelpers.ts";
 import { getHarborCapacity, getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec, getFieldDistance } from "@shared/gameConfig.ts";
-import { UNIT_DISPLAY, BUILDING_DISPLAY, BUILDING_ORDER, CMD_COLORS, CMD_LABEL } from "../lib/labels.ts";
+import { UNIT_DISPLAY, UNIT_ORDER, BUILDING_DISPLAY, BUILDING_ORDER, CMD_COLORS, CMD_LABEL } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { GAME_SPEED } from "../lib/gameSpeed.ts";
 import { useNow } from "../context/TickContext.tsx";
@@ -285,7 +285,12 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
 
   // ─── FORM MODE ───────────────────────────────────────────────────────────────
   const availableUnits = (myCity?.units.filter(u => u.quantity > 0) ?? [])
-    .filter(u => type === "SPY" ? u.name === "HACKER" : u.name !== "HACKER");
+    .filter(u => type === "SPY" ? u.name === "HACKER" : u.name !== "HACKER")
+    .sort((a, b) => {
+      const ai = UNIT_ORDER.indexOf(a.name);
+      const bi = UNIT_ORDER.indexOf(b.name);
+      return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+    });
   const tc = CMD_COLORS[type];
 
   const canSubmit = (() => {

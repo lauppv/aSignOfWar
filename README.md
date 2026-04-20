@@ -4,24 +4,67 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 
 ## Tech Stack
 
-- **Backend:** Node.js + Express 5 + TypeScript
-- **Database:** PostgreSQL + Prisma ORM
-- **Queue/Jobs:** Redis + BullMQ
-- **Auth:** JWT + bcrypt
-- **Validation:** Zod (request body validation on all endpoints)
-- **CORS:** Configured for development (localhost:5173) and production (CLIENT_URL env var)
+**Frontend:** React 18 + TypeScript + Vite + Tailwind CSS 4 + TanStack Query 5 + React Router 6
+
+**Backend:** Node.js + Express 5 + TypeScript + Prisma 5 (PostgreSQL) + BullMQ (Redis) + Zod 4
+
+**Auth:** JWT (jsonwebtoken) + bcrypt
+
+**File uploads:** Multer (player/alliance avatars, stored in `server/uploads/`)
 
 ## Prerequisites
 
-- Node.js
-- PostgreSQL
-- Redis
+- [Node.js](https://nodejs.org/) (v18+)
+- [PostgreSQL](https://www.postgresql.org/) (v14+)
+- [Redis](https://redis.io/) (v6+)
+
+### Installing prerequisites
+
+**Ubuntu/Debian:**
+
+```bash
+# Node.js (via NodeSource)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# PostgreSQL
+sudo apt install -y postgresql postgresql-contrib
+sudo systemctl start postgresql
+
+# Redis
+sudo apt install -y redis-server
+sudo systemctl start redis-server
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew install node postgresql@14 redis
+brew services start postgresql@14
+brew services start redis
+```
+
+**Windows:** Install Node.js from the official site, PostgreSQL from the installer at postgresql.org, and Redis via WSL2 or Memurai.
+
+### Setting up the database
+
+```bash
+sudo -u postgres psql
+```
+
+```sql
+CREATE USER asow WITH PASSWORD 'your_password';
+CREATE DATABASE asow OWNER asow;
+\q
+```
 
 ## Setup
 
 1. Clone the repo and install dependencies:
 
 ```bash
+git clone https://github.com/your-username/aSignOfWar.git
+cd aSignOfWar
 cd server && npm install
 cd ../client && npm install
 ```
@@ -32,9 +75,19 @@ cd ../client && npm install
 cp server/.env.example server/.env
 ```
 
-Edit `server/.env` and fill in `DATABASE_URL`, `JWT_SECRET`, etc.
+Edit `server/.env`:
 
-3. Run database migrations:
+```env
+PORT=3000
+DATABASE_URL=postgresql://asow:your_password@localhost:5432/asow
+DATABASE_PASSWORD=your_password
+JWT_SECRET=some_random_secret_string
+REDIS_URL=redis://localhost:6379
+NODE_ENV=development
+GAME_SPEED=1
+```
+
+3. Run database migrations and generate Prisma client:
 
 ```bash
 cd server
@@ -44,10 +97,10 @@ npx prisma migrate dev
 4. Start the development server and client (two terminals):
 
 ```bash
-# Terminal 1 - server
+# Terminal 1 — server (auto-reload via tsx watch)
 cd server && npm run dev
 
-# Terminal 2 - client
+# Terminal 2 — client (Vite dev server)
 cd client && npm run dev
 ```
 
@@ -55,47 +108,216 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `3000` |
-| `DATABASE_URL` | PostgreSQL connection string | - |
-| `DATABASE_PASSWORD` | Database password | - |
-| `JWT_SECRET` | Secret for signing JWT tokens | - |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
-| `NODE_ENV` | `development` or `production` | - |
-| `GAME_SPEED` | Game speed multiplier (1 = normal) | `1` |
-| `CLIENT_URL` | Frontend URL (production only) | - |
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `PORT` | Server port | No | `3000` |
+| `DATABASE_URL` | PostgreSQL connection string | Yes | — |
+| `DATABASE_PASSWORD` | Database password | Yes | — |
+| `JWT_SECRET` | Secret for signing JWT tokens | Yes | — |
+| `REDIS_URL` | Redis connection string | Yes | — |
+| `NODE_ENV` | `development` or `production` | No | `development` |
+| `GAME_SPEED` | Game speed multiplier (1 = normal, higher = faster) | No | `1` |
+| `CLIENT_URL` | Frontend URL (production CORS origin) | Production only | — |
 
 ## Scripts
 
+**Server** (`server/`):
+
 ```bash
-npm run dev      # Start in development mode (tsx watch, auto-reload)
-npm run build    # Compile TypeScript
-npm start        # Run compiled build
+npm run dev      # Start with tsx watch (auto-reload on file changes)
+npm run build    # Compile TypeScript to dist/
+npm start        # Run compiled build (node dist/app.js)
+```
+
+**Client** (`client/`):
+
+```bash
+npm run dev      # Vite dev server with HMR
+npm run build    # Type-check + Vite production build
+npm run preview  # Preview production build locally
+```
+
+**Admin/maintenance scripts** (`server/scripts/`):
+
+```bash
+npx tsx scripts/dev-cheats.ts <command> [args]   # Dev cheats (refill resources, set units, etc.)
+npx tsx scripts/seed-ghosts.ts                   # Seed ghost cities around existing players
+npx tsx scripts/repack-map.ts                    # Re-arrange all cities in a spiral layout
+npx tsx scripts/backfill-ghost-buildings.ts       # Backfill buildings for legacy ghost cities
+npx tsx scripts/resolve-stuck-commands.ts         # Re-queue stuck TRAVELING commands
+```
+
+## Project Structure
+
+```
+aSignOfWar/
+├── shared/                            # Shared code (imported by both client and server)
+│   ├── gameConfig.ts                  # Single source of truth: buildings, units, costs, speeds
+│   └── battleCalc.ts                  # Battle formula (used server-side + client simulator)
+│
+├── server/
+│   ├── prisma/
+│   │   └── schema.prisma              # Database schema (15 models, 6 enums)
+│   ├── scripts/                       # One-off admin/maintenance scripts
+│   │   ├── dev-cheats.ts              # Dev CLI: refill, setUnits, setBuilding, maxAll, etc.
+│   │   ├── seed-ghosts.ts             # Seed ghost cities around players
+│   │   ├── repack-map.ts             # Re-arrange city positions on the map
+│   │   ├── backfill-ghost-buildings.ts # Backfill buildings for legacy ghosts
+│   │   └── resolve-stuck-commands.ts  # Re-queue stuck commands
+│   ├── src/
+│   │   ├── app.ts                     # Express entry point, route mounting, worker boot
+│   │   ├── config/
+│   │   │   ├── db.ts                  # Prisma client singleton
+│   │   │   ├── env.ts                 # Environment variable loader + validation
+│   │   │   ├── redis.ts               # IORedis connection
+│   │   │   └── queue.ts              # BullMQ queue definitions
+│   │   ├── middleware/
+│   │   │   ├── auth.ts                # JWT verification, attaches userId to request
+│   │   │   └── validate.ts            # Zod schema validation middleware
+│   │   ├── api/
+│   │   │   ├── schemas.ts             # Zod schemas for all request bodies
+│   │   │   ├── controllers/           # Request handlers (13 controllers)
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   ├── building.controller.ts
+│   │   │   │   ├── city.controller.ts
+│   │   │   │   ├── command.controller.ts
+│   │   │   │   ├── governor.controller.ts
+│   │   │   │   ├── map.controller.ts
+│   │   │   │   ├── ranking.controller.ts
+│   │   │   │   ├── recruitment.controller.ts
+│   │   │   │   ├── report.controller.ts
+│   │   │   │   ├── sharedReport.controller.ts
+│   │   │   │   ├── alliance.controller.ts
+│   │   │   │   ├── message.controller.ts
+│   │   │   │   └── user.controller.ts
+│   │   │   └── routes/                # Route definitions (13 route files)
+│   │   │       ├── auth.routes.ts
+│   │   │       ├── building.routes.ts
+│   │   │       ├── city.routes.ts
+│   │   │       ├── command.routes.ts
+│   │   │       ├── config.routes.ts
+│   │   │       ├── governor.routes.ts
+│   │   │       ├── map.routes.ts
+│   │   │       ├── ranking.routes.ts
+│   │   │       ├── recruitment.routes.ts
+│   │   │       ├── report.routes.ts
+│   │   │       ├── alliance.routes.ts
+│   │   │       ├── message.routes.ts
+│   │   │       └── user.routes.ts
+│   │   ├── services/                  # Business logic (16 services)
+│   │   │   ├── auth.service.ts        # Register, login, password hashing
+│   │   │   ├── building.service.ts    # Building upgrades, cancel, queue scheduling
+│   │   │   ├── city.service.ts        # City overview, resource sync, rename
+│   │   │   ├── recruitment.service.ts # Unit recruitment, cancel, queue scheduling
+│   │   │   ├── command.service.ts     # Send/cancel commands, travel time calculation
+│   │   │   ├── battle.service.ts      # Battle resolution, loot, loyalty, conquest
+│   │   │   ├── governor.service.ts    # Governor deposit/recruit (account-wide)
+│   │   │   ├── map.service.ts         # World map, city placement, ghost city spawning
+│   │   │   ├── ghost.service.ts       # Ghost city auto-upgrade ticker
+│   │   │   ├── ranking.service.ts     # Player and alliance leaderboards
+│   │   │   ├── report.service.ts      # Battle/spy/support/resource report queries
+│   │   │   ├── sharedReport.service.ts # Report sharing with visibility options
+│   │   │   ├── alliance.service.ts    # Alliance CRUD, invites, applications, chat
+│   │   │   ├── message.service.ts     # Direct messages between players
+│   │   │   ├── user.service.ts        # Player profiles, description, search
+│   │   │   └── avatar.service.ts      # Avatar upload (player + alliance)
+│   │   └── workers/                   # BullMQ job processors
+│   │       ├── building.worker.ts     # Completes building upgrades
+│   │       ├── recruitment.worker.ts  # Completes unit recruitment
+│   │       └── command.worker.ts      # Processes command arrivals and returns
+│   └── uploads/                       # Avatar file storage (gitignored)
+│
+├── client/
+│   ├── index.html
+│   ├── vite.config.ts
+│   └── src/
+│       ├── main.tsx                   # React entry point
+│       ├── App.tsx                    # Router, context providers, route definitions
+│       ├── index.css                  # Tailwind imports
+│       ├── types/
+│       │   └── index.ts              # Shared TypeScript types (API responses, game entities)
+│       ├── api/                       # API client functions (fetch wrappers)
+│       │   ├── client.ts             # Base fetch wrapper, auth token, error handling
+│       │   ├── auth.ts               # Login, register
+│       │   ├── city.ts               # City data, rename
+│       │   ├── command.ts            # Send/cancel/list commands
+│       │   ├── map.ts                # World map data
+│       │   ├── report.ts            # Reports CRUD + sharing
+│       │   ├── ranking.ts           # Leaderboard queries
+│       │   ├── governor.ts          # Governor deposit/recruit
+│       │   ├── alliance.ts          # Alliance CRUD, invites, applications, chat
+│       │   ├── message.ts           # Direct messages
+│       │   └── user.ts              # Player profiles, avatar upload
+│       ├── context/                   # React context providers
+│       │   ├── TickContext.tsx        # Real-time clock (1s tick) for countdowns
+│       │   ├── UnitInfoContext.tsx    # Unit info modal (click any unit icon)
+│       │   ├── PlayerProfileContext.tsx   # Player profile modal
+│       │   └── AllianceProfileContext.tsx # Alliance profile modal
+│       ├── hooks/
+│       │   └── useClickOutside.ts    # Click-outside + Escape key hook
+│       ├── lib/                       # Shared utilities
+│       │   ├── labels.ts            # Display names, colors, unit/building order
+│       │   ├── cityHelpers.ts       # Helper functions for city data
+│       │   └── gameSpeed.ts         # Loads game speed from server config
+│       ├── pages/                     # Route-level page components
+│       │   ├── LoginPage.tsx
+│       │   ├── RegisterPage.tsx
+│       │   ├── CityPage.tsx          # Main city dashboard (buildings, units, commands)
+│       │   ├── MapPage.tsx           # World map (scrollable grid, city selection)
+│       │   ├── RankingsPage.tsx      # Player and alliance leaderboards
+│       │   ├── AlliancePage.tsx      # Alliance management (members, chat, settings)
+│       │   └── MessagesPage.tsx      # Direct messages between players
+│       └── components/                # Reusable UI components
+│           ├── Layout.tsx            # Authenticated layout (nav bar, resource bar)
+│           ├── ResourceBar.tsx       # Live resource totals + production rates + city switcher
+│           ├── CityMap.tsx           # Isometric city canvas (building slots)
+│           ├── BuildingsView.tsx     # Building list
+│           ├── BuildingDetailView.tsx # Building upgrade panel
+│           ├── MilitaryBaseView.tsx  # Unit recruitment UI
+│           ├── UnitCard.tsx          # Single unit display card
+│           ├── UnitInfoModal.tsx     # Unit stats popup
+│           ├── CityActionPanel.tsx   # Map command composer (attack/support/resources/spy)
+│           ├── CommandDetailModal.tsx # Command inspection modal
+│           ├── CancelCommandConfirm.tsx # Command cancel confirmation
+│           ├── ReportsView.tsx       # Battle/spy/support/resource reports
+│           ├── SimulatorView.tsx     # Offline battle calculator
+│           ├── PlayerProfileModal.tsx # Player profile (stats, cities, avatar)
+│           ├── AllianceProfileModal.tsx # Alliance profile
+│           ├── MessageContent.tsx    # Message rendering (shared reports, rich text)
+│           └── ConfirmModal.tsx      # Generic confirmation dialog
+├── plan.txt                           # Game design document (Romanian)
+└── simulations.txt                    # Tribal Wars battle simulations used as reference for balancing
 ```
 
 ## API Endpoints
+
+Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 
 ### Auth
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Register user + create starter city |
+| POST | `/api/auth/register` | No | Register user + create starter city + spawn ghost cities nearby |
 | POST | `/api/auth/login` | No | Login, returns JWT token |
-
-### Buildings
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/buildings/:buildingId/upgrade` | Yes | Start building upgrade |
-| DELETE | `/api/buildings/orders/:orderId` | Yes | Cancel a pending building upgrade order (75% refund) |
 
 ### Cities
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/cities/mine?cityId=...` | Yes | Get city overview (buildings, units, resources, orders). `cityId` selects which owned city; defaults to oldest. Response includes `ownedCities[]` |
+| GET | `/api/cities/mine?cityId=...` | Yes | City overview (buildings, units, resources, orders). Defaults to oldest owned city. Response includes `ownedCities[]` |
 | PATCH | `/api/cities/mine/name` | Yes | Rename a city (`{ name, cityId? }`) |
+
+### Buildings
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/buildings/:buildingId/upgrade` | Yes | Start building upgrade (queued via BullMQ) |
+| DELETE | `/api/buildings/orders/:orderId` | Yes | Cancel a pending upgrade order (75% refund) |
+
+### Recruitment
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
 | POST | `/api/cities/:cityId/recruit` | Yes | Start unit recruitment |
 | DELETE | `/api/recruitment/orders/:orderId` | Yes | Cancel a pending recruitment order (75% refund) |
 
@@ -103,15 +325,9 @@ npm start        # Run compiled build
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/governor` | Yes | Get account-wide governor progress: produced count, current deposits, next cost |
-| POST | `/api/governor/deposit` | Yes | Deposit resources (`money`/`energy`/`ammo`) into the shared governor progress bars from any owned city |
-| POST | `/api/governor/recruit` | Yes | Finalize recruitment once all three bars are full — spawns one GOVERNOR in the city that filled the last bar |
-
-### Config
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/config` | No | Returns `shared/gameConfig` snapshot for the client (buildings, units, speed, travel constants) |
+| GET | `/api/governor` | Yes | Governor progress: produced count, current deposits, next cost |
+| POST | `/api/governor/deposit` | Yes | Deposit resources into shared governor progress bars from any city |
+| POST | `/api/governor/recruit` | Yes | Finalize recruitment once all three bars are full |
 
 ### Commands
 
@@ -122,181 +338,238 @@ npm start        # Run compiled build
 | POST | `/api/cities/:cityId/commands/:commandId/cancel` | Yes | Cancel a TRAVELING command (5-minute window) |
 | POST | `/api/cities/:cityId/commands/withdraw` | Yes | Withdraw stationed SUPPORT units home |
 
-### Reports
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/reports` | Yes | List battle / spy / support / resource reports for the user |
-| DELETE | `/api/reports` | Yes | Hide all reports for the user |
-| DELETE | `/api/reports/:id` | Yes | Hide a single report for the user |
-
 ### Map
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/map` | Yes | World map: grid size + all cities (coords, owner) |
+| GET | `/api/map` | Yes | World map: grid size + all cities (coords, owner, alliance) |
 
-Authentication uses Bearer tokens: `Authorization: Bearer <token>`
+### Reports
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/reports` | Yes | List all reports for the user |
+| DELETE | `/api/reports` | Yes | Hide all reports |
+| DELETE | `/api/reports/:id` | Yes | Hide a single report |
+| POST | `/api/reports/:commandId/share` | Yes | Create a shared report link (with visibility options) |
+| GET | `/api/reports/shared/:id` | Yes | View a shared report |
+
+### Rankings
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/rankings` | Yes | Player leaderboard (points, kills, loot) |
+| GET | `/api/rankings/alliances` | Yes | Alliance leaderboard |
+
+### Alliances
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/alliances` | Yes | List all alliances |
+| POST | `/api/alliances` | Yes | Create an alliance |
+| PATCH | `/api/alliances` | Yes | Update alliance settings (name, tag, access mode) |
+| GET | `/api/alliances/me` | Yes | Get own alliance details |
+| POST | `/api/alliances/leave` | Yes | Leave current alliance |
+| POST | `/api/alliances/disband` | Yes | Disband alliance (leader only) |
+| POST | `/api/alliances/invite` | Yes | Invite player by username |
+| GET | `/api/alliances/invitations` | Yes | List alliance's pending invitations (leader) |
+| DELETE | `/api/alliances/invitations/:id` | Yes | Cancel an invitation |
+| POST | `/api/alliances/invitations/:id/accept` | Yes | Accept an invitation |
+| POST | `/api/alliances/invitations/:id/reject` | Yes | Reject an invitation |
+| GET | `/api/alliances/me/invitations` | Yes | List invitations received by the user |
+| GET | `/api/alliances/me/application` | Yes | Get own pending application |
+| POST | `/api/alliances/me/application/cancel` | Yes | Cancel own application |
+| GET | `/api/alliances/applications` | Yes | List applications to your alliance (leader) |
+| POST | `/api/alliances/applications/:id/accept` | Yes | Accept an application |
+| POST | `/api/alliances/applications/:id/reject` | Yes | Reject an application |
+| POST | `/api/alliances/members/:id/kick` | Yes | Kick a member (leader only) |
+| POST | `/api/alliances/members/:id/transfer` | Yes | Transfer leadership |
+| GET | `/api/alliances/messages/unread` | Yes | Check for unread alliance messages |
+| GET | `/api/alliances/messages` | Yes | List alliance chat messages |
+| POST | `/api/alliances/messages` | Yes | Post alliance chat message |
+| DELETE | `/api/alliances/messages/:id` | Yes | Delete an alliance message (leader) |
+| POST | `/api/alliances/:id/avatar` | Yes | Upload alliance avatar |
+| GET | `/api/alliances/:id/profile` | Yes | Get alliance profile (public) |
+| GET | `/api/alliances/:id` | Yes | Get alliance details |
+| POST | `/api/alliances/:id/join` | Yes | Join an open alliance |
+| POST | `/api/alliances/:id/apply` | Yes | Submit application to an alliance |
+
+### Messages
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/messages/direct/unread` | Yes | Count unread direct messages |
+| GET | `/api/messages/direct/conversations` | Yes | List conversation threads |
+| GET | `/api/messages/direct/:peerId` | Yes | List messages with a specific player |
+| POST | `/api/messages/direct` | Yes | Send a direct message |
+| DELETE | `/api/messages/direct/:id` | Yes | Delete a message (soft-delete per side) |
+
+### Users
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| PATCH | `/api/users/me/description` | Yes | Update own profile description |
+| POST | `/api/users/me/avatar` | Yes | Upload player avatar |
+| GET | `/api/users/:id/profile` | Yes | Get player profile (cities, stats, alliance) |
+
+### Config
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/config` | No | Returns shared game config (buildings, units, speed, travel constants) |
+
+## Database Schema
+
+15 models across 6 enums. Key entities:
+
+- **User** — player account, governor progress, lifetime combat stats, alliance membership
+- **City** — coordinates, loyalty, resources (lazily synced), owner (nullable for ghost cities)
+- **Building** — 9 types per city, level 0–30
+- **Unit** — 11 types per city, quantity tracked
+- **Command** — attack/support/resources/spy with travel state machine (TRAVELING → ARRIVED/RETURNING → COMPLETED)
+- **CommandUnit** — units attached to a command
+- **BuildingUpgradeOrder** / **RecruitmentOrder** — queued orders with BullMQ job references
+- **Alliance** — name, tag, access mode (OPEN/CLOSED/INVITE_ONLY/APPLICATION), leader
+- **AllianceInvitation** / **AllianceApplication** — join request management
+- **AllianceMessage** — alliance chat (soft-deletable)
+- **DirectMessage** — player-to-player messages (read tracking, soft-delete per side)
+- **SharedReport** — shared battle/spy reports with visibility toggles
 
 ## Game Mechanics
 
 ### Buildings
 
-9 building types, upgradeable to level 20-30. Each level increases cost and construction time exponentially.
+9 building types, upgradeable to level 20–30. Each level increases cost and construction time exponentially. Headquarters level reduces construction time by 2% per level.
 
 | Building | Function | Max Level | HQ Required |
 |----------|----------|-----------|-------------|
-| HEADQUARTERS | Reduces construction time 2%/level | 30 | - |
-| BANK | Produces Money | 30 | - |
-| POWER_PLANT | Produces Energy | 30 | - |
-| WEAPONS_FACTORY | Produces Ammo | 30 | - |
-| HOUSING | Limits population (240–24000) | 30 | - |
-| WAREHOUSE | Limits resource storage (1000–400000) | 30 | - |
-| MILITARY_BASE | Unlocks units, speeds up recruitment | 25 | HQ 5 |
-| HARBOR | Send resources to other cities | 25 | HQ 15 |
-| AIR_DEFENSE | City defense | 20 | HQ 5 |
+| Headquarters | Reduces construction time 2%/level | 30 | — |
+| Bank | Produces Money | 30 | — |
+| Power plant | Produces Energy | 30 | — |
+| Weapons factory | Produces Ammo | 30 | — |
+| Housing | Population limit (240–24,000) | 30 | — |
+| Warehouse | Resource storage limit (1,000–400,000) | 30 | — |
+| Military base | Unlocks units, speeds up recruitment | 25 | HQ 5 |
+| Harbor | Send resources to other cities | 25 | HQ 15 |
+| Air defense | Passive city defense bonus | 20 | HQ 5 |
 
 ### Resources
 
-- **Money** — produced by BANK
-- **Energy** — produced by POWER_PLANT
-- **Ammo** — produced by WEAPONS_FACTORY
+- **Money** — produced by Bank
+- **Energy** — produced by Power plant
+- **Ammo** — produced by Weapons factory
 
 Production rates increase per building level. Resources are synced lazily before any operation that reads or modifies them (no background worker needed).
 
 ### Units
 
-11 unit types. Most are recruited from MILITARY_BASE; GOVERNOR and HACKER are recruited directly from HEADQUARTERS.
+11 unit types across 6 categories. Most are recruited from Military base; Governor is recruited via a special account-wide deposit mechanic, and Hacker is recruited from Headquarters.
 
-| Unit | Category | HQ Required | MB Required |
-|------|----------|-------------|-------------|
-| LIGHT_INFANTRY | Infantry | - | - |
-| DEFENDER_INFANTRY | Infantry | 5 | - |
-| HEAVY_INFANTRY | Infantry | - | - |
-| SNIPER | Range | 10 | 10 |
-| SPECIAL_FORCES | Range | 15 | 10 |
-| RAIDER | Mechanized | 10 | - |
-| TANK | Mechanized | 20 | 15 |
-| MISSILE_LAUNCHER | Siege | 20 | 15 |
-| DRONE | Siege | 20 | 20 |
-| GOVERNOR | Conquer | 30 | - |
-| HACKER | Spy | 10 | - |
+| Unit | Category | Attack | Defense (I/R/M) | Speed | Pop | HQ | MB |
+|------|----------|--------|-----------------|-------|-----|----|----|
+| Light infantry | Infantry | 10 | 15/25/10 | 8 | 1 | — | — |
+| Defender infantry | Infantry | 5 | 30/30/30 | 12 | 1 | 5 | — |
+| Heavy infantry | Infantry | 40 | 20/10/20 | 12 | 2 | — | — |
+| Sniper | Range | 60 | 10/30/10 | 10 | 3 | 10 | 10 |
+| Special forces | Range | 80 | 40/40/40 | 6 | 4 | 15 | 10 |
+| Raider | Mechanized | 30 | 10/10/20 | 4 | 3 | 10 | — |
+| Tank | Mechanized | 100 | 50/20/50 | 14 | 6 | 20 | 15 |
+| Missile launcher | Siege | 40 | 5/5/5 | 16 | 5 | 20 | 15 |
+| Drone | Siege | 50 | 5/5/5 | 18 | 6 | 20 | 20 |
+| Governor | Conquer | 0 | 10/10/10 | 16 | 0 | 30 | — |
+| Hacker | Spy | 0 | 0/0/0 | 6 | 1 | 10 | — |
+
+*Speed = minutes per map field. Lower = faster. I/R/M = defense vs Infantry/Range/Mechanized.*
 
 ### Commands
 
-Players can send four types of commands between cities:
+Players send four types of commands between cities:
 
 | Type | Description |
 |------|-------------|
-| ATTACK | Send units to attack another player's city |
-| SUPPORT | Send units to reinforce a city — stationed units contribute to defense and can be withdrawn later |
-| RESOURCES | Send resources to another city (requires HARBOR) |
-| SPY | Send hackers to gather intel on another city |
+| Attack | Send units to attack another city. Surviving units return with loot |
+| Support | Send units to reinforce a city. They stay and defend until withdrawn |
+| Resources | Send resources via Harbor merchants |
+| Spy | Send hackers to gather intel on a target city |
 
-Travel time is computed per command from the euclidean distance between the two cities and the speed of the slowest unit in the stack (Tribal Wars style):
-
-```
-distance           = sqrt((x2 - x1)² + (y2 - y1)²)     // in map fields
-unit travel (sec)  = distance × slowestSpeed × 60 / GAME_SPEED   // speed is minutes-per-field
-resource travel    = distance × 2 × 60 / GAME_SPEED              // HARBOR merchants are fast and uniform
-```
-
-See `RESOURCE_TRAVEL_MIN_PER_FIELD`, `getFieldDistance`, `getSlowestUnitSpeed`, `getUnitTravelTimeSec` and `getResourceTravelTimeSec` in `shared/gameConfig.ts`. After an attack resolves, surviving units return home with any stolen resources — the return trip is recomputed from the surviving slowest unit, so a wiped-out fast raid returns slower if only tanks survived. A TRAVELING command can be cancelled within the first 5 minutes of its trip — the units then return home symmetrically (same time elapsed already travelled).
-
-#### Spy Mechanic
-
-Only HACKER units participate in spy commands. Attacker sends N hackers; defender has D hackers (native + stationed as SUPPORT).
-
-- If `N > D`: spy succeeds, `N - D` attacker hackers return home, defender hackers stay intact, and the attacker receives a snapshot of the target city's buildings and units.
-- If `N <= D`: all attacker hackers die, defender is untouched, no snapshot is produced.
-
-Defender hackers never die. The defender is never notified of a spy attempt (successful or not).
-
-#### Battle Formula
-
-Attacker losses are calculated per unit category (Infantry, Range, Mechanized):
+**Travel time** is computed from euclidean distance and the slowest unit in the stack:
 
 ```
-loss_rate = (defender_force / attacker_force) ^ 1.5   [if attacker wins]
-loss_rate = 1.0                                         [if attacker loses]
+distance  = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+travel_s  = distance * slowestSpeed * 60 / GAME_SPEED
 ```
 
-The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. AIR_DEFENSE level applies a defense bonus (4%–107%) to all defending units. MISSILE_LAUNCHER and DRONE deal wall damage before combat.
+Resource transports use a fixed speed of 2 minutes per field. A TRAVELING command can be cancelled within the first 5 minutes — units return home symmetrically.
 
-Attacking units that survive return home using the travel formula above.
+### Battle Formula
 
-#### Loyalty & Conquest
+The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. Air defense level applies a defense bonus (4%–107%) to all defending units.
 
-Each city starts at 100 loyalty. When an attack clears all defenders and contains at least one surviving GOVERNOR, loyalty is reduced by 20–35% per Governor (random roll). Loyalty is tracked on the `City` row and persists between attacks — repeated governor strikes wear a city down over time.
-
-When loyalty drops to 0 or below, ownership transfers to the attacker: one GOVERNOR is consumed, loyalty resets to 100, the city is assigned to the attacker, and any stationed SUPPORT commands from third parties are displaced home (each with its own per-command return travel time). The surviving attacker stack that escorted the Governor does **not** merge into the new city — it stays garrisoned there as an `ARRIVED` SUPPORT command originating from the attacker's source city, so the units contribute to defense but remain under the source city's control and can be withdrawn normally.
-
-### Reports
-
-Players receive reports for battles (ATTACK), spy missions (SPY, attacker only), support arrivals / withdrawals (SUPPORT), and resource deliveries (RESOURCES). Reports are soft-hidden per user via `reportHiddenByAttacker` / `reportHiddenByDefender` flags, so the same underlying Command row can be dismissed independently by each side.
-
-The client shows an unread badge on the Reports button, keyed per user via the JWT-derived user id so that different accounts in the same browser don't share read state.
-
-### Client
-
-The frontend is a React 19 + Vite + TailwindCSS SPA. Auth state is kept in a JWT stored in `localStorage`; protected routes redirect to `/login` otherwise.
-
-| Route | Page | Purpose |
-|-------|------|---------|
-| `/login`, `/register` | `LoginPage`, `RegisterPage` | Auth forms |
-| `/city` | `CityPage` | Main city view — buildings, resources, recruitment, reports |
-| `/map` | `MapPage` | World map grid, pick targets, send commands |
-
-Key UI building blocks under `client/src/components/`:
-
-- `CityMap` — isometric-style city canvas rendering each building slot
-- `BuildingsView` / `BuildingDetailView` — building list + upgrade panel
-- `MilitaryBaseView` — recruitment UI for all 11 unit types
-- `CityActionPanel` + `CommandDetailModal` — compose and inspect commands (attack / support / resources / spy)
-- `ReportsView` — battle / spy / support / resource reports with unread badge keyed per user
-- `ResourceBar` — live resource totals + production rates
-- `SimulatorView` — offline battle calculator that reuses the shared `battleCalc.ts` formula, so the client can preview a fight without hitting the server
-
-All game data (building costs, unit stats, production curves, battle formula) is imported from `shared/` so the client and server never drift.
-
-### Multiple cities per account
-
-A player's account can own any number of cities (starter city + conquered cities). One city is always marked as "active" on the client — the active id is stored in `localStorage` under `activeCityId` and mirrored into the URL as `?cityId=...` so a page reload keeps the same city selected. The active city drives every city-scoped request (`GET /api/cities/mine`, recruitment, building upgrades, commands).
-
-UI affordances for multi-city accounts:
-
-- `ResourceBar` renders a `▾` dropdown next to the city name when `ownedCities.length > 1`, listing all owned cities with coords and an active marker.
-- On the map, clicking one of your own cities opens `CityActionPanel` with two buttons: **Select** (only switches the active city, stays on the map) and **Enter** (navigates into `/city`). The currently-active city shows neither button.
-- A non-active owned city also gets **Support** / **Resources** buttons so you can reinforce or shuttle resources between your own cities. A city never offers these buttons against itself.
-- Renaming a city uses `PATCH /api/cities/mine/name` with `{ name, cityId }`, so the right city is affected even when the active city is different from the one being renamed.
-
-### Job Queue
-
-Background jobs run via BullMQ + Redis:
-
-- `building-upgrade` — completes building upgrades after the required time
-- `unit-recruitment` — completes unit recruitment after the required time
-- `command-travel` — processes command arrivals and return trips (including spy resolution and withdrawal returns)
-
-## Project Structure
+Attacker losses per unit category (Infantry, Range, Mechanized):
 
 ```
-aSignOfWar/
-├── shared/
-│   └── gameConfig.ts          # Single source of truth for all game data
-├── server/
-│   ├── src/
-│   │   ├── api/
-│   │   │   ├── controllers/   # Request handlers
-│   │   │   ├── routes/        # Route definitions
-│   │   │   └── schemas.ts     # Zod validation schemas
-│   │   ├── config/            # DB, Redis, game config wrapper, queues
-│   │   ├── middleware/        # Auth + validation middleware
-│   │   ├── services/          # Business logic
-│   │   ├── workers/           # Background job processors
-│   │   └── app.ts             # Entry point
-│   └── prisma/
-│       └── schema.prisma      # Database schema
-├── client/                    # Frontend (React + Vite + TailwindCSS)
-└── plan.txt                   # Game design document (RO)
+loss_rate = (defender_force / attacker_force) ^ 1.5    if attacker wins
+loss_rate = 1.0                                         if attacker loses
 ```
+
+Missile launchers and drones deal building/wall damage before combat.
+
+### Spy Mechanic
+
+Only Hacker units participate. Attacker sends N hackers; defender has D hackers.
+
+- If `N > D`: spy succeeds. Attacker gets a snapshot of the target city (buildings, units, resources). `N - D` hackers return home. Defender hackers are untouched.
+- If `N <= D`: all attacker hackers die, no intel is retrieved.
+
+The defender is never notified of spy attempts.
+
+### Loyalty and Conquest
+
+Each city starts at 100 loyalty. When an attack clears all defenders and includes at least one surviving Governor, loyalty is reduced by 20–35% per Governor (random). Loyalty persists between attacks.
+
+When loyalty drops to 0: ownership transfers to the attacker, one Governor is consumed, loyalty resets to 100, and any stationed support from third parties is sent home.
+
+### Ghost Cities
+
+Unowned NPC cities that spawn near each player on registration. They provide early-game attack targets for farming resources. Ghost cities auto-upgrade one random building every 6 hours (scaled by game speed), but never build Military base, Harbor, or Air defense.
+
+### Multiple Cities
+
+A player's account can own any number of cities (starter + conquered). The active city is tracked in `localStorage` and mirrored into URL params. On the map, clicking your own city offers Select (switch active) and Enter (navigate to city dashboard). Non-active owned cities also show Support/Resources buttons.
+
+### Alliances
+
+Players can create or join alliances. Access modes: Open, Closed, Invite only, Application. Features include alliance chat, member management (kick, transfer leadership), and alliance leaderboards.
+
+### Messages
+
+Players can send direct messages to each other. Messages support embedded shared reports (paste `[report:id]` tag). Soft-delete per side — each player can delete their view independently.
+
+### Report Sharing
+
+Battle and spy reports can be shared with visibility options:
+- Hide own troops
+- Show only own losses (hide initial count)
+- Hide enemy troops / intel
+
+Sharing generates a `[report:id]` tag that can be pasted into any message.
+
+## Job Queue (BullMQ)
+
+Three workers process async game events via Redis-backed queues:
+
+| Worker | Queue | Purpose |
+|--------|-------|---------|
+| `building.worker.ts` | `building-upgrade` | Completes building upgrades after construction time |
+| `recruitment.worker.ts` | `unit-recruitment` | Completes unit recruitment after training time |
+| `command.worker.ts` | `command-travel` | Processes command arrivals: battle resolution, resource delivery, spy missions, support stationing, return trips |
+
+Additionally, `ghost.service.ts` runs a periodic ticker (not BullMQ) that auto-upgrades ghost city buildings.
+
+## Architecture Decisions
+
+- **Express over NestJS**: Manual layering (Controller → Service → Prisma) is simpler for a project with ~50 endpoints. NestJS decorators add ceremony without benefit at this scale.
+- **Lazy resource sync**: Resources are computed on-read from production rate and elapsed time, rather than ticked by a background worker. This eliminates an entire worker and keeps resource values consistent without race conditions.
+- **Shared game config**: `shared/gameConfig.ts` is the single source of truth for all game balance data (costs, speeds, formulas). Both client and server import it directly, so they never drift.
+- **Optimistic locking**: Resource deductions use Prisma transactions with conditional updates to prevent double-spending under concurrent requests.
+- **Soft-delete reports**: Each side of a battle can independently hide their report without affecting the other player's view.

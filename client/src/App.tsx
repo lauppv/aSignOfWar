@@ -53,10 +53,10 @@ export default function App() {
     // hook-urile de countdown depind de el. Restul pot fi reordonate liber. Daca creste
     // peste 5-6 provideri, as extrage un <Providers> wrapper — dar cu 4 nu merita indirectia.
     <TickProvider>
+    <BrowserRouter>
     <UnitInfoProvider>
     <AllianceProfileProvider>
     <PlayerProfileProvider>
-    <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -75,10 +75,10 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to={isLoggedIn() ? "/city" : "/login"} replace />} />
       </Routes>
-    </BrowserRouter>
     </PlayerProfileProvider>
     </AllianceProfileProvider>
     </UnitInfoProvider>
+    </BrowserRouter>
     </TickProvider>
   );
 }

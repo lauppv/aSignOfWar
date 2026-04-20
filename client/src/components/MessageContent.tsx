@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getSharedReport } from "../api/report.ts";
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
@@ -120,6 +121,11 @@ function SharedReportCard({ shareId, onExpandChange }: { shareId: string; onExpa
 
 function SharedReportBody({ report: r }: { report: any }) {
   const { openPlayer } = usePlayerProfile();
+  const navigate = useNavigate();
+
+  function goToCity(cityId: string) {
+    navigate(`/map?selectCityId=${encodeURIComponent(cityId)}`);
+  }
 
   const fromOwner = r.fromCity.owner;
   const toOwner = r.toCity.owner;
@@ -127,7 +133,9 @@ function SharedReportBody({ report: r }: { report: any }) {
   return (
     <>
       <div className="text-[11px] text-[#b1bac4]">
-        {r.fromCity.name}
+        <button type="button" onClick={() => goToCity(r.fromCity.id)} className="text-[#e6b800] hover:underline">
+          {r.fromCity.name}
+        </button>
         <span className="text-[#7d8590] font-mono"> ({r.fromCity.x}, {r.fromCity.y})</span>
         {" "}
         <span className="text-[#7d8590]">
@@ -136,7 +144,9 @@ function SharedReportBody({ report: r }: { report: any }) {
           ) : "Ghost city"}]
         </span>
         {" → "}
-        {r.toCity.name}
+        <button type="button" onClick={() => goToCity(r.toCity.id)} className="text-[#e6b800] hover:underline">
+          {r.toCity.name}
+        </button>
         <span className="text-[#7d8590] font-mono"> ({r.toCity.x}, {r.toCity.y})</span>
         {" "}
         <span className="text-[#7d8590]">
