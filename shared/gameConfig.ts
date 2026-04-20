@@ -20,18 +20,19 @@ export type BuildingName =
   | "HARBOR"
   | "AIR_DEFENSE";
 
+
 export type UnitName =
-  | "LIGHT_INFANTRY"
-  | "DEFENDER_INFANTRY"
   | "HEAVY_INFANTRY"
+  | "DEFENDER_INFANTRY"
+  | "LIGHT_INFANTRY"
   | "SNIPER"
-  | "SPECIAL_FORCES"
+  | "HACKER"
   | "RAIDER"
+  | "SPECIAL_FORCES"
   | "TANK"
   | "MISSILE_LAUNCHER"
   | "DRONE"
-  | "GOVERNOR"
-  | "HACKER";
+  | "GOVERNOR";
 
 export type UnitCategory = "INFANTRY" | "RANGE" | "MECHANIZED" | "SIEGE" | "CONQUER" | "SPY";
 
@@ -121,10 +122,10 @@ export interface UnitConfig {
 }
 
 export const UNITS: Record<UnitName, UnitConfig> = {
-  LIGHT_INFANTRY: {
-    category: "INFANTRY", costMoney: 60, costEnergy: 30, costAmmo: 40,
-    population: 1, speed: 18, carry: 10, baseRecruitmentTime: 120,
-    attack: 40, defenseVsInfantry: 10, defenseVsMechanized: 5, defenseVsRange: 10,
+    HEAVY_INFANTRY: {
+    category: "INFANTRY", costMoney: 50, costEnergy: 30, costAmmo: 10,
+    population: 1, speed: 18, carry: 25, baseRecruitmentTime: 130,
+    attack: 10, defenseVsInfantry: 15, defenseVsMechanized: 45, defenseVsRange: 20,
   },
   DEFENDER_INFANTRY: {
     category: "INFANTRY", costMoney: 30, costEnergy: 30, costAmmo: 70,
@@ -132,28 +133,35 @@ export const UNITS: Record<UnitName, UnitConfig> = {
     attack: 25, defenseVsInfantry: 50, defenseVsMechanized: 15, defenseVsRange: 40,
     requiresHQ: 5,
   },
-  HEAVY_INFANTRY: {
-    category: "INFANTRY", costMoney: 50, costEnergy: 30, costAmmo: 10,
-    population: 1, speed: 18, carry: 25, baseRecruitmentTime: 130,
-    attack: 10, defenseVsInfantry: 15, defenseVsMechanized: 45, defenseVsRange: 20,
+  LIGHT_INFANTRY: {
+    category: "INFANTRY", costMoney: 60, costEnergy: 30, costAmmo: 40,
+    population: 1, speed: 18, carry: 10, baseRecruitmentTime: 120,
+    attack: 40, defenseVsInfantry: 10, defenseVsMechanized: 5, defenseVsRange: 10,
   },
+
   SNIPER: {
     category: "RANGE", costMoney: 100, costEnergy: 30, costAmmo: 60,
     population: 1, speed: 18, carry: 10, baseRecruitmentTime: 200,
     attack: 15, defenseVsInfantry: 50, defenseVsMechanized: 40, defenseVsRange: 5,
     requiresHQ: 10, requiresMilitaryBase: 10,
-  },
-  SPECIAL_FORCES: {
-    category: "RANGE", costMoney: 250, costEnergy: 100, costAmmo: 150,
-    population: 5, speed: 10, carry: 50, baseRecruitmentTime: 400,
-    attack: 120, defenseVsInfantry: 40, defenseVsMechanized: 30, defenseVsRange: 50,
-    requiresHQ: 15, requiresMilitaryBase: 10,
+  },  
+  HACKER: {
+    category: "SPY", costMoney: 50, costEnergy: 50, costAmmo: 20,
+    population: 2, speed: 9, carry: 0, baseRecruitmentTime: 180,
+    attack: 0, defenseVsInfantry: 2, defenseVsMechanized: 1, defenseVsRange: 2,
+    requiresHQ: 10,
   },
   RAIDER: {
     category: "MECHANIZED", costMoney: 125, costEnergy: 100, costAmmo: 250,
     population: 4, speed: 10, carry: 80, baseRecruitmentTime: 300,
     attack: 130, defenseVsInfantry: 30, defenseVsMechanized: 40, defenseVsRange: 30,
     requiresHQ: 10,
+  },
+  SPECIAL_FORCES: {
+    category: "RANGE", costMoney: 250, costEnergy: 100, costAmmo: 150,
+    population: 5, speed: 10, carry: 50, baseRecruitmentTime: 400,
+    attack: 120, defenseVsInfantry: 40, defenseVsMechanized: 30, defenseVsRange: 50,
+    requiresHQ: 15, requiresMilitaryBase: 10,
   },
   TANK: {
     category: "MECHANIZED", costMoney: 200, costEnergy: 150, costAmmo: 600,
@@ -181,14 +189,11 @@ export const UNITS: Record<UnitName, UnitConfig> = {
     attack: 0, defenseVsInfantry: 0, defenseVsMechanized: 0, defenseVsRange: 0,
     requiresHQ: 30,
   },
-  HACKER: {
-    category: "SPY", costMoney: 50, costEnergy: 50, costAmmo: 20,
-    population: 2, speed: 9, carry: 0, baseRecruitmentTime: 180,
-    attack: 0, defenseVsInfantry: 2, defenseVsMechanized: 1, defenseVsRange: 2,
-    requiresHQ: 10,
-  },
+
 };
 
+
+  
 // ─── Lookup tables (hardcodate, nu urmeaza o formula) ────────────────────────
 
 const MILITARY_BASE_SPEED_FACTOR = [

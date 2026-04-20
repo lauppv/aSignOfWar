@@ -13,6 +13,7 @@ import { getMyAlliance } from "../api/alliance.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
+
 interface Props {
   city: MapCity;
   myCity: CityOverview | undefined;
@@ -130,7 +131,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   // ─── INFO MODE ───────────────────────────────────────────────────────────────
   if (mode === "info") {
     return (
-      <Wrapper headerColor={headerColor} title={`${city.name} (${city.x}, ${city.y})`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
+      <Wrapper  headerColor={headerColor} title={`${city.name} (${city.x}, ${city.y})`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
         <Row label="Owner"       value={ownerLabel} />
         <Row label="Points"      value={<span className="font-mono">{city.points.toLocaleString()}</span>} />
         <Row
@@ -302,13 +303,19 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   })();
 
   return (
-    <Wrapper headerColor={headerColor} title={`${type.toLowerCase()} → ${city.name}`} onClose={onClose} onHeaderMouseDown={onHeaderMouseDown}>
-      <div className="text-[10px] text-[#b1bac4] mb-2">
-        From <span className="text-[#c9d1d9]">{myCity?.name}</span>
-        {" → "}
-        ({city.x}, {city.y}) · {ownerLabel}
-      </div>
-
+    <Wrapper 
+      headerColor={headerColor} 
+      title={
+        <>
+          {type.toLowerCase()} on {city.name} ({city.x}, {city.y})
+          <br />
+          from {myCity?.name} ({myCity?.x}, {myCity?.y})
+        </>
+      } 
+      onClose={onClose} 
+      onHeaderMouseDown={onHeaderMouseDown}
+    >
+      
       {(() => {
         if (!myCity) return null;
         const fieldDist = getFieldDistance(myCity.x, myCity.y, city.x, city.y);
@@ -347,7 +354,8 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
           )}
         </div>
       ) : (
-        <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto pr-1">
+        // pentru atac si suport, afisam lista de unitati disponibile cu input pentru cantitate. Pentru spionaj, doar hackerii.
+        <div className="flex flex-col gap-1 max-h-[480px] overflow-y-auto pr-1">
           {availableUnits.length === 0 ? (
             <div className="text-[10px] text-[#b1bac4] py-1">No units available</div>
           ) : availableUnits.map(u => (
@@ -409,24 +417,16 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
 function Wrapper({
-  headerColor, title, onClose, onHeaderMouseDown, children,
-}: { headerColor: string; title: string; onClose: () => void; onHeaderMouseDown?: (e: React.MouseEvent) => void; children: React.ReactNode }) {
+  headerColor, title, onHeaderMouseDown, children,
+}: { headerColor: string; title: React.ReactNode; onClose: () => void; onHeaderMouseDown?: (e: React.MouseEvent) => void; children: React.ReactNode }) {
   return (
     <>
       <div
         className="flex items-center justify-between px-3 py-2 border-b border-[#30363d] select-none"
-        style={{ background: headerColor, color: "#0d1117", cursor: onHeaderMouseDown ? "grab" : undefined }}
+        style={{ background: headerColor, color: "#161718", cursor: onHeaderMouseDown ? "grab" : undefined }}
         onMouseDown={onHeaderMouseDown}
       >
         <span className="font-bold truncate text-xs">{title}</span>
-        <button
-          onClick={onClose}
-          onMouseDown={(e) => e.stopPropagation()}
-          className="text-[#0d1117] hover:opacity-70 text-sm leading-none px-1"
-          style={{ cursor: "pointer" }}
-        >
-          ×
-        </button>
       </div>
       <div className="p-3 flex flex-col gap-1.5 text-xs">{children}</div>
     </>
@@ -501,7 +501,7 @@ function StationedWithdrawPanel({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1  overflow-y-auto">
         {entries.map(([name, available]) => (
           <div key={name} className="flex items-center gap-2">
             <img
@@ -633,7 +633,7 @@ function UnitInput({ name, available, value, onChange }: {
 }) {
   const { openUnit } = useUnitInfo();
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 ">
       <img
         src={`/images/units/${name.toLowerCase()}.jpg`}
         alt={UNIT_DISPLAY[name]}
