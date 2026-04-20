@@ -2,6 +2,9 @@
 
 A multiplayer real-time strategy game inspired by browser-based strategy games like Tribal Wars (RO: Triburile), Travian, and Grepolis. Each player starts with a single city and develops it over time by constructing buildings, gathering resources, and training military units. Players form alliances and wage conquest wars against each other.
 
+> **Note:** This is a portfolio project. This README intentionally includes detailed API endpoints, database schema, game mechanics, and architecture decisions that would normally live in internal documentation — the goal is to give reviewers a complete picture of the system without having to dig through the code.
+
+
 ## Tech Stack
 
 **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS 4 + TanStack Query 5 + React Router 6
