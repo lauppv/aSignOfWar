@@ -17,10 +17,19 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **Direct messages** with embedded shared battle/spy reports
 - **Load tested** — 200 concurrent users at ~70 req/s with ~0.2% failure rate
 
-<!-- Screenshots: add your screenshots here -->
-<!-- ![City dashboard](screenshots/city.png) -->
-<!-- ![World map](screenshots/map.png) -->
-<!-- ![Battle report](screenshots/report.png) -->
+### Screenshots
+
+| City dashboard | World map |
+|:-:|:-:|
+| ![City dashboard](screenshots/city.png) | ![World map](screenshots/map.png) |
+
+| Buildings overview | Military base |
+|:-:|:-:|
+| ![Buildings](screenshots/buildings.png) | ![Military base](screenshots/military-base.png) |
+
+| Unit info | Air defense |
+|:-:|:-:|
+| ![Unit info](screenshots/unit-info.png) | ![Air defense](screenshots/air-defense.png) |
 
 ## Tech Stack
 
