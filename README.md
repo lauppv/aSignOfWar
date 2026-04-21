@@ -23,13 +23,25 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 |:-:|:-:|
 | ![City dashboard](screenshots/city.png) | ![World map](screenshots/map.png) |
 
-| Buildings overview | Military base |
+| Headquarters | Military base |
 |:-:|:-:|
-| ![Buildings](screenshots/buildings.png) | ![Military base](screenshots/military-base.png) |
+| ![Headquarters](screenshots/buildings.png) | ![Military base](screenshots/military-base.png) |
 
 | Unit info | Air defense |
 |:-:|:-:|
 | ![Unit info](screenshots/unit-info.png) | ![Air defense](screenshots/air-defense.png) |
+
+| Power plant |
+|:-:|
+| ![Power plant](screenshots/power-plant.png) |
+
+| Weapons factory |
+|:-:|
+| ![Weapons factory](screenshots/weapons-factory.png) |
+
+| Harbor |
+|:-:|
+| ![Harbor](screenshots/harbor.png) |
 
 ## Tech Stack
 
