@@ -31,17 +31,13 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 |:-:|:-:|
 | ![Unit info](screenshots/unit-info.png) | ![Air defense](screenshots/air-defense.png) |
 
-| Power plant |
-|:-:|
-| ![Power plant](screenshots/power-plant.png) |
+| Power plant | Weapons factory |
+|:-:|:-:|
+| ![Power plant](screenshots/power-plant.png) | ![Weapons factory](screenshots/weapons-factory.png) |
 
-| Weapons factory |
-|:-:|
-| ![Weapons factory](screenshots/weapons-factory.png) |
-
-| Harbor |
-|:-:|
-| ![Harbor](screenshots/harbor.png) |
+| Harbor | Warehouse |
+|:-:|:-:|
+| ![Harbor](screenshots/harbor.png) | ![Warehouse](screenshots/warehouse.png) |
 
 ## Tech Stack
 
