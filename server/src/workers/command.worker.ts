@@ -286,6 +286,12 @@ async function processAttackArrival(command: CommandWithUnits) {
     });
 
     if (conquered) {
+      // Reseteaza TOATE unitatile native din oras pe 0 (inclusiv hackeri si guvernatori).
+      await tx.unit.updateMany({
+        where: { cityId: command.toCityId },
+        data:  { quantity: 0 },
+      });
+
       // Anuleaza upgrade-urile de cladiri in curs (fara refund — e razboi).
       const buildingOrders = await tx.buildingUpgradeOrder.findMany({
         where:  { cityId: command.toCityId },
@@ -554,13 +560,14 @@ async function processSpyArrival(command: CommandWithUnits) {
     buildings: { name: string; level: number }[];
     units: { name: UnitName; quantity: number }[];
     resources: { money: number; energy: number; ammo: number };
+    loyalty: number;
   } | null = null;
   if (success) {
     // Sincronizam resursele target-ului inainte sa le citim, ca sa fie actuale
     await syncResources(command.toCityId);
     const freshCity = await prisma.city.findUnique({
       where: { id: command.toCityId },
-      select: { money: true, energy: true, ammo: true },
+      select: { money: true, energy: true, ammo: true, loyalty: true },
     });
 
     // Units = native + toate stack-urile stationate de SUPPORT
@@ -581,6 +588,7 @@ async function processSpyArrival(command: CommandWithUnits) {
         energy: Math.floor(freshCity?.energy ?? 0),
         ammo:   Math.floor(freshCity?.ammo   ?? 0),
       },
+      loyalty: Math.floor(freshCity?.loyalty ?? 100),
     };
   }
 

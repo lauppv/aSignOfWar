@@ -177,7 +177,9 @@ export default function CityPage() {
                 className="flex-1 p-2.5 border-r border-[#30363d] flex flex-col gap-1.5 cursor-pointer hover:bg-[#1c2129] transition-colors min-w-0"
                 onClick={() => openView("building", { name: "AIR_DEFENSE" })}
               >
-                <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">Air defense</span>
+                <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">
+                  Loyalty: <span className={`font-semibold ${city.loyalty > 50 ? "text-[#3fb950]" : city.loyalty > 25 ? "text-[#e3b341]" : "text-[#f85149]"}`}>{Math.floor(city.loyalty)}%</span>
+                </span>
                 <img
                   src="/images/buildings/air_defense.jpg"
                   alt="Air defense"

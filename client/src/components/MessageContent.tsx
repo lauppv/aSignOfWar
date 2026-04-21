@@ -8,7 +8,7 @@ import type { BattleReportData, SpyReportData, UnitName, BattleUnitCount } from 
 import { useEffect, useState } from "react";
 
 const REPORT_TAG = /\[report:([a-f0-9-]+)\]/gi;
-const ALL_UNITS: UnitName[] = [...UNIT_ORDER, "GOVERNOR"] as UnitName[];
+const ALL_UNITS: UnitName[] = [...UNIT_ORDER.filter(n => n !== "HACKER"), "GOVERNOR"] as UnitName[];
 
 interface Props {
   content: string;
@@ -338,6 +338,22 @@ function SharedSpyDetail({ report: data }: { report: SpyReportData }) {
               <SharedLoot label="Money" color="#7ee787" value={data.snapshot.resources.money} />
               <SharedLoot label="Energy" color="#79c0ff" value={data.snapshot.resources.energy} />
               <SharedLoot label="Ammo" color="#e3b341" value={data.snapshot.resources.ammo} />
+            </div>
+          )}
+
+          {data.snapshot.loyalty !== undefined && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-[#7d8590]">Loyalty</span>
+              <div className="flex-1 h-2 bg-[#21262d] rounded overflow-hidden">
+                <div
+                  className="h-full rounded"
+                  style={{
+                    width: `${data.snapshot.loyalty}%`,
+                    background: data.snapshot.loyalty > 50 ? "#3fb950" : data.snapshot.loyalty > 25 ? "#e3b341" : "#f85149",
+                  }}
+                />
+              </div>
+              <span className="text-[#c9d1d9] font-mono text-[11px] font-semibold">{data.snapshot.loyalty}%</span>
             </div>
           )}
 

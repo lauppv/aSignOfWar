@@ -36,12 +36,15 @@ export const syncResources = async (cityId: string): Promise<void> => {
 
   const cap = getWarehouseCapacity(warehouse.level);
 
+  const newLoyalty = Math.min(100, city.loyalty + 1 * env.gameSpeed * elapsedHours);
+
   await prisma.city.update({
     where: { id: cityId },
     data: {
       money:              Math.min(cap, city.money  + getResourceProduction(bank.level, env.gameSpeed)        * elapsedHours),
       energy:             Math.min(cap, city.energy + getResourceProduction(powerPlant.level, env.gameSpeed)  * elapsedHours),
       ammo:               Math.min(cap, city.ammo   + getResourceProduction(weapFactory.level, env.gameSpeed) * elapsedHours),
+      loyalty:            newLoyalty,
       lastResourceUpdate: now,
     },
   });

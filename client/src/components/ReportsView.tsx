@@ -8,7 +8,7 @@ import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 
-const ALL_UNITS: UnitName[] = [...UNIT_ORDER, "GOVERNOR"] as UnitName[];
+const ALL_UNITS: UnitName[] = [...UNIT_ORDER.filter(n => n !== "HACKER"), "GOVERNOR"] as UnitName[];
 
 const SKIP_CONFIRM_KEY = "skipReportDeleteConfirm";
 
@@ -839,6 +839,24 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
             <LootCell label="Money"  color="#7ee787" value={resources.money} />
             <LootCell label="Energy" color="#79c0ff" value={resources.energy} />
             <LootCell label="Ammo"   color="#e3b341" value={resources.ammo} />
+          </div>
+        </div>
+      )}
+
+      {data.snapshot.loyalty !== undefined && (
+        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Loyalty</div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-2 bg-[#21262d] rounded overflow-hidden">
+              <div
+                className="h-full rounded"
+                style={{
+                  width: `${data.snapshot.loyalty}%`,
+                  background: data.snapshot.loyalty > 50 ? "#3fb950" : data.snapshot.loyalty > 25 ? "#e3b341" : "#f85149",
+                }}
+              />
+            </div>
+            <span className="text-[#c9d1d9] font-mono font-semibold">{data.snapshot.loyalty}%</span>
           </div>
         </div>
       )}

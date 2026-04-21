@@ -1,3 +1,5 @@
+LE: NU toate mecanicile sunt scrise aici. Multe decizii au fost luate pe parcurs.
+
 Copie Triburile in epoca contemporana. Doar acest fisier este in RO. Codul sursa si websiteul vor fi in EN pentru consistenta
 
 Fiecare jucator incepe cu un singur oras si:

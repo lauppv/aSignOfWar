@@ -4,6 +4,23 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 
 > **Note:** This is a portfolio project. This README intentionally includes detailed API endpoints, database schema, game mechanics, and architecture decisions that would normally live in internal documentation — the goal is to give reviewers a complete picture of the system without having to dig through the code.
 
+## Features
+
+- **Interactive city view** — isometric city image with clickable polygon hitboxes over each building slot, opening building details directly from the map
+- **City management** — 9 building types, 3 resource economies, population system, upgrade queues
+- **11 military units** across 6 categories (infantry, range, mechanized, siege, conquer, spy) with rock-paper-scissors defense mechanics
+- **Real-time combat** — category-weighted battle formula shared between server and client-side battle simulator
+- **Spy intelligence** — hacker-vs-hacker system separate from combat, with city snapshots on success
+- **City conquest** — governor-based loyalty siege across multiple attacks
+- **Alliance system** — creation, invitations, applications, chat, member management, leaderboards
+- **World map** — 100x100 grid with ghost NPC cities for early-game farming
+- **Direct messages** with embedded shared battle/spy reports
+- **Load tested** — 200 concurrent users at ~70 req/s with ~0.2% failure rate
+
+<!-- Screenshots: add your screenshots here -->
+<!-- ![City dashboard](screenshots/city.png) -->
+<!-- ![World map](screenshots/map.png) -->
+<!-- ![Battle report](screenshots/report.png) -->
 
 ## Tech Stack
 
@@ -66,7 +83,7 @@ CREATE DATABASE asow OWNER asow;
 1. Clone the repo and install dependencies:
 
 ```bash
-git clone https://github.com/your-username/aSignOfWar.git
+git clone https://github.com/lauppv/aSignOfWar
 cd aSignOfWar
 
 cd server
@@ -142,6 +159,45 @@ npx tsx scripts/repack-map.ts                    # Re-arrange all cities in a sp
 npx tsx scripts/backfill-ghost-buildings.ts       # Backfill buildings for legacy ghost cities
 npx tsx scripts/resolve-stuck-commands.ts         # Re-queue stuck TRAVELING commands
 ```
+
+## Resetting the world
+
+To wipe all data and start fresh (like a new world in Tribal Wars):
+
+```bash
+cd server
+npx prisma migrate reset    # Drops all tables, re-runs migrations — empty DB, schema intact
+redis-cli FLUSHDB           # Clears BullMQ job queues
+```
+
+## Playing with friends (ngrok)
+
+You can host the game locally and let friends on different networks join via [ngrok](https://ngrok.com/). The server serves the built client as static files, so only one tunnel is needed.
+
+1. Build the client:
+
+```bash
+cd client
+npm run build
+cd ..
+```
+
+2. Start the server:
+
+```bash
+cd server
+npm run dev
+```
+
+3. Start ngrok:
+
+```bash
+ngrok http 3000
+```
+
+4. Share the ngrok URL (e.g. `https://abc123.ngrok-free.app`) with your friends. They open it in a browser and register/play normally.
+
+The ngrok URL is random and unlisted — only people you share it with can access the game. For extra security, ngrok supports basic auth (`ngrok http 3000 --basic-auth="user:password"`) or IP restrictions on paid plans.
 
 ## Project Structure
 
@@ -500,7 +556,7 @@ Resource transports use a fixed speed of 2 minutes per field. A TRAVELING comman
 
 ### Battle Formula
 
-The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. Air defense level applies a defense bonus (4%–107%) to all defending units.
+The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. Air defense level applies a defense bonus (4%–107%) to all defending units. Hackers (SPY category) are excluded from combat entirely — they have a dedicated spy-vs-spy system (see below).
 
 Attacker losses per unit category (Infantry, Range, Mechanized):
 
@@ -509,26 +565,32 @@ loss_rate = (defender_force / attacker_force) ^ 1.5    if attacker wins
 loss_rate = 1.0                                         if attacker loses
 ```
 
-Missile launchers and drones deal building/wall damage before combat.
+**Siege units** act before the main battle, scaled by the battle ratio:
+- **Missile launchers** destroy air defense levels, reducing the defense bonus for all defending units. This softens the city for future attacks even if the current one fails.
+- **Drones** demolish levels from a target building chosen by the attacker. If no target is selected, drones assist missile launchers in destroying air defense instead.
 
 ### Spy Mechanic
 
-Only Hacker units participate. Attacker sends N hackers; defender has D hackers.
+Only Hacker units participate. This is a separate system from regular combat — hackers cannot be sent in attack or support commands. Attacker sends N hackers; defender has D hackers (native + stationed support).
 
-- If `N > D`: spy succeeds. Attacker gets a snapshot of the target city (buildings, units, resources). `N - D` hackers return home. Defender hackers are untouched.
-- If `N <= D`: all attacker hackers die, no intel is retrieved.
+- If `N > D`: spy succeeds. Attacker gets a snapshot of the target city (buildings, units, resources). `N - D` hackers return home. Defender hackers are untouched. The defender is not notified.
+- If `N <= D`: spy fails. All attacker hackers die, no intel is retrieved. The defender receives a report about the failed spy attempt.
 
-The defender is never notified of spy attempts.
+Defending hackers can never be killed in any scenario.
 
 ### Loyalty and Conquest
 
-Each city starts at 100 loyalty. When an attack clears all defenders and includes at least one surviving Governor, loyalty is reduced by 20–35% per Governor (random). Loyalty persists between attacks.
+Each city starts at 100 loyalty. Loyalty regenerates at 1 point per hour (scaled by game speed). When an attack clears all defenders and includes at least one surviving Governor, loyalty is reduced by 20–35 per Governor (random). Loyalty persists between attacks.
 
-When loyalty drops to 0: ownership transfers to the attacker, one Governor is consumed, loyalty resets to 100, and any stationed support from third parties is sent home.
+When loyalty drops to 0: ownership transfers to the attacker, one Governor is consumed, loyalty resets to 100, all native units in the city are reset to 0 (including hackers and governors), and any stationed support from third parties is sent home.
+
+### Battle Simulator
+
+The client includes an offline battle simulator that uses the exact same `calculateBattle()` function as the server. Players can test army compositions, air defense levels, and resource scenarios before committing real units — the results are guaranteed to match actual combat outcomes.
 
 ### Ghost Cities
 
-Unowned NPC cities that spawn near each player on registration. They provide early-game attack targets for farming resources. Ghost cities auto-upgrade one random building every 6 hours (scaled by game speed), but never build Military base, Harbor, or Air defense.
+Unowned NPC cities that spawn near each player on registration. They provide early-game attack targets for farming resources. Ghost cities auto-upgrade one random building every 6 hours but they do not recruit units. These cities can also be supplied with resources and supported with units.
 
 ### Multiple Cities
 
@@ -576,20 +638,21 @@ locust -f locustfile.py --host http://localhost:3000
 
 Open `http://localhost:8089` in the browser, set number of users and spawn rate, and start the test.
 
-### Results (20 concurrent users, 1–3s think time)
+### Results (200 concurrent users, 1–3s think time)
 
 Tested on a low-spec machine (5.7 GB RAM, running both the server and the load test simultaneously):
 
-| Operation | Requests | Failures | Median | p95 |
-|-----------|----------|----------|--------|-----|
-| Building upgrade | 41 | 0% | 29ms | 39ms |
-| Unit recruitment | 32 | 0% | 10ms | 12ms |
-| Attack command | 28 | 0% | 26ms | 37ms |
-| Spy command | 5 | 0% | 10ms | 12ms |
-| Resource transfer | 10 | 0% | 10ms | 12ms |
-| Direct messages | 32 | 0% | 18ms | 24ms |
+| Operation | Requests | Failures | Median | p95 | p99 |
+|-----------|----------|----------|--------|-----|-----|
+| Register | 200 | 2% | 320ms | 1300ms | 1600ms |
+| Building upgrade | 516 | 0.4% | 44ms | 520ms | 720ms |
+| Unit recruitment | 484 | 0% | 17ms | 170ms | 250ms |
+| Attack command | 352 | 0% | 44ms | 440ms | 530ms |
+| Spy command | 185 | 0% | 22ms | 190ms | 240ms |
+| Resource transfer | 160 | 0% | 19ms | 170ms | 230ms |
+| Direct messages | 370 | 0% | 21ms | 240ms | 360ms |
 
-0% failure rate on all gameplay operations. All responses under 40ms at p95. The server comfortably handles 20 simultaneous players at ~6 req/s with minimal resource consumption (~200 MB overhead).
+~0.2% overall failure rate at 200 concurrent users and ~70 req/s. Register failures are caused by coordinate collisions on city placement (retried automatically up to 5 times). All gameplay operations maintain 0% failure rate under heavy load.
 
 ## Architecture Decisions
 
@@ -597,4 +660,6 @@ Tested on a low-spec machine (5.7 GB RAM, running both the server and the load t
 - **Lazy resource sync**: Resources are computed on-read from production rate and elapsed time, rather than ticked by a background worker. This eliminates an entire worker and keeps resource values consistent without race conditions.
 - **Shared game config**: `shared/gameConfig.ts` is the single source of truth for all game balance data (costs, speeds, formulas). Both client and server import it directly, so they never drift.
 - **Optimistic locking**: Resource deductions use Prisma transactions with conditional updates to prevent double-spending under concurrent requests.
+- **Retry on coordinate collision**: City placement uses a read-then-insert pattern. Under concurrent registrations, two transactions can pick the same slot. The register flow retries up to 5 times on unique constraint violations, filtering only coordinate-related conflicts.
+- **Shared battle calculator**: `battleCalc.ts` is imported by both the server (for real combat) and the client (for the battle simulator). One formula, zero drift.
 - **Soft-delete reports**: Each side of a battle can independently hide their report without affecting the other player's view.

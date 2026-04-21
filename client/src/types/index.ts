@@ -147,6 +147,7 @@ export interface SpyReportData {
     buildings: { name: BuildingName; level: number }[];
     units:     BattleUnitCount[];
     resources?: { money: number; energy: number; ammo: number };
+    loyalty?: number;
   } | null;
   battleAt: string;
 }

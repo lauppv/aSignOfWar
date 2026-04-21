@@ -42,15 +42,12 @@ export function calculateBattle(
   //      compozitia atacatorului — asta recompenseaza armatele echilibrate.
   //   2. Air defense damage e calculat PRE-batalie dar scalat cu battleRatio —
   //      atacatorii care pierd tot dau ceva damage de siege, nu e all-or-nothing.
-  //   3. Hackerii au mini-batalie proprie (spy vs spy) — sunt invizibili pentru
-  //      unitatile normale. Asta creeaza un meta-game dedicat de spionaj.
+  //   3. Hackerii NU participa la batalii — au sistem dedicat (SPY vs SPY).
   //   4. Prada se imparte egal pe 3 resurse (carry / 3) — previne cherry-picking.
   //   5. Governor loyalty damage: 20 + random(0-15). Randomness-ul previne calculul
   //      exact "am nevoie de N guvernatori", adaugand incertitudine strategica.
 
-  // 0. Separăm hackerii — au mini-bătălie proprie
-  const atkHackers = attackerUnits.find(u => UNITS[u.name].category === "SPY")?.quantity ?? 0;
-  const defHackers = defenderUnits.find(u => UNITS[u.name].category === "SPY")?.quantity ?? 0;
+  // Hackerii nu participa la batalii — au sistem propriu (SPY vs SPY).
   attackerUnits = attackerUnits.filter(u => UNITS[u.name].category !== "SPY");
   defenderUnits = defenderUnits.filter(u => UNITS[u.name].category !== "SPY");
 
@@ -140,27 +137,7 @@ export function calculateBattle(
     quantity: Math.round(quantity * (1 - defLossRate)),
   }));
 
-  // 7. Mini-bătălie hackeri
-  if (atkHackers > 0) {
-    const hackerLossRate = defHackers > 0
-      ? Math.min(1, Math.pow(defHackers / atkHackers, 1.5))
-      : 0;
-    attackerSurvivors.push({
-      name: "HACKER" as UnitName,
-      quantity: Math.round(atkHackers * (1 - hackerLossRate)),
-    });
-  }
-  if (defHackers > 0) {
-    const hackerLossRate = atkHackers > 0
-      ? Math.min(1, Math.pow(atkHackers / defHackers, 1.5))
-      : 0;
-    defenderSurvivors.push({
-      name: "HACKER" as UnitName,
-      quantity: Math.round(defHackers * (1 - hackerLossRate)),
-    });
-  }
-
-  // 8. Resurse furate
+  // 7. Resurse furate
   let stolenMoney = 0, stolenEnergy = 0, stolenAmmo = 0;
   if (attackerWon) {
     const totalCarry = attackerSurvivors.reduce(

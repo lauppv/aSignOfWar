@@ -33,12 +33,15 @@ const app = express();
 
 app.use(cors({
   origin: env.nodeEnv === "production"
-    ? process.env.CLIENT_URL        // in productie, seteaza CLIENT_URL in .env
-    : "http://localhost:5173",       // in development, clientul Vite
+    ? process.env.CLIENT_URL
+    : true,                          // in development, permite orice origin (ngrok, localhost)
   credentials: true,
 }));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+const clientDist = path.join(__dirname, "../../client/dist");
+app.use(express.static(clientDist));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/buildings", buildingRoutes);
@@ -54,8 +57,11 @@ app.use("/api/alliances", allianceRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 
-// Middleware global de erori — prinde orice eroare neasteptata din controllere
-// Fara el, Express ar return un HTML urat cu tot stack trace-ul vizibil
+app.get("/{*splat}", (_req, res, next) => {
+  const index = path.join(clientDist, "index.html");
+  res.sendFile(index, (err) => { if (err) next(); });
+});
+
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
   res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });

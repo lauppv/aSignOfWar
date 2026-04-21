@@ -10,7 +10,7 @@ interface Props {
   onClose: () => void;
 }
 
-const ALL_UNITS: UnitName[] = [...UNIT_ORDER, "GOVERNOR"] as UnitName[];
+const ALL_UNITS: UnitName[] = [...UNIT_ORDER.filter(n => n !== "HACKER"), "GOVERNOR"] as UnitName[];
 
 const EMPTY_UNITS = (): Record<UnitName, number> =>
   Object.fromEntries(Object.keys(UNITS).map(k => [k, 0])) as Record<UnitName, number>;
