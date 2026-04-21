@@ -18,6 +18,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **Load tested** — 200 concurrent users at ~70 req/s with ~0.2% failure rate
 
 ### Screenshots
+These screenshots were taken with GAME_SPEED=600 (see server/.env) for testing purposes, which is why the construction and recruitment times are so short. Normally, at speed 1, for example, constructions take hours, and recruitment—depending on the quantity—can take days.
 
 | City dashboard | World map |
 |:-:|:-:|
