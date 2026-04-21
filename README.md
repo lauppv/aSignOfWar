@@ -354,6 +354,7 @@ aSignOfWar/
 │           ├── AllianceProfileModal.tsx # Alliance profile
 │           ├── MessageContent.tsx    # Message rendering (shared reports, rich text)
 │           └── ConfirmModal.tsx      # Generic confirmation dialog
+├── screenshots/                       # README screenshots (city, map, buildings, units)
 ├── plan.txt                           # Game design document (Romanian)
 ├── simulations.txt                    # Tribal Wars battle simulations used as reference for balancing
 └── locustfile.py                      # Load test (Locust) — simulates concurrent players
