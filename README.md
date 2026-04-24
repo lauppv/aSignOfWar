@@ -34,7 +34,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - [Job Queue (BullMQ)](#job-queue-bullmq)
 - [Load Testing](#load-testing)
   - [Results (500 users)](#results-500-concurrent-users-spawn-rate-5-13s-think-time)
-  - [Extended run (600 users)](#extended-run-600-concurrent-users-spawn-rate-1-12-minutes)
+  - [After optimization (500 users)](#after-optimization-500-concurrent-users-spawn-rate-50-13s-think-time)
   - [Performance optimizations](#performance-optimizations)
 - [Development Approach](#development-approach)
 - [Architecture Decisions](#architecture-decisions)
@@ -721,22 +721,24 @@ Tested on a low-spec machine (4 cores, 5.7 GB RAM, running server + database + R
 
 5 failures out of 54,916 total requests (0.009%). 218 req/s aggregate throughput. All gameplay operations maintain 0% failure rate under heavy load.
 
-### Extended run (600 concurrent users, spawn rate 1, ~12 minutes)
+### After optimization (500 concurrent users, spawn rate 50, 1–3s think time)
+
+After applying selective queries, write-free resource sync, and parallel query execution:
 
 | Operation | Requests | Failures | Median | p95 | p99 |
 |-----------|----------|----------|--------|-----|-----|
-| Register | 600 | 0 | 110ms | 1,800ms | 2,900ms |
-| Building upgrade | 14,559 | 0 | 54ms | 2,500ms | 3,600ms |
-| Unit recruitment | 14,516 | 2 | 24ms | 1,200ms | 1,900ms |
-| Attack command | 9,698 | 0 | 34ms | 1,500ms | 2,600ms |
-| Spy command | 4,935 | 0 | 28ms | 1,100ms | 1,900ms |
-| Resource transfer | 4,920 | 0 | 27ms | 1,200ms | 2,000ms |
-| Direct messages | 10,908 | 2 | 33ms | 1,700ms | 2,700ms |
-| City overview | 8,023 | 0 | 44ms | 2,500ms | 3,500ms |
-| World map | 5,505 | 2 | 26ms | 1,100ms | 2,300ms |
-| Rankings | 3,621 | 1 | 21ms | 730ms | 1,700ms |
+| Register | 500 | 0 | 140ms | 260ms | 590ms |
+| Building upgrade | 4,849 | 0 | 35ms | 360ms | 940ms |
+| Unit recruitment | 4,853 | 0 | 16ms | 190ms | 460ms |
+| Attack command | 2,623 | 0 | 30ms | 310ms | 740ms |
+| Spy command | 1,337 | 0 | 17ms | 240ms | 490ms |
+| Resource transfer | 1,300 | 0 | 18ms | 230ms | 750ms |
+| Direct messages | 3,697 | 0 | 20ms | 250ms | 510ms |
+| City overview | 2,843 | 0 | 25ms | 200ms | 470ms |
+| World map | 1,788 | 0 | 14ms | 340ms | 670ms |
+| Rankings | 1,238 | 0 | 14ms | 170ms | 530ms |
 
-10 failures out of 102,827 total requests (0.0097%). 217 req/s sustained over 12 minutes with 600 concurrent users.
+0 failures out of 33,608 total requests (0%). 241 req/s aggregate throughput. Median response time dropped from 84ms to 21ms across all endpoints.
 
 ### Performance optimizations
 
