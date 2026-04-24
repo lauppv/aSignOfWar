@@ -17,7 +17,8 @@ const dbPort = process.env.DATABASE_PORT || "5432";
 const dbName = process.env.DATABASE_NAME!;
 const dbUser = process.env.DATABASE_USER!;
 const dbPassword = encodeURIComponent(process.env.DATABASE_PASSWORD!);
-process.env.DATABASE_URL = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?connection_limit=20`;
+const connLimit = process.env.DATABASE_CONNECTION_LIMIT || "10";
+process.env.DATABASE_URL = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?connection_limit=${connLimit}`;
 
 const env = {
   port: process.env.PORT || "3000",

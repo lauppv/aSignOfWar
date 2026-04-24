@@ -29,8 +29,8 @@ export const sendCommand = async (
   if (fromCityId === toCityId) throw new Error("SAME_CITY");
 
   const [fromCity, toCity] = await Promise.all([
-    prisma.city.findUnique({ where: { id: fromCityId }, include: { units: true, buildings: true } }),
-    prisma.city.findUnique({ where: { id: toCityId } }),
+    prisma.city.findUnique({ where: { id: fromCityId }, select: { id: true, x: true, y: true, ownerId: true, units: { select: { name: true, quantity: true } }, buildings: { select: { name: true, level: true } } } }),
+    prisma.city.findUnique({ where: { id: toCityId }, select: { id: true, x: true, y: true, ownerId: true } }),
   ]);
 
   if (!fromCity)             throw new Error("CITY_NOT_FOUND");
@@ -333,7 +333,7 @@ export const withdrawStationedSupport = async (
 };
 
 export const getCommandsForCity = async (cityId: string, userId: string) => {
-  const city = await prisma.city.findUnique({ where: { id: cityId } });
+  const city = await prisma.city.findUnique({ where: { id: cityId }, select: { ownerId: true } });
   if (!city)                   throw new Error("CITY_NOT_FOUND");
   if (city.ownerId !== userId) throw new Error("UNAUTHORIZED");
 
@@ -343,12 +343,12 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
   const [outgoing, incoming] = await Promise.all([
     prisma.command.findMany({
       where:   { fromCityId: cityId, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
-      include: { units: true, toCity: { select: { id: true, name: true, x: true, y: true, owner: { select: { id: true, username: true } } } } },
+      include: { units: { select: { name: true, quantity: true } }, toCity: { select: { id: true, name: true, x: true, y: true, owner: { select: { id: true, username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
     prisma.command.findMany({
       where:   { toCityId: cityId, status: "TRAVELING" },
-      include: { units: true, fromCity: { select: { name: true, x: true, y: true, owner: { select: { id: true, username: true } } } } },
+      include: { units: { select: { name: true, quantity: true } }, fromCity: { select: { name: true, x: true, y: true, owner: { select: { id: true, username: true } } } } },
       orderBy: { arrivalAt: "asc" },
     }),
   ]);

@@ -16,7 +16,7 @@ export const startRecruitment = async (
 
   const city = await prisma.city.findUnique({
     where: { id: cityId },
-    include: { buildings: true, units: true },
+    select: { id: true, ownerId: true, buildings: { select: { name: true, level: true } }, units: { select: { name: true, quantity: true } } },
   });
 
   if (!city)                        throw new Error("CITY_NOT_FOUND");
@@ -40,7 +40,7 @@ export const startRecruitment = async (
   const maxPop     = getHousingCapacity(housing.level);
   const currentPop = city.units.reduce((sum, u) => sum + u.quantity * UNITS[u.name].population, 0);
 
-  const pendingOrders = await prisma.recruitmentOrder.findMany({ where: { cityId } });
+  const pendingOrders = await prisma.recruitmentOrder.findMany({ where: { cityId }, select: { quantity: true, unitName: true } });
   const pendingPop    = pendingOrders.reduce((sum, o) => sum + o.quantity * UNITS[o.unitName].population, 0);
 
   if (currentPop + pendingPop + quantity * cfg.population > maxPop) {
@@ -114,7 +114,7 @@ export const startRecruitment = async (
 export const cancelRecruitment = async (orderId: string, userId: string) => {
   const order = await prisma.recruitmentOrder.findUnique({
     where: { id: orderId },
-    include: { city: true },
+    include: { city: { select: { id: true, ownerId: true } } },
   });
 
   if (!order)                        throw new Error("ORDER_NOT_FOUND");

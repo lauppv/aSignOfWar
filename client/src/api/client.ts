@@ -1,4 +1,4 @@
-const BASE_URL = "/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // Mapare cod eroare -> mesaj human-readable. Serverul trimite coduri masina
 // (ex: "INSUFFICIENT_RESOURCES") si clientul le traduce. Asta decupleaza afisarea

@@ -36,6 +36,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
   - [Results (500 users)](#results-500-concurrent-users-spawn-rate-5-13s-think-time)
   - [Extended run (600 users)](#extended-run-600-concurrent-users-spawn-rate-1-12-minutes)
   - [Performance optimizations](#performance-optimizations)
+- [Development Approach](#development-approach)
 - [Architecture Decisions](#architecture-decisions)
 
 ## Features
@@ -174,7 +175,7 @@ GAME_SPEED=1
 
 ```bash
 cd server
-npx prisma migrate dev
+npm run db:migrate
 cd ..
 ```
 
@@ -226,7 +227,7 @@ To wipe all data and start fresh (like a new world in Tribal Wars):
 
 ```bash
 cd server
-npx prisma migrate reset    # Drops all tables, re-runs migrations — empty DB, schema intact
+npm run db:reset            # Drops all tables, re-runs migrations — empty DB, schema intact
 redis-cli FLUSHDB           # Clears BullMQ job queues
 ```
 
@@ -268,6 +269,7 @@ aSignOfWar/
 │   └── battleCalc.ts                  # Battle formula (used server-side + client simulator)
 │
 ├── server/
+│   ├── test.rest                       # API-first testing file (VS Code REST Client)
 │   ├── prisma/
 │   │   └── schema.prisma              # Database schema (15 models, 6 enums)
 │   ├── scripts/                       # One-off admin/maintenance scripts
@@ -746,6 +748,15 @@ The server was profiled and optimized using Locust. Key bottlenecks identified a
 - **Database indexes** — added indexes on `City.ownerId`, `Command(fromCityId, status)`, `Command(toCityId, type, status)`, `BuildingUpgradeOrder.cityId`, `RecruitmentOrder.cityId`. Without these, PostgreSQL was doing full table scans on the most frequent queries.
 - **Ghost ticker batching** — ghost city auto-upgrades changed from sequential (one query per city) to parallel batches of 50, reducing connection pool contention.
 - **PostgreSQL tuning** — `shared_buffers`, `work_mem`, and `effective_cache_size` configured proportionally to available RAM (previously set too high, causing memory pressure).
+- **Selective queries (`select` over `include`)** — Prisma queries across all services were rewritten to fetch only the columns actually used, instead of loading entire rows with all relations. For example, `getAllCitiesOnMap` was loading full owner, alliance, and building objects when only `id`, `username`, `tag`, `name`, and `level` were needed. Same pattern applied to `sendCommand`, `startUpgrade`, `startRecruitment`, `getCommandsForCity`, and others. Result: median response time dropped from 84ms to 13ms at 500 users.
+- **Parallel queries (`Promise.all`)** — independent database queries within the same endpoint were parallelized instead of running sequentially. For example, `getCityOverview` ran stationed support and own command queries one after the other; now they run simultaneously. Same applied to `cancelUpgrade` (building lookup + order count).
+- **Write-free resource sync** — resources (money, energy, ammo) are a pure function of time: `current = stored + production × elapsed`. Previously, every `GET /cities/mine` wrote updated values back to the database. Now resources are computed in-memory on read and only written when actually spent (upgrade, recruitment, attack). This eliminated ~250 writes/sec under load from the most frequently called endpoint.
+
+## Development Approach
+
+The backend was built and tested independently from the frontend using an **API-first** workflow. All endpoints were validated through `server/test.rest` (a VS Code REST Client file) before any UI work began. This kept debugging focused on one layer at a time — when the frontend was built, the API was already solid, so issues could only come from the UI itself.
+
+The `test.rest` file covers every endpoint in the project: auth, cities, buildings, recruitment, commands (attack, spy, support, resources, withdraw), reports, rankings, governor, alliances (full lifecycle: create, invite, apply, accept, kick, transfer, disband), alliance chat, direct messages, and player profiles.
 
 ## Architecture Decisions
 

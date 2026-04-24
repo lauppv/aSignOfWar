@@ -7,7 +7,7 @@ import { syncResources } from "./city.service";
 export const startUpgrade = async (buildingId: string, userId: string) => {
   const building = await prisma.building.findUnique({
     where: { id: buildingId },
-    include: { city: { include: { buildings: true } } },
+    include: { city: { select: { id: true, ownerId: true, buildings: { select: { name: true, level: true } } } } },
   });
 
   if (!building)                        throw new Error("BUILDING_NOT_FOUND");
@@ -100,22 +100,22 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
 export const cancelUpgrade = async (orderId: string, userId: string) => {
   const order = await prisma.buildingUpgradeOrder.findUnique({
     where: { id: orderId },
-    include: { city: true },
+    include: { city: { select: { id: true, ownerId: true } } },
   });
 
   if (!order)                        throw new Error("ORDER_NOT_FOUND");
   if (order.city.ownerId !== userId) throw new Error("UNAUTHORIZED");
 
-  // Calculeaza costul original al acestui upgrade pentru a returna 75%
-  const building = await prisma.building.findFirst({
-    where: { cityId: order.cityId, name: order.buildingName },
-  });
+  const [building, ordersBefore] = await Promise.all([
+    prisma.building.findFirst({
+      where: { cityId: order.cityId, name: order.buildingName },
+      select: { level: true },
+    }),
+    prisma.buildingUpgradeOrder.count({
+      where: { cityId: order.cityId, buildingName: order.buildingName, startAt: { lt: order.startAt } },
+    }),
+  ]);
   if (!building) throw new Error("BUILDING_NOT_FOUND");
-
-  // Numara cate ordere sunt inaintea acestuia (pentru a determina effectiveLevel)
-  const ordersBefore = await prisma.buildingUpgradeOrder.count({
-    where: { cityId: order.cityId, buildingName: order.buildingName, startAt: { lt: order.startAt } },
-  });
   const effectiveLevel = building.level + ordersBefore;
   const cost = getBuildingUpgradeCost(order.buildingName, effectiveLevel);
 

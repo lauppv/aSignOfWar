@@ -134,9 +134,10 @@ export const getAllCitiesOnMap = async () => {
   if (mapCache && now < mapCache.expiresAt) return mapCache.data;
 
   const cities = await prisma.city.findMany({
-    include: {
-      owner: { include: { alliance: true } },
-      buildings: true,
+    select: {
+      id: true, name: true, x: true, y: true,
+      owner: { select: { id: true, username: true, allianceId: true, alliance: { select: { tag: true } } } },
+      buildings: { select: { name: true, level: true } },
     },
   });
 
