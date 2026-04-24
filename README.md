@@ -33,8 +33,6 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
   - [Report Sharing](#report-sharing)
 - [Job Queue (BullMQ)](#job-queue-bullmq)
 - [Load Testing](#load-testing)
-  - [Results (500 users)](#results-500-concurrent-users-spawn-rate-5-13s-think-time)
-  - [After optimization (500 users)](#after-optimization-500-concurrent-users-spawn-rate-50-13s-think-time)
   - [Performance optimizations](#performance-optimizations)
 - [Development Approach](#development-approach)
 - [Architecture Decisions](#architecture-decisions)
@@ -702,43 +700,6 @@ locust -f locustfile.py --host http://localhost:3000
 
 Open `http://localhost:8089` in the browser, set number of users and spawn rate, and start the test.
 
-### Results (500 concurrent users, spawn rate 5, 1–3s think time)
-
-Tested on a low-spec machine (4 cores, 5.7 GB RAM, running server + database + Redis + Locust simultaneously):
-
-| Operation | Requests | Failures | Median | p95 | p99 |
-|-----------|----------|----------|--------|-----|-----|
-| Register | 500 | 2 | 140ms | 300ms | 470ms |
-| Building upgrade | 7,725 | 1 | 38ms | 1,200ms | 2,000ms |
-| Unit recruitment | 7,947 | 0 | 16ms | 500ms | 970ms |
-| Attack command | 4,918 | 0 | 29ms | 780ms | 1,500ms |
-| Spy command | 2,461 | 0 | 18ms | 580ms | 1,000ms |
-| Resource transfer | 2,460 | 0 | 18ms | 540ms | 1,100ms |
-| Direct messages | 5,727 | 0 | 22ms | 670ms | 1,300ms |
-| City overview | 4,496 | 0 | 34ms | 1,000ms | 1,900ms |
-| World map | 2,875 | 0 | 15ms | 670ms | 1,300ms |
-| Rankings | 2,003 | 0 | 12ms | 320ms | 500ms |
-
-5 failures out of 54,916 total requests (0.009%). 218 req/s aggregate throughput. All gameplay operations maintain 0% failure rate under heavy load.
-
-### After optimization (500 concurrent users, spawn rate 50, 1–3s think time)
-
-After applying selective queries, write-free resource sync, and parallel query execution:
-
-| Operation | Requests | Failures | Median | p95 | p99 |
-|-----------|----------|----------|--------|-----|-----|
-| Register | 500 | 0 | 140ms | 260ms | 590ms |
-| Building upgrade | 4,849 | 0 | 35ms | 360ms | 940ms |
-| Unit recruitment | 4,853 | 0 | 16ms | 190ms | 460ms |
-| Attack command | 2,623 | 0 | 30ms | 310ms | 740ms |
-| Spy command | 1,337 | 0 | 17ms | 240ms | 490ms |
-| Resource transfer | 1,300 | 0 | 18ms | 230ms | 750ms |
-| Direct messages | 3,697 | 0 | 20ms | 250ms | 510ms |
-| City overview | 2,843 | 0 | 25ms | 200ms | 470ms |
-| World map | 1,788 | 0 | 14ms | 340ms | 670ms |
-| Rankings | 1,238 | 0 | 14ms | 170ms | 530ms |
-
-0 failures out of 33,608 total requests (0%). 241 req/s aggregate throughput. Median response time dropped from 84ms to 21ms across all endpoints.
 
 ### Performance optimizations
 

@@ -20,7 +20,7 @@ def random_str(n=10):
 
 
 class GamePlayer(HttpUser):
-    wait_time = between(1, 3)
+    wait_time = between(0.5, 1)
 
     def on_start(self):
         suffix = random_str()
