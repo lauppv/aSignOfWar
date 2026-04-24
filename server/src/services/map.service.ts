@@ -138,6 +138,7 @@ export const getAllCitiesOnMap = async () => {
       owner: city.owner ? {
         id: city.owner.id,
         username: city.owner.username,
+        allianceId: city.owner.allianceId,
         alliance: city.owner.alliance ? {
           tag: city.owner.alliance.tag,
         } : null,

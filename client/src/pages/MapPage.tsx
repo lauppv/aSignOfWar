@@ -19,7 +19,7 @@ const GRID_LINE = "#3d660e";
 const COLOR_ACTIVE   = "#e85aad"; // orasul pe care jucatorul il are selectat ca "activ"
 const COLOR_OWN      = "#e3b341"; // celelalte orase ale jucatorului (non-active)
 const COLOR_GHOST    = "#ffffff"; // orase ghost (fara owner) - pot fi cucerite
-const COLOR_ALLIANCE = "#134ce9d7"; // orase ale colegilor de alianta
+const COLOR_ALLIANCE = "#58a6ff"; // orase ale colegilor de alianta
 const COLOR_OTHER    = "#7125b8"; // restul jucatorilor (adversari potentiali)
 
 // Clasificarea unui oras din perspectiva jucatorului curent - determina
@@ -442,6 +442,12 @@ export default function MapPage() {
                   }
                   e.stopPropagation();
                   setSelected({ city: c, px: c.x * CELL, py: c.y * CELL });
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (ownedCityIds.has(c.id)) {
+                    navigate(`/city?cityId=${encodeURIComponent(c.id)}`);
+                  }
                 }}
                 className="absolute rounded-sm"
                 style={{
