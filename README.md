@@ -4,6 +4,40 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 
 > **Note:** This is a portfolio project. This README intentionally includes detailed API endpoints, database schema, game mechanics, and architecture decisions that would normally live in internal documentation — the goal is to give reviewers a complete picture of the system without having to dig through the code.
 
+## Table of contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Environment Variables](#environment-variables)
+- [Admin Scripts](#admin-scripts)
+- [Resetting the world](#resetting-the-world)
+- [Playing with friends (ngrok)](#playing-with-friends-ngrok)
+- [Project Structure](#project-structure)
+- [API Endpoints](#api-endpoints)
+- [Database Schema](#database-schema)
+- [Game Mechanics](#game-mechanics)
+  - [Buildings](#buildings)
+  - [Resources](#resources)
+  - [Units](#units)
+  - [Commands](#commands)
+  - [Battle Formula](#battle-formula)
+  - [Spy Mechanic](#spy-mechanic)
+  - [Loyalty and Conquest](#loyalty-and-conquest)
+  - [Battle Simulator](#battle-simulator)
+  - [Ghost Cities](#ghost-cities)
+  - [Multiple Cities](#multiple-cities)
+  - [Alliances](#alliances)
+  - [Messages](#messages)
+  - [Report Sharing](#report-sharing)
+- [Job Queue (BullMQ)](#job-queue-bullmq)
+- [Load Testing](#load-testing)
+  - [Results (500 users)](#results-500-concurrent-users-spawn-rate-5-13s-think-time)
+  - [Extended run (600 users)](#extended-run-600-concurrent-users-spawn-rate-1-12-minutes)
+  - [Performance optimizations](#performance-optimizations)
+- [Architecture Decisions](#architecture-decisions)
+
 ## Features
 
 - **Interactive city view** — isometric city image with clickable polygon hitboxes over each building slot, opening building details directly from the map
@@ -13,9 +47,9 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **Spy intelligence** — hacker-vs-hacker system separate from combat, with city snapshots on success
 - **City conquest** — governor-based loyalty siege across multiple attacks
 - **Alliance system** — creation, invitations, applications, chat, member management, leaderboards
-- **World map** — 100x100 grid with ghost NPC cities for early-game farming
+- **World map** — 300x300 grid with ghost NPC cities for early-game farming
 - **Direct messages** with embedded shared battle/spy reports
-- **Load tested** — 200 concurrent users at ~70 req/s with ~0.2% failure rate
+- **Load tested** — 500 concurrent users at ~218 req/s with ~0.01% failure rate (Locust)
 
 ### Screenshots
 These screenshots were taken with GAME_SPEED=600 (see server/.env) for testing purposes, which is why the construction and recruitment times are so short. Normally, at speed 1, for example, constructions take hours, and recruitment—depending on the quantity—can take days.
@@ -283,6 +317,7 @@ aSignOfWar/
 │   │   │   ├── battle.service.ts      # Battle resolution, loot, loyalty, conquest
 │   │   │   ├── governor.service.ts    # Governor deposit/recruit (account-wide)
 │   │   │   ├── map.service.ts         # World map, city placement, ghost city spawning
+│   │   │   ├── slotAllocator.ts      # In-memory slot allocator with async mutex
 │   │   │   ├── ghost.service.ts       # Ghost city auto-upgrade ticker
 │   │   │   ├── ranking.service.ts     # Player and alliance leaderboards
 │   │   │   ├── report.service.ts      # Battle/spy/support/resource report queries
@@ -657,21 +692,52 @@ locust -f locustfile.py --host http://localhost:3000
 
 Open `http://localhost:8089` in the browser, set number of users and spawn rate, and start the test.
 
-### Results (200 concurrent users, 1–3s think time)
+### Results (500 concurrent users, spawn rate 5, 1–3s think time)
 
-Tested on a low-spec machine (5.7 GB RAM, running both the server and the load test simultaneously):
+Tested on a low-spec machine (4 cores, 5.7 GB RAM, running server + database + Redis + Locust simultaneously):
 
 | Operation | Requests | Failures | Median | p95 | p99 |
 |-----------|----------|----------|--------|-----|-----|
-| Register | 200 | 2% | 320ms | 1300ms | 1600ms |
-| Building upgrade | 516 | 0.4% | 44ms | 520ms | 720ms |
-| Unit recruitment | 484 | 0% | 17ms | 170ms | 250ms |
-| Attack command | 352 | 0% | 44ms | 440ms | 530ms |
-| Spy command | 185 | 0% | 22ms | 190ms | 240ms |
-| Resource transfer | 160 | 0% | 19ms | 170ms | 230ms |
-| Direct messages | 370 | 0% | 21ms | 240ms | 360ms |
+| Register | 500 | 2 | 140ms | 300ms | 470ms |
+| Building upgrade | 7,725 | 1 | 38ms | 1,200ms | 2,000ms |
+| Unit recruitment | 7,947 | 0 | 16ms | 500ms | 970ms |
+| Attack command | 4,918 | 0 | 29ms | 780ms | 1,500ms |
+| Spy command | 2,461 | 0 | 18ms | 580ms | 1,000ms |
+| Resource transfer | 2,460 | 0 | 18ms | 540ms | 1,100ms |
+| Direct messages | 5,727 | 0 | 22ms | 670ms | 1,300ms |
+| City overview | 4,496 | 0 | 34ms | 1,000ms | 1,900ms |
+| World map | 2,875 | 0 | 15ms | 670ms | 1,300ms |
+| Rankings | 2,003 | 0 | 12ms | 320ms | 500ms |
 
-~0.2% overall failure rate at 200 concurrent users and ~70 req/s. Register failures are caused by coordinate collisions on city placement (retried automatically up to 5 times). All gameplay operations maintain 0% failure rate under heavy load.
+5 failures out of 54,916 total requests (0.009%). 218 req/s aggregate throughput. All gameplay operations maintain 0% failure rate under heavy load.
+
+### Extended run (600 concurrent users, spawn rate 1, ~12 minutes)
+
+| Operation | Requests | Failures | Median | p95 | p99 |
+|-----------|----------|----------|--------|-----|-----|
+| Register | 600 | 0 | 110ms | 1,800ms | 2,900ms |
+| Building upgrade | 14,559 | 0 | 54ms | 2,500ms | 3,600ms |
+| Unit recruitment | 14,516 | 2 | 24ms | 1,200ms | 1,900ms |
+| Attack command | 9,698 | 0 | 34ms | 1,500ms | 2,600ms |
+| Spy command | 4,935 | 0 | 28ms | 1,100ms | 1,900ms |
+| Resource transfer | 4,920 | 0 | 27ms | 1,200ms | 2,000ms |
+| Direct messages | 10,908 | 2 | 33ms | 1,700ms | 2,700ms |
+| City overview | 8,023 | 0 | 44ms | 2,500ms | 3,500ms |
+| World map | 5,505 | 2 | 26ms | 1,100ms | 2,300ms |
+| Rankings | 3,621 | 1 | 21ms | 730ms | 1,700ms |
+
+10 failures out of 102,827 total requests (0.0097%). 217 req/s sustained over 12 minutes with 600 concurrent users.
+
+### Performance optimizations
+
+The server was profiled and optimized using Locust. Key bottlenecks identified and resolved:
+
+- **SlotAllocator** (`slotAllocator.ts`) — in-memory singleton with async mutex that replaced per-request `SELECT * FROM city` queries for map slot allocation. Eliminates race conditions where concurrent registrations picked the same coordinates, and removes redundant full-table scans (previously 2 scans per registration).
+- **Inline resource sync** — `syncResources` was called before city overview, which then re-fetched the city to get updated values (3 DB queries). Refactored to pass the already-loaded city object and return updated values directly (1 query).
+- **In-memory caching** — `GET /map` and `GET /rankings` responses cached with 5–10 second TTL. These endpoints load all cities/users with all buildings and were called hundreds of times per second under load with identical results.
+- **Database indexes** — added indexes on `City.ownerId`, `Command(fromCityId, status)`, `Command(toCityId, type, status)`, `BuildingUpgradeOrder.cityId`, `RecruitmentOrder.cityId`. Without these, PostgreSQL was doing full table scans on the most frequent queries.
+- **Ghost ticker batching** — ghost city auto-upgrades changed from sequential (one query per city) to parallel batches of 50, reducing connection pool contention.
+- **PostgreSQL tuning** — `shared_buffers`, `work_mem`, and `effective_cache_size` configured proportionally to available RAM (previously set too high, causing memory pressure).
 
 ## Architecture Decisions
 
@@ -679,6 +745,6 @@ Tested on a low-spec machine (5.7 GB RAM, running both the server and the load t
 - **Lazy resource sync**: Resources are computed on-read from production rate and elapsed time, rather than ticked by a background worker. This eliminates an entire worker and keeps resource values consistent without race conditions.
 - **Shared game config**: `shared/gameConfig.ts` is the single source of truth for all game balance data (costs, speeds, formulas). Both client and server import it directly, so they never drift.
 - **Optimistic locking**: Resource deductions use Prisma transactions with conditional updates to prevent double-spending under concurrent requests.
-- **Retry on coordinate collision**: City placement uses a read-then-insert pattern. Under concurrent registrations, two transactions can pick the same slot. The register flow retries up to 5 times on unique constraint violations, filtering only coordinate-related conflicts.
+- **Mutex-based slot allocation**: City placement uses an in-memory `SlotAllocator` singleton with an async mutex. All slot reservations are serialized, eliminating coordinate collisions entirely. The occupied set is loaded once from DB at startup and updated in-memory on each allocation — zero DB queries for slot-finding.
 - **Shared battle calculator**: `battleCalc.ts` is imported by both the server (for real combat) and the client (for the battle simulator). One formula, zero drift.
 - **Soft-delete reports**: Each side of a battle can independently hide their report without affecting the other player's view.

@@ -1,8 +1,7 @@
 import prisma from "../config/db";
-import { Prisma } from "@prisma/client";
 import { getBuildingPoints, getWarehouseCapacity, BuildingName } from "../../../shared/gameConfig";
+import { slotAllocator } from "./slotAllocator";
 
-// Sablon cladiri pentru orasele fantoma nou create (vezi plan.txt → GHOST CITIES).
 export const GHOST_STARTER_BUILDINGS: { name: BuildingName; level: number }[] = [
   { name: "HEADQUARTERS",    level: 3 },
   { name: "BANK",            level: 3 },
@@ -16,134 +15,137 @@ export const GHOST_STARTER_BUILDINGS: { name: BuildingName; level: number }[] = 
 ];
 
 const GHOST_STARTER_WAREHOUSE_LEVEL = 3;
-
-export const MAP_SIZE = 100;
-
-// Pana la cati candidati liberi (oricat de "lipiti") sa luam in considerare.
-const ANY_FREE_POOL = 20;
-// Cati candidati cu zero vecini ocupati pe 4 directii sa preferam (creeaza spatii goale).
-const NO_NEIGHBOR_POOL = 10;
-
+export const MAP_SIZE = 300;
 const GHOST_NAME = "Ghost city";
-
-type TransactionClient = Prisma.TransactionClient;
-
-const slotIndex = (x: number, y: number) => y * MAP_SIZE + x;
 
 export const getMapCenter = () => ({
   x: Math.floor(MAP_SIZE / 2),
   y: Math.floor(MAP_SIZE / 2),
 });
 
-export const getOccupiedSet = async (
-  tx: TransactionClient = prisma
-): Promise<Set<number>> => {
-  const cities = await tx.city.findMany({ select: { x: true, y: true } });
-  return new Set(cities.map(c => slotIndex(c.x, c.y)));
-};
-
-// Alege un slot liber cat mai aproape de (originX, originY).
-// Prefera sloturile cu zero vecini ocupati (4-vecini) — astfel orasele raman rasfirate
-// cu spatii goale intre ele in loc sa fie lipite. Daca pool-ul "no-neighbor" e gol,
-// cade pe orice slot liber. Aruncam MAP_FULL daca nu mai e nimic disponibil.
+// Functie pura (fara DB) — cauta in cercuri din ce in ce mai mari din origin.
+// Preferinta: sloturi fara vecini (ca orasele sa nu fie lipite). Daca nu gaseste, ia oricare liber.
+// Acumuleaza candidati peste mai multe ring-uri — daca ring-ul curent are doar sloturi
+// cu vecini, continua sa caute in ring-urile urmatoare pana gaseste cel putin 10 fara vecini
+// sau epuizeaza 20 de sloturi libere. Fara asta, orasele se lipeau in centrul hartii.
 export const pickFreeSlotNear = (
   originX: number,
   originY: number,
   occupied: Set<number>
 ): { x: number; y: number } => {
-  // Sortam toate sloturile dupa distanta euclidiana fata de origine, cu tiebreaker random
-  // ca sa nu cada mereu acelasi inel in aceeasi ordine.
-  const sorted: { x: number; y: number; d: number; r: number }[] = [];
-  for (let y = 0; y < MAP_SIZE; y++) {
-    for (let x = 0; x < MAP_SIZE; x++) {
-      const dx = x - originX;
-      const dy = y - originY;
-      sorted.push({ x, y, d: dx * dx + dy * dy, r: Math.random() });
-    }
-  }
-  sorted.sort((a, b) => (a.d - b.d) || (a.r - b.r));
-
   const noNeighbor: { x: number; y: number }[] = [];
   const anyFree: { x: number; y: number }[] = [];
 
-  for (const s of sorted) {
-    if (occupied.has(slotIndex(s.x, s.y))) continue;
-    anyFree.push(s);
+  for (let radius = 0; radius < MAP_SIZE; radius++) {
+    for (let i = -radius; i <= radius; i++) {
+      for (let j = -radius; j <= radius; j++) {
+        if (Math.abs(i) !== radius && Math.abs(j) !== radius) continue;
+        const x = originX + i;
+        const y = originY + j;
+        if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) continue;
+        const idx = y * MAP_SIZE + x;
+        if (occupied.has(idx)) continue;
 
-    const hasNeighbor =
-      (s.x > 0              && occupied.has(slotIndex(s.x - 1, s.y))) ||
-      (s.x < MAP_SIZE - 1   && occupied.has(slotIndex(s.x + 1, s.y))) ||
-      (s.y > 0              && occupied.has(slotIndex(s.x, s.y - 1))) ||
-      (s.y < MAP_SIZE - 1   && occupied.has(slotIndex(s.x, s.y + 1)));
-    if (!hasNeighbor) noNeighbor.push(s);
+        anyFree.push({ x, y });
+        const hasNeighbor =
+          (x > 0 && occupied.has(idx - 1)) ||
+          (x < MAP_SIZE - 1 && occupied.has(idx + 1)) ||
+          (y > 0 && occupied.has(idx - MAP_SIZE)) ||
+          (y < MAP_SIZE - 1 && occupied.has(idx + MAP_SIZE));
+        if (!hasNeighbor) noNeighbor.push({ x, y });
+      }
+    }
 
-    if (noNeighbor.length >= NO_NEIGHBOR_POOL) break;
-    if (anyFree.length >= ANY_FREE_POOL && noNeighbor.length > 0) break;
+    if (noNeighbor.length >= 10 || anyFree.length >= 20) break;
   }
 
   const pool = noNeighbor.length > 0 ? noNeighbor : anyFree;
   if (pool.length === 0) throw new Error("MAP_FULL");
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  return { x: pick.x, y: pick.y };
+  return pool[Math.floor(Math.random() * pool.length)];
 };
 
-// Wrapper pentru compatibilitate cu createStarterCity: ia un slot din spirala centrala.
-export const pickFreeSlot = async (
-  tx: TransactionClient = prisma
-): Promise<{ x: number; y: number }> => {
-  const occupied = await getOccupiedSet(tx);
+// Inainte lua tx ca parametru si facea getOccupiedSet(tx) — acum merge prin allocator, fara DB query
+export const pickFreeSlot = async (): Promise<{ x: number; y: number }> => {
   const center = getMapCenter();
-  return pickFreeSlotNear(center.x, center.y, occupied);
+  return slotAllocator.allocateSlot(center.x, center.y);
 };
 
-// Creeaza N orase fantoma in jurul unei origini. Pentru fiecare reciteste sloturile
-// ocupate (read-your-writes in tranzactie) ca sa nu lovim unique-ul pe (x,y).
+// Inainte avea getOccupiedSet (SELECT pe tot), skipDuplicates (masca race conditions),
+// si un query OR cu buildings: { none: {} } ca sa gaseasca orasele tocmai create.
+// Acum sloturile vin pre-alocate din allocator, garantat unice — nu mai trebuie skipDuplicates.
 export const createGhostCitiesAround = async (
   origin: { x: number; y: number },
-  count: number,
-  tx: TransactionClient = prisma
+  count: number
 ): Promise<void> => {
-  const occupied = await getOccupiedSet(tx);
+  const slots = await slotAllocator.allocateSlots(origin.x, origin.y, count);
   const startingResources = getWarehouseCapacity(GHOST_STARTER_WAREHOUSE_LEVEL);
 
-  for (let i = 0; i < count; i++) {
-    const slot = pickFreeSlotNear(origin.x, origin.y, occupied);
-    occupied.add(slotIndex(slot.x, slot.y));
-    await tx.city.create({
-      data: {
-        name: GHOST_NAME,
-        x: slot.x,
-        y: slot.y,
-        money:  startingResources,
-        energy: startingResources,
-        ammo:   startingResources,
-        buildings: { create: GHOST_STARTER_BUILDINGS },
-      },
-    });
+  const ghostCitiesData = slots.map(slot => ({
+    name: GHOST_NAME,
+    x: slot.x,
+    y: slot.y,
+    money: startingResources,
+    energy: startingResources,
+    ammo: startingResources,
+  }));
+
+  await prisma.city.createMany({ data: ghostCitiesData });
+
+  const createdCities = await prisma.city.findMany({
+    where: { OR: slots.map(s => ({ x: s.x, y: s.y })) },
+    select: { id: true },
+  });
+
+  const buildingsData: { cityId: string; name: BuildingName; level: number }[] = [];
+  for (const city of createdCities) {
+    for (const b of GHOST_STARTER_BUILDINGS) {
+      buildingsData.push({ cityId: city.id, name: b.name, level: b.level });
+    }
+  }
+
+  if (buildingsData.length > 0) {
+    await prisma.building.createMany({ data: buildingsData });
   }
 };
 
+// Cache in-memory cu TTL — harta nu se schimba la fiecare request, nu are rost sa
+// incarci toate orasele cu toate buildings la fiecare GET /map. La 500 useri care
+// dau refresh la harta, fara cache faceai sute de queries identice pe secunda.
+let mapCache: { data: any; expiresAt: number } | null = null;
+const MAP_CACHE_TTL_MS = 5_000;
+
 export const getAllCitiesOnMap = async () => {
+  const now = Date.now();
+  if (mapCache && now < mapCache.expiresAt) return mapCache.data;
+
   const cities = await prisma.city.findMany({
-    select: {
-      id: true,
-      name: true,
-      x: true,
-      y: true,
-      owner: {
-        select: {
-          id: true,
-          username: true,
-          allianceId: true,
-          alliance: { select: { id: true, tag: true, name: true } },
-        },
-      },
-      buildings: { select: { name: true, level: true } },
+    include: {
+      owner: { include: { alliance: true } },
+      buildings: true,
     },
   });
-  return cities.map(({ buildings, ...c }) => {
+
+  const data = cities.map((city) => {
     let points = 0;
-    for (const b of buildings) points += getBuildingPoints(b.name as BuildingName, b.level);
-    return { ...c, points };
+    for (const b of city.buildings) {
+        points += getBuildingPoints(b.name as BuildingName, b.level);
+    }
+    return {
+      id: city.id,
+      name: city.name,
+      x: city.x,
+      y: city.y,
+      owner: city.owner ? {
+        id: city.owner.id,
+        username: city.owner.username,
+        alliance: city.owner.alliance ? {
+          tag: city.owner.alliance.tag,
+        } : null,
+      } : null,
+      points,
+    };
   });
+
+  mapCache = { data, expiresAt: now + MAP_CACHE_TTL_MS };
+  return data;
 };

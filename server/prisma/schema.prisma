@@ -209,6 +209,7 @@ model City {
   recruitmentOrders     RecruitmentOrder[]
 
   @@unique([x, y])
+  @@index([ownerId])
 }
 
 model Building {
@@ -231,6 +232,8 @@ model BuildingUpgradeOrder {
 
   cityId String
   city   City   @relation(fields: [cityId], references: [id])
+
+  @@index([cityId])
 }
 
 model RecruitmentOrder {
@@ -243,6 +246,8 @@ model RecruitmentOrder {
 
   cityId String
   city   City   @relation(fields: [cityId], references: [id])
+
+  @@index([cityId])
 }
 
 model Unit {
@@ -312,6 +317,11 @@ model Command {
 
   units         CommandUnit[]
   sharedReports SharedReport[]
+
+  @@index([fromCityId, status])
+  @@index([toCityId, type, status])
+  @@index([attackerUserId])
+  @@index([defenderUserId])
 }
 
 model CommandUnit {

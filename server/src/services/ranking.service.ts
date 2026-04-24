@@ -32,10 +32,16 @@ export interface AllianceRankingEntry {
   totalKills: number;
 }
 
-// O(n*m*k) la fiecare request: loopuri users x cities x buildings. La ~100 playeri
-// e ok (<50ms). La 1000+ as cache-ui rankings in Redis cu TTL 60s sau as recalcula
-// pe un cron — dar acum YAGNI, optimizare prematura pentru un proiect portofoliu.
+// Cache in-memory cu TTL — rankings nu se schimba la fiecare request.
+// Inainte fiecare GET /rankings incarca toti userii cu toate orasele cu toate buildings.
+let rankingsCache: { data: PlayerRankingEntry[]; expiresAt: number } | null = null;
+let allianceRankingsCache: { data: AllianceRankingEntry[]; expiresAt: number } | null = null;
+const RANKINGS_CACHE_TTL_MS = 10_000;
+
 export async function getRankings(): Promise<PlayerRankingEntry[]> {
+  const now = Date.now();
+  if (rankingsCache && now < rankingsCache.expiresAt) return rankingsCache.data;
+
   const users = await prisma.user.findMany({
     select: {
       id: true,
@@ -78,10 +84,13 @@ export async function getRankings(): Promise<PlayerRankingEntry[]> {
   });
 
   rows.sort((a, b) => b.points - a.points);
+  rankingsCache = { data: rows, expiresAt: Date.now() + RANKINGS_CACHE_TTL_MS };
   return rows;
 }
 
 export async function getAllianceRankings(): Promise<AllianceRankingEntry[]> {
+  const now = Date.now();
+  if (allianceRankingsCache && now < allianceRankingsCache.expiresAt) return allianceRankingsCache.data;
   const alliances = await prisma.alliance.findMany({
     include: {
       members: {
@@ -131,5 +140,6 @@ export async function getAllianceRankings(): Promise<AllianceRankingEntry[]> {
   });
 
   rows.sort((a, b) => b.points - a.points);
+  allianceRankingsCache = { data: rows, expiresAt: Date.now() + RANKINGS_CACHE_TTL_MS };
   return rows;
 }

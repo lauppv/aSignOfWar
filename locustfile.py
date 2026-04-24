@@ -1,19 +1,17 @@
 """
-Load test for aSignOfWar — focused on heavy write operations.
+Load test for aSignOfWar.
 
 Run:
     locust -f locustfile.py --host http://localhost:3000
 
-Open http://localhost:8089 and start with:
-    - 20 users, spawn rate 2  → moderate
-    - 50 users, spawn rate 5  → heavy
+
 """
 
 import random
 import string
 from locust import HttpUser, task, between
 
-# All registered usernames so players can message each other
+# Toti userii inregistrati — ca sa poata trimite mesaje intre ei
 ALL_USERNAMES: list[str] = []
 
 
@@ -50,10 +48,11 @@ class GamePlayer(HttpUser):
         self.has_units = False
 
         self._load_city()
-        self._discover_ghosts()
+
+    # -- Helpers --
 
     def _load_city(self):
-        r = self.client.get("/api/cities/mine", headers=self.headers, name="[setup] city")
+        r = self.client.get("/api/cities/mine", headers=self.headers, name="GET /cities/mine")
         if r.status_code == 200:
             data = r.json()
             self.city_id = data.get("id")
@@ -61,17 +60,29 @@ class GamePlayer(HttpUser):
             units = data.get("units", [])
             self.has_units = any(u["quantity"] > 0 for u in units if u["name"] == "LIGHT_INFANTRY")
 
-    def _discover_ghosts(self):
-        r = self.client.get("/api/map", headers=self.headers, name="[setup] map")
-        if r.status_code == 200:
-            cities = r.json().get("cities", [])
-            self.ghost_ids = [c["id"] for c in cities if c.get("owner") is None]
+    def _refresh_ghosts_from_map(self, response_json):
+        """Extrage ghost city ids din raspunsul de la GET /map."""
+        cities = response_json.get("cities", [])
+        self.ghost_ids = [c["id"] for c in cities if c.get("owner") is None]
 
-    # ── Building upgrades ──
+    # -- Harta (cel mai greu endpoint — incarca toate orasele) --
+
+    @task(3)
+    def poll_map(self):
+        """GET /map — intr-un joc real userii dau refresh la harta periodic."""
+        if not self.token:
+            return
+        with self.client.get("/api/map", headers=self.headers, catch_response=True, name="GET /map") as r:
+            if r.status_code == 200:
+                self._refresh_ghosts_from_map(r.json())
+                r.success()
+            else:
+                r.failure(f"{r.status_code}")
+
+    # -- Building upgrades --
 
     @task(8)
     def upgrade_building(self):
-        """Upgrade a random building — DB transaction + BullMQ job scheduling."""
         if not self.token or not self.building_ids:
             return
         bid = random.choice(self.building_ids)
@@ -81,17 +92,15 @@ class GamePlayer(HttpUser):
             catch_response=True,
             name="POST /buildings/:id/upgrade",
         ) as r:
-            # 400/409 = expected (insufficient resources, upgrade in progress, max level)
             if r.status_code in (200, 400, 409):
                 r.success()
             else:
                 r.failure(f"{r.status_code} {r.text[:100]}")
 
-    # ── Unit recruitment ──
+    # -- Unit recruitment --
 
     @task(8)
     def recruit_units(self):
-        """Recruit infantry — DB transaction + BullMQ job scheduling."""
         if not self.token or not self.city_id:
             return
         unit = random.choice(["LIGHT_INFANTRY", "HEAVY_INFANTRY", "DEFENDER_INFANTRY"])
@@ -109,33 +118,27 @@ class GamePlayer(HttpUser):
             else:
                 r.failure(f"{r.status_code} {r.text[:100]}")
 
-    # ── Attack commands ──
+    # -- Commands (attack, spy, resources) --
 
     @task(6)
     def send_attack(self):
-        """Send attack to ghost city — travel time calc + DB transaction + BullMQ delayed job."""
         if not self.token or not self.city_id or not self.ghost_ids:
             return
         target = random.choice(self.ghost_ids)
-        units = {"LIGHT_INFANTRY": random.randint(1, 5)}
         with self.client.post(
             f"/api/cities/{self.city_id}/commands",
-            json={"type": "ATTACK", "targetCityId": target, "units": units},
+            json={"type": "ATTACK", "targetCityId": target, "units": {"LIGHT_INFANTRY": random.randint(1, 5)}},
             headers=self.headers,
             catch_response=True,
             name="POST /commands [ATTACK]",
         ) as r:
-            # 400 = no units available, insufficient — expected
             if r.status_code in (201, 400):
                 r.success()
             else:
                 r.failure(f"{r.status_code} {r.text[:100]}")
 
-    # ── Spy commands ──
-
     @task(3)
     def send_spy(self):
-        """Send spy to ghost city."""
         if not self.token or not self.city_id or not self.ghost_ids:
             return
         target = random.choice(self.ghost_ids)
@@ -151,11 +154,8 @@ class GamePlayer(HttpUser):
             else:
                 r.failure(f"{r.status_code} {r.text[:100]}")
 
-    # ── Resource sending ──
-
     @task(3)
     def send_resources(self):
-        """Send resources to a ghost city (requires Harbor, will likely fail — tests the path)."""
         if not self.token or not self.city_id or not self.ghost_ids:
             return
         target = random.choice(self.ghost_ids)
@@ -175,11 +175,38 @@ class GamePlayer(HttpUser):
             else:
                 r.failure(f"{r.status_code} {r.text[:100]}")
 
-    # ── Direct messages ──
+    @task(2)
+    def cancel_command(self):
+        """Incearca sa anuleze o comanda — testeaza si path-ul de cancel."""
+        if not self.token or not self.city_id:
+            return
+        r = self.client.get(
+            f"/api/cities/{self.city_id}/commands",
+            headers=self.headers,
+            name="GET /cities/:cityId/commands",
+        )
+        if r.status_code != 200:
+            return
+        commands = r.json() if isinstance(r.json(), list) else r.json().get("commands", [])
+        traveling = [c for c in commands if c.get("status") == "TRAVELING"]
+        if not traveling:
+            return
+        cmd = random.choice(traveling)
+        with self.client.post(
+            f"/api/cities/{self.city_id}/commands/{cmd['id']}/cancel",
+            headers=self.headers,
+            catch_response=True,
+            name="POST /commands/:id/cancel",
+        ) as r2:
+            if r2.status_code in (200, 400, 404):
+                r2.success()
+            else:
+                r2.failure(f"{r2.status_code} {r2.text[:100]}")
+
+    # -- Direct messages --
 
     @task(6)
     def send_message(self):
-        """Send a direct message to another load test player."""
         if not self.token or len(ALL_USERNAMES) < 2:
             return
         candidates = [u for u in ALL_USERNAMES if u != self.username]
@@ -200,7 +227,6 @@ class GamePlayer(HttpUser):
 
     @task(3)
     def read_conversations(self):
-        """List conversation threads."""
         if not self.token:
             return
         self.client.get(
@@ -211,7 +237,6 @@ class GamePlayer(HttpUser):
 
     @task(2)
     def check_unread(self):
-        """Check unread message count."""
         if not self.token:
             return
         self.client.get(
@@ -220,7 +245,7 @@ class GamePlayer(HttpUser):
             name="GET /messages/direct/unread",
         )
 
-    # ── Polling (realistic background traffic) ──
+    # -- Polling (trafic de background, ca in jocul real) --
 
     @task(4)
     def poll_city(self):
@@ -243,3 +268,42 @@ class GamePlayer(HttpUser):
         if not self.token:
             return
         self.client.get("/api/reports", headers=self.headers, name="GET /reports")
+
+    @task(2)
+    def poll_rankings(self):
+        if not self.token:
+            return
+        self.client.get("/api/rankings", headers=self.headers, name="GET /rankings")
+
+    # -- Profile & rename (operatii mai rare) --
+
+    @task(1)
+    def rename_city(self):
+        if not self.token:
+            return
+        with self.client.patch(
+            "/api/cities/mine/name",
+            json={"name": f"City {random_str(6)}"},
+            headers=self.headers,
+            catch_response=True,
+            name="PATCH /cities/mine/name",
+        ) as r:
+            if r.status_code in (200, 400):
+                r.success()
+            else:
+                r.failure(f"{r.status_code} {r.text[:100]}")
+
+    @task(1)
+    def view_player_profile(self):
+        """Viziteaza profilul unui alt jucator."""
+        if not self.token or len(ALL_USERNAMES) < 2:
+            return
+        candidates = [u for u in ALL_USERNAMES if u != self.username]
+        if not candidates:
+            return
+        # nu avem user ID-urile, dar putem folosi players endpoint
+        self.client.get(
+            "/api/rankings",
+            headers=self.headers,
+            name="GET /rankings [profile browse]",
+        )

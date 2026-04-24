@@ -11,43 +11,49 @@ type TransactionClient = Prisma.TransactionClient;
 // un jucator ar putea cheltui resurse care nu au fost inca produse ("time travel exploit").
 // As fi putut folosi un cron care sync-eaza toate orasele periodic, dar on-demand sync
 // e mai simplu si evita acumularea fantasma pe conturile inactive. YAGNI.
-export const syncResources = async (cityId: string): Promise<void> => {
-  const city = await prisma.city.findUnique({
-    where: { id: cityId },
-    include: { buildings: true },
-  });
-  if (!city) throw new Error("CITY_NOT_FOUND");
 
+// Varianta inline: cand getCityOverview deja are city-ul incarcat cu buildings,
+// nu mai face inca un findUnique — calculeaza si face un singur update.
+export const syncResourcesFromCity = async (
+  city: { id: string; money: number; energy: number; ammo: number; loyalty: number; lastResourceUpdate: Date; buildings: { name: string; level: number }[] }
+): Promise<{ money: number; energy: number; ammo: number } | null> => {
   const now = new Date();
   const elapsedHours = (now.getTime() - city.lastResourceUpdate.getTime()) / 3_600_000;
-
-  if (elapsedHours < 1 / 3600) return; // sub 1 secunda, nu merita
+  if (elapsedHours < 1 / 3600) return null;
 
   const bank        = city.buildings.find(b => b.name === "BANK");
   const powerPlant  = city.buildings.find(b => b.name === "POWER_PLANT");
   const weapFactory = city.buildings.find(b => b.name === "WEAPONS_FACTORY");
   const warehouse   = city.buildings.find(b => b.name === "WAREHOUSE");
 
-  // Ghost cities (no owner) lack buildings — nothing to sync.
   if (!bank || !powerPlant || !weapFactory || !warehouse) {
-    await prisma.city.update({ where: { id: cityId }, data: { lastResourceUpdate: now } });
-    return;
+    await prisma.city.update({ where: { id: city.id }, data: { lastResourceUpdate: now } });
+    return null;
   }
 
   const cap = getWarehouseCapacity(warehouse.level);
-
-  const newLoyalty = Math.min(100, city.loyalty + 1 * env.gameSpeed * elapsedHours);
+  const money  = Math.min(cap, city.money  + getResourceProduction(bank.level, env.gameSpeed)        * elapsedHours);
+  const energy = Math.min(cap, city.energy + getResourceProduction(powerPlant.level, env.gameSpeed)  * elapsedHours);
+  const ammo   = Math.min(cap, city.ammo   + getResourceProduction(weapFactory.level, env.gameSpeed) * elapsedHours);
+  const loyalty = Math.min(100, city.loyalty + 1 * env.gameSpeed * elapsedHours);
 
   await prisma.city.update({
-    where: { id: cityId },
-    data: {
-      money:              Math.min(cap, city.money  + getResourceProduction(bank.level, env.gameSpeed)        * elapsedHours),
-      energy:             Math.min(cap, city.energy + getResourceProduction(powerPlant.level, env.gameSpeed)  * elapsedHours),
-      ammo:               Math.min(cap, city.ammo   + getResourceProduction(weapFactory.level, env.gameSpeed) * elapsedHours),
-      loyalty:            newLoyalty,
-      lastResourceUpdate: now,
-    },
+    where: { id: city.id },
+    data: { money, energy, ammo, loyalty, lastResourceUpdate: now },
   });
+
+  return { money, energy, ammo };
+};
+
+// Versiunea originala — apelata din building.service, command.worker unde nu avem city-ul preloaded.
+// Face un singur findUnique apoi delega la syncResourcesFromCity.
+export const syncResources = async (cityId: string): Promise<void> => {
+  const city = await prisma.city.findUnique({
+    where: { id: cityId },
+    include: { buildings: true },
+  });
+  if (!city) throw new Error("CITY_NOT_FOUND");
+  await syncResourcesFromCity(city);
 };
 
 export const getCityOverview = async (userId: string, cityId?: string) => {
@@ -63,16 +69,11 @@ export const getCityOverview = async (userId: string, cityId?: string) => {
   });
   if (!city) throw new Error("CITY_NOT_FOUND");
 
-  await syncResources(city.id);
+  // Inainte: syncResources facea findUnique (city-ul pe care il avem deja), update,
+  // apoi getCityOverview facea INCA un findUnique ca sa ia resursele actualizate = 3 queries.
+  // Acum: syncResourcesFromCity primeste city-ul deja incarcat si returneaza valorile noi = 1 query.
+  const updated = await syncResourcesFromCity(city);
 
-  // Refetch resources actualizate dupa sync
-  const updated = await prisma.city.findUnique({
-    where: { id: city.id },
-    select: { money: true, energy: true, ammo: true },
-  });
-
-  // Unitatile de sprijin stationate in orasul nostru — contribuie la afisaj/aparare,
-  // dar nu sunt ale noastre (nu pot fi trimise in comenzi proprii).
   const stationedSupports = await prisma.command.findMany({
     where:  { toCityId: city.id, type: "SUPPORT", status: "ARRIVED" },
     select: { units: { select: { name: true, quantity: true } } },
@@ -133,7 +134,8 @@ export const createStarterCity = async (
   cityName: string,
   tx: TransactionClient = prisma
 ) => {
-  const { x, y } = await pickFreeSlot(tx);
+  // pickFreeSlot nu mai primeste tx — merge prin SlotAllocator (in-memory, mutex)
+  const { x, y } = await pickFreeSlot();
   return tx.city.create({
     data: {
       name: cityName,

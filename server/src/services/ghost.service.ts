@@ -43,17 +43,23 @@ export const tickGhostCity = async (cityId: string): Promise<void> => {
   });
 };
 
+// Inainte: iterare secventiala peste toate ghost cities, un UPDATE per oras.
+// Cu 1500 ghosts = 1500 queries secventiale care blocau connection pool-ul.
+// Acum: procesam in batch-uri de 50, paralel in fiecare batch.
+const GHOST_BATCH_SIZE = 50;
+
 export const tickAllGhosts = async (): Promise<void> => {
   const ghosts = await prisma.city.findMany({
     where:  { ownerId: null },
     select: { id: true },
   });
-  for (const g of ghosts) {
-    try {
-      await tickGhostCity(g.id);
-    } catch (err) {
-      console.error(`ghost tick failed for ${g.id}:`, err);
-    }
+  for (let i = 0; i < ghosts.length; i += GHOST_BATCH_SIZE) {
+    const batch = ghosts.slice(i, i + GHOST_BATCH_SIZE);
+    await Promise.all(
+      batch.map(g => tickGhostCity(g.id).catch(err =>
+        console.error(`ghost tick failed for ${g.id}:`, err)
+      ))
+    );
   }
 };
 

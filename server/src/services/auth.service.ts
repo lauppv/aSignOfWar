@@ -1,13 +1,13 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { Prisma } from "@prisma/client";
 import prisma from "../config/db";
 import env from "../config/env";
 import { createStarterCity } from "./city.service";
 import { createGhostCitiesAround } from "./map.service";
 
-const MAX_REGISTER_RETRIES = 5;
-
+// Inainte avea un retry loop cu 5 incercari (MAX_REGISTER_RETRIES) pentru ca
+// doua registrari simultane puteau alege acelasi slot si una pica cu P2002 (unique constraint).
+// Cu allocator-ul nu se mai poate intampla asta, deci nu mai e nevoie de retry.
 export const registerUser = async (
   username: string,
   email: string,
@@ -25,34 +25,21 @@ export const registerUser = async (
 
   const hash = await bcrypt.hash(password, 10);
 
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < MAX_REGISTER_RETRIES; attempt++) {
-    try {
-      const user = await prisma.$transaction(async (tx) => {
-        const newUser = await tx.user.create({
-          data: { username, email, password: hash },
-        });
-        const starter = await createStarterCity(newUser.id, cityName, tx);
-        await createGhostCitiesAround({ x: starter.x, y: starter.y }, 3, tx);
-        return newUser;
-      });
+  const result = await prisma.$transaction(async (tx) => {
+    const newUser = await tx.user.create({
+      data: { username, email, password: hash },
+    });
+    const starter = await createStarterCity(newUser.id, cityName, tx);
+    return { user: newUser, starter };
+  });
 
-      const token = jwt.sign({ id: user.id }, env.jwtSecret, { expiresIn: "7d" });
-      return { token, username: user.username };
-    } catch (e) {
-      const isCoordCollision =
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === "P2002" &&
-        Array.isArray(e.meta?.target) &&
-        (e.meta.target as string[]).includes("x");
-      if (isCoordCollision) {
-        lastErr = e;
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw lastErr;
+  // Fire-and-forget — userul nu asteapta dupa ghost cities, intra direct in joc.
+  // Sloturile sunt deja rezervate in memorie de allocator, DB insert-ul vine async.
+  createGhostCitiesAround({ x: result.starter.x, y: result.starter.y }, 3)
+    .catch(err => console.error("Ghost city creation failed:", err));
+
+  const token = jwt.sign({ id: result.user.id }, env.jwtSecret, { expiresIn: "7d" });
+  return { token, username: result.user.username };
 };
 
 export const loginUser = async (username: string, password: string) => {
