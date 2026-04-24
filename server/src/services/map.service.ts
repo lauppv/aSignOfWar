@@ -56,7 +56,7 @@ export const pickFreeSlotNear = (
       }
     }
 
-    if (noNeighbor.length >= 10 || anyFree.length >= 20) break;
+    if (noNeighbor.length >= 10) break;
   }
 
   const pool = noNeighbor.length > 0 ? noNeighbor : anyFree;
@@ -64,10 +64,25 @@ export const pickFreeSlotNear = (
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
-// Inainte lua tx ca parametru si facea getOccupiedSet(tx) — acum merge prin allocator, fara DB query
+// Originea e un punct random pe un cerc in jurul centrului. Raza cercului creste
+// cu numarul de orase deja ocupate — primii jucatori sunt aproape de centru,
+// urmatorii se distribuie pe cercuri din ce in ce mai mari. Randomizarea pe cerc
+// evita pattern-ul de diamant pe care il genereaza cautarea pe ring-uri patrate.
 export const pickFreeSlot = async (): Promise<{ x: number; y: number }> => {
   const center = getMapCenter();
-  return slotAllocator.allocateSlot(center.x, center.y);
+  const occupiedCount = slotAllocator.getOccupiedCount();
+  const maxRadius = MAP_SIZE * 0.45;
+  const totalSlots = MAP_SIZE * MAP_SIZE;
+  const fillRatio = occupiedCount / totalSlots;
+  const baseRadius = maxRadius * Math.sqrt(fillRatio) + 2;
+  const angle = Math.random() * 2 * Math.PI;
+  const r = baseRadius * (0.5 + Math.random() * 0.5);
+  const originX = Math.round(center.x + Math.cos(angle) * r);
+  const originY = Math.round(center.y + Math.sin(angle) * r);
+  return slotAllocator.allocateSlot(
+    Math.max(0, Math.min(MAP_SIZE - 1, originX)),
+    Math.max(0, Math.min(MAP_SIZE - 1, originY)),
+  );
 };
 
 // Inainte avea getOccupiedSet (SELECT pe tot), skipDuplicates (masca race conditions),
@@ -110,7 +125,7 @@ export const createGhostCitiesAround = async (
 
 // Cache in-memory cu TTL — harta nu se schimba la fiecare request, nu are rost sa
 // incarci toate orasele cu toate buildings la fiecare GET /map. La 500 useri care
-// dau refresh la harta, fara cache faceai sute de queries identice pe secunda.
+// dau refresh la harta, fara cache se faceau sute de queries identice pe secunda.
 let mapCache: { data: any; expiresAt: number } | null = null;
 const MAP_CACHE_TTL_MS = 5_000;
 

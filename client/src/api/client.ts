@@ -116,6 +116,14 @@ async function request<T>(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const code = (body as any).error ?? `HTTP ${res.status}`;
+
+    if (code === "TOKEN_INVALID" || code === "TOKEN_MISSING") {
+      clearToken();
+      clearActiveCityId();
+      window.location.href = "/register";
+      throw new Error("Session expired");
+    }
+
     throw new Error(humanizeError(code));
   }
 

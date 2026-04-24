@@ -71,6 +71,10 @@ class SlotAllocator {
     });
   }
 
+  getOccupiedCount(): number {
+    return this.occupied?.size ?? 0;
+  }
+
   // Daca un oras e sters (cucerire, etc), eliberam slotul ca sa poata fi refolosit
   releaseSlot(x: number, y: number): void {
     this.occupied?.delete(slotIndex(x, y));

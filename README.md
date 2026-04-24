@@ -157,9 +157,14 @@ Edit `server/.env`:
 
 ```env
 PORT=3000
-DATABASE_URL=postgresql://asow:your_password@localhost:5432/asow
-DATABASE_PASSWORD=your_password
-JWT_SECRET=some_random_secret_string
+
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=asow
+DATABASE_USER=asow
+DATABASE_PASSWORD=your_silly_password_here
+
+JWT_SECRET=strong_secret_key_here
 REDIS_URL=redis://localhost:6379
 NODE_ENV=development
 GAME_SPEED=1
@@ -192,7 +197,10 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
 | `PORT` | Server port | No | `3000` |
-| `DATABASE_URL` | PostgreSQL connection string | Yes | — |
+| `DATABASE_HOST` | PostgreSQL host | Yes | — |
+| `DATABASE_PORT` | PostgreSQL port | No | `5432` |
+| `DATABASE_NAME` | Database name | Yes | — |
+| `DATABASE_USER` | Database user | Yes | — |
 | `DATABASE_PASSWORD` | Database password | Yes | — |
 | `JWT_SECRET` | Secret for signing JWT tokens | Yes | — |
 | `REDIS_URL` | Redis connection string | Yes | — |
