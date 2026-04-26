@@ -9,6 +9,7 @@ import {
   submitApplication, getMyApplication, cancelMyApplication,
   listAllianceApplications, acceptApplication, rejectApplication,
   type AllianceDetail, type AllianceSummary, type AllianceAccess,
+  type AllianceInvitationForMe,
 } from "../api/alliance.ts";
 import { getCurrentUserId } from "../api/client.ts";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
@@ -582,10 +583,11 @@ function CancelMyAppButton({ onDone }: { onDone: () => void }) {
 }
 
 function InviteRow({ inv, onChanged }: {
-  inv: { id: string; alliance: { id: string; tag: string; name: string; accessMode: AllianceAccess } };
+  inv: AllianceInvitationForMe;
   onChanged: () => void;
 }) {
   const { openAlliance } = useAllianceProfile();
+  const { openPlayer } = usePlayerProfile();
   const [err, setErr] = useState<string | null>(null);
   const accept = useMutation({
     mutationFn: () => acceptInvitation(inv.id),
@@ -598,8 +600,16 @@ function InviteRow({ inv, onChanged }: {
     onError: (e: Error) => setErr(e.message),
   });
   return (
-    <div className="flex items-center justify-between py-2 text-xs">
-      <span>
+    <div className="py-3 text-xs flex flex-col gap-1.5">
+      <div>
+        <button
+          type="button"
+          onClick={() => openPlayer(inv.invitedBy.id)}
+          className="text-[#79c0ff] hover:underline font-semibold"
+        >
+          {inv.invitedBy.username}
+        </button>
+        {" invited you to "}
         <button
           type="button"
           onClick={() => openAlliance(inv.alliance.id)}
@@ -608,24 +618,27 @@ function InviteRow({ inv, onChanged }: {
           <span className="text-[#e6b800] font-semibold">[{inv.alliance.tag}]</span>{" "}
           <span className="text-[#c9d1d9]">{inv.alliance.name}</span>
         </button>
-        {err && <span className="ml-2 text-[10px] text-[#f85149]">{err}</span>}
-      </span>
-      <span className="flex gap-1">
+        <span className="text-[#6e7681] ml-1.5">
+          {new Date(inv.createdAt).toLocaleDateString()}
+        </span>
+      </div>
+      {err && <div className="text-[10px] text-[#f85149]">{err}</div>}
+      <div className="flex gap-1.5">
         <button
           onClick={() => accept.mutate()}
           disabled={accept.isPending}
-          className="text-[10px] border border-[#3fb950] text-[#3fb950] rounded px-2 py-0.5 hover:bg-[#1a3d1a] disabled:opacity-40"
+          className="text-[10px] border border-[#3fb950] text-[#3fb950] bg-[#0e2a14] rounded px-3 py-1 hover:bg-[#1a3d1a] disabled:opacity-40 font-semibold"
         >
           Accept
         </button>
         <button
           onClick={() => reject.mutate()}
           disabled={reject.isPending}
-          className="text-[10px] border border-[#f85149] text-[#f85149] rounded px-2 py-0.5 hover:bg-[#3d1a1a] disabled:opacity-40"
+          className="text-[10px] border border-[#f85149] text-[#f85149] rounded px-3 py-1 hover:bg-[#3d1a1a] disabled:opacity-40"
         >
           Decline
         </button>
-      </span>
+      </div>
     </div>
   );
 }

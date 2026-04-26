@@ -32,9 +32,7 @@ function fmt(n: number): string {
 }
 
 export default function ResourceBar({ cityName, cityPoints, money, energy, ammo, capacity, moneyProd, energyProd, ammoProd, population, maxPopulation, onLogout, onSimulator, onReports, onMap, onRankings, onAlliance, onMessages, unreadReports = 0, unreadMessages = 0, ownedCities, activeCityId, onSwitchCity }: Props) {
-  // 27 de props e mult — intr-o aplicatie mai mare as inlocui cu un NavigationContext
-  // sau un useNavigation() hook ca ResourceBar sa nu trebuiasca sa stie de fiecare pagina.
-  // Pentru un proiect portofoliu cu 5 pagini, prop-drilling e mai clar decat context. KISS.
+
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);

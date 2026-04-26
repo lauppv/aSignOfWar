@@ -38,6 +38,7 @@ export interface AllianceInvitationForLeader {
 export interface AllianceInvitationForMe {
   id: string;
   alliance: { id: string; name: string; tag: string; accessMode: AllianceAccess };
+  invitedBy: { id: string; username: string };
   createdAt: string;
 }
 

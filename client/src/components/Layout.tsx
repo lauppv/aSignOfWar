@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyCity } from "../api/city.ts";
 import { getReports } from "../api/report.ts";
 import { getDirectUnreadCount } from "../api/message.ts";
-import { getAllianceUnreadCount } from "../api/alliance.ts";
+import { getAllianceUnreadCount, listMyInvitations } from "../api/alliance.ts";
 import { logout } from "../api/auth.ts";
 import {
   getCurrentUserId,
@@ -73,7 +73,12 @@ export default function Layout() {
     setSeenReportIds(readSeenIds());
   }, [seenReportsKey]);
 
-  const unreadReports = (reports ?? []).filter((r) => !seenReportIds.has(r.id)).length;
+  const { data: pendingInvites } = useQuery({
+    queryKey: ["alliance", "me", "invitations"],
+    queryFn: listMyInvitations,
+    refetchInterval: 10000,
+  });
+  const unreadReports = (reports ?? []).filter((r) => !seenReportIds.has(r.id)).length + (pendingInvites?.length ?? 0);
 
   const { data: unreadMsgs } = useQuery({
     queryKey: ["messages", "unread"],

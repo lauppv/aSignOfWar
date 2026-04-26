@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getReports, deleteReport, shareReport } from "../api/report.ts";
+import { listMyInvitations, acceptInvitation, rejectInvitation, type AllianceInvitationForMe } from "../api/alliance.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { useNow } from "../context/TickContext.tsx";
 import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
+import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
 
 const ALL_UNITS: UnitName[] = [...UNIT_ORDER.filter(n => n !== "HACKER"), "GOVERNOR"] as UnitName[];
 
@@ -106,6 +108,12 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
     refetchInterval: 10000,
   });
 
+  const { data: invites } = useQuery({
+    queryKey: ["alliance", "me", "invitations"],
+    queryFn: listMyInvitations,
+    refetchInterval: 10000,
+  });
+
   const deleteSelected = useMutation({
     mutationFn: async (ids: string[]) => {
       await Promise.all(ids.map(id => deleteReport(id)));
@@ -197,11 +205,14 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
         {/* Left column: list + action bar */}
         <div className="w-[440px] shrink-0 border-r border-[#30363d] flex flex-col">
           <div className="flex-1 overflow-y-auto">
-            {list.length === 0 ? (
+            {(invites?.length ?? 0) > 0 && invites!.map(inv => (
+              <InviteNotification key={inv.id} inv={inv} />
+            ))}
+            {list.length === 0 && (invites?.length ?? 0) === 0 ? (
               <div className="text-[11px] text-[#dddddd] text-center mt-6 px-3">
                 No reports yet.
               </div>
-            ) : (
+            ) : list.length === 0 ? null : (
               list.map(r => (
                 <ReportRow
                   key={r.id}
@@ -1024,6 +1035,71 @@ function LootCell({ label, color, value }: { label: string; color: string; value
     <div className="flex flex-col items-center bg-[#0d1117] rounded p-2 border border-[#21262d]">
       <span className="text-[9px] uppercase tracking-widest" style={{ color }}>{label}</span>
       <span className="text-[#c9d1d9] font-mono">{Math.floor(value).toLocaleString()}</span>
+    </div>
+  );
+}
+
+function InviteNotification({ inv }: { inv: AllianceInvitationForMe }) {
+  const queryClient = useQueryClient();
+  const { openPlayer } = usePlayerProfile();
+  const { openAlliance } = useAllianceProfile();
+  const [err, setErr] = useState<string | null>(null);
+
+  function onDone() {
+    queryClient.invalidateQueries({ queryKey: ["alliance"] });
+  }
+
+  const accept = useMutation({
+    mutationFn: () => acceptInvitation(inv.id),
+    onSuccess: onDone,
+    onError: (e: Error) => setErr(e.message),
+  });
+  const reject = useMutation({
+    mutationFn: () => rejectInvitation(inv.id),
+    onSuccess: onDone,
+    onError: (e: Error) => setErr(e.message),
+  });
+
+  return (
+    <div className="px-3 py-2.5 border-b border-[#30363d] bg-[#0c2744]">
+      <div className="text-xs text-[#c9d1d9]">
+        <button
+          type="button"
+          onClick={() => openPlayer(inv.invitedBy.id)}
+          className="text-[#79c0ff] hover:underline font-semibold"
+        >
+          {inv.invitedBy.username}
+        </button>
+        {" invited you to "}
+        <button
+          type="button"
+          onClick={() => openAlliance(inv.alliance.id)}
+          className="hover:underline"
+        >
+          <span className="text-[#e6b800] font-semibold">[{inv.alliance.tag}]</span>{" "}
+          <span className="text-[#c9d1d9]">{inv.alliance.name}</span>
+        </button>
+        <span className="text-[#6e7681] ml-1.5 text-[10px]">
+          {new Date(inv.createdAt).toLocaleDateString()}
+        </span>
+      </div>
+      {err && <div className="text-[10px] text-[#f85149] mt-1">{err}</div>}
+      <div className="flex gap-1.5 mt-1.5">
+        <button
+          onClick={() => accept.mutate()}
+          disabled={accept.isPending}
+          className="text-[10px] border border-[#3fb950] text-[#3fb950] bg-[#0e2a14] rounded px-3 py-1 hover:bg-[#1a3d1a] disabled:opacity-40 font-semibold"
+        >
+          Accept
+        </button>
+        <button
+          onClick={() => reject.mutate()}
+          disabled={reject.isPending}
+          className="text-[10px] border border-[#f85149] text-[#f85149] rounded px-3 py-1 hover:bg-[#3d1a1a] disabled:opacity-40"
+        >
+          Decline
+        </button>
+      </div>
     </div>
   );
 }

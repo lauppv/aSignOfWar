@@ -385,11 +385,21 @@ export async function listMyInvitations(userId: string) {
   const rows = await prisma.allianceInvitation.findMany({
     where: { userId },
     include: {
-      alliance: { select: { id: true, name: true, tag: true, accessMode: true } },
+      alliance: {
+        select: {
+          id: true, name: true, tag: true, accessMode: true,
+          leader: { select: { id: true, username: true } },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(r => ({ id: r.id, alliance: r.alliance, createdAt: r.createdAt }));
+  return rows.map(r => ({
+    id: r.id,
+    alliance: { id: r.alliance.id, name: r.alliance.name, tag: r.alliance.tag, accessMode: r.alliance.accessMode },
+    invitedBy: r.alliance.leader,
+    createdAt: r.createdAt,
+  }));
 }
 
 export async function acceptInvitation(userId: string, invitationId: string) {
