@@ -2,12 +2,25 @@ import prisma from "../config/db";
 import { buildingQueue } from "../config/queue";
 import { getBuildingUpgradeCost, getBuildingUpgradeTime, BUILDINGS } from "../../../shared/gameConfig";
 import env from "../config/env";
-import { syncResources } from "./city.service";
+import { syncResourcesFromCity } from "./city.service";
 
 export const startUpgrade = async (buildingId: string, userId: string) => {
   const building = await prisma.building.findUnique({
     where: { id: buildingId },
-    include: { city: { select: { id: true, ownerId: true, buildings: { select: { name: true, level: true } } } } },
+    include: {
+      city: {
+        select: {
+          id: true,
+          ownerId: true,
+          money: true,
+          energy: true,
+          ammo: true,
+          loyalty: true,
+          lastResourceUpdate: true,
+          buildings: { select: { name: true, level: true } },
+        },
+      },
+    },
   });
 
   if (!building)                        throw new Error("BUILDING_NOT_FOUND");
@@ -26,7 +39,7 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     throw new Error(`HQ_REQUIRED:${cfg.requiresHQ}`);
   }
 
-  await syncResources(building.city.id);
+  await syncResourcesFromCity(building.city);
 
   const cost    = getBuildingUpgradeCost(building.name, effectiveLevel);
   const timeSec = getBuildingUpgradeTime(building.name, effectiveLevel, hq.level, env.gameSpeed);

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import prisma from "../config/db";
 import { getBuildingPoints, getWarehouseCapacity, BuildingName } from "../../../shared/gameConfig";
 import { slotAllocator } from "./slotAllocator";
@@ -88,6 +89,9 @@ export const pickFreeSlot = async (): Promise<{ x: number; y: number }> => {
 // Inainte avea getOccupiedSet (SELECT pe tot), skipDuplicates (masca race conditions),
 // si un query OR cu buildings: { none: {} } ca sa gaseasca orasele tocmai create.
 // Acum sloturile vin pre-alocate din allocator, garantat unice — nu mai trebuie skipDuplicates.
+// ID-urile le generam in JS (randomUUID) ca sa scapam de findMany-ul de dupa createMany
+// — Prisma createMany nu intoarce randurile, asa ca era nevoie de un SELECT extra
+// pe (x, y) doar ca sa stim ce ID-uri sa folosim pentru building.createMany.
 export const createGhostCitiesAround = async (
   origin: { x: number; y: number },
   count: number
@@ -96,6 +100,7 @@ export const createGhostCitiesAround = async (
   const startingResources = getWarehouseCapacity(GHOST_STARTER_WAREHOUSE_LEVEL);
 
   const ghostCitiesData = slots.map(slot => ({
+    id: randomUUID(),
     name: GHOST_NAME,
     x: slot.x,
     y: slot.y,
@@ -104,23 +109,17 @@ export const createGhostCitiesAround = async (
     ammo: startingResources,
   }));
 
-  await prisma.city.createMany({ data: ghostCitiesData });
-
-  const createdCities = await prisma.city.findMany({
-    where: { OR: slots.map(s => ({ x: s.x, y: s.y })) },
-    select: { id: true },
-  });
-
   const buildingsData: { cityId: string; name: BuildingName; level: number }[] = [];
-  for (const city of createdCities) {
+  for (const city of ghostCitiesData) {
     for (const b of GHOST_STARTER_BUILDINGS) {
       buildingsData.push({ cityId: city.id, name: b.name, level: b.level });
     }
   }
 
-  if (buildingsData.length > 0) {
-    await prisma.building.createMany({ data: buildingsData });
-  }
+  await prisma.$transaction([
+    prisma.city.createMany({ data: ghostCitiesData }),
+    ...(buildingsData.length > 0 ? [prisma.building.createMany({ data: buildingsData })] : []),
+  ]);
 };
 
 // Cache in-memory cu TTL — harta nu se schimba la fiecare request, nu are rost sa

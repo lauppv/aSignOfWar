@@ -10,7 +10,7 @@ import {
 } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { CommandType, UnitName, BuildingName } from "@prisma/client";
-import { syncResources } from "./city.service";
+import { syncResourcesFromCity } from "./city.service";
 
 // Lifecycle-ul unei comenzi: TRAVELING -> ARRIVING (worker) -> RETURNING -> COMPLETED
 // Fereastra de anulare: 5 min dupa plecare, intoarcerea e simetrica (mers X sec = retur X sec).
@@ -29,7 +29,15 @@ export const sendCommand = async (
   if (fromCityId === toCityId) throw new Error("SAME_CITY");
 
   const [fromCity, toCity] = await Promise.all([
-    prisma.city.findUnique({ where: { id: fromCityId }, select: { id: true, x: true, y: true, ownerId: true, units: { select: { name: true, quantity: true } }, buildings: { select: { name: true, level: true } } } }),
+    prisma.city.findUnique({
+      where: { id: fromCityId },
+      select: {
+        id: true, x: true, y: true, ownerId: true,
+        money: true, energy: true, ammo: true, loyalty: true, lastResourceUpdate: true,
+        units:     { select: { name: true, quantity: true } },
+        buildings: { select: { name: true, level: true } },
+      },
+    }),
     prisma.city.findUnique({ where: { id: toCityId }, select: { id: true, x: true, y: true, ownerId: true } }),
   ]);
 
@@ -92,7 +100,7 @@ export const sendCommand = async (
     if (resources.money < 0 || resources.energy < 0 || resources.ammo < 0) throw new Error("NEGATIVE_RESOURCES");
   }
 
-  await syncResources(fromCityId);
+  await syncResourcesFromCity(fromCity);
 
   const distance = getFieldDistance(fromCity.x, fromCity.y, toCity.x, toCity.y);
   let travelSec: number;

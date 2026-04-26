@@ -3,7 +3,7 @@ import { recruitmentQueue } from "../config/queue";
 import { UNITS, getRecruitmentTime, getHousingCapacity, getGovernorCost } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { UnitName, Prisma } from "@prisma/client";
-import { syncResources } from "./city.service";
+import { syncResourcesFromCity } from "./city.service";
 
 export const startRecruitment = async (
   cityId: string,
@@ -16,7 +16,17 @@ export const startRecruitment = async (
 
   const city = await prisma.city.findUnique({
     where: { id: cityId },
-    select: { id: true, ownerId: true, buildings: { select: { name: true, level: true } }, units: { select: { name: true, quantity: true } } },
+    select: {
+      id: true,
+      ownerId: true,
+      money: true,
+      energy: true,
+      ammo: true,
+      loyalty: true,
+      lastResourceUpdate: true,
+      buildings: { select: { name: true, level: true } },
+      units: { select: { name: true, quantity: true } },
+    },
   });
 
   if (!city)                        throw new Error("CITY_NOT_FOUND");
@@ -47,7 +57,7 @@ export const startRecruitment = async (
     throw new Error("INSUFFICIENT_POPULATION");
   }
 
-  await syncResources(cityId);
+  await syncResourcesFromCity(city);
 
   const cost    = { money: cfg.costMoney * quantity, energy: cfg.costEnergy * quantity, ammo: cfg.costAmmo * quantity };
   const timeSec = quantity * getRecruitmentTime(unitName, mb.level, env.gameSpeed);

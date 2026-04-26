@@ -9,7 +9,7 @@ Run:
 
 import random
 import string
-from locust import HttpUser, task, between
+from locust import HttpUser, task, constant_throughput
 
 # Toti userii inregistrati — ca sa poata trimite mesaje intre ei
 ALL_USERNAMES: list[str] = []
@@ -20,7 +20,11 @@ def random_str(n=10):
 
 
 class GamePlayer(HttpUser):
-    wait_time = between(0.5, 1)
+    # Plafonam RPS-ul global la 150: 0.3 req/sec/user × 500 useri = 150 RPS.
+    # In timpul ramp-up-ului, RPS-ul creste linear cu numarul de useri activi
+    # si se stabilizeaza la 150 dupa ce toti 500 sunt spawned.
+    # Pentru alt target: rate_per_user = target_rps / num_users.
+    wait_time = constant_throughput(0.3)
 
     def on_start(self):
         suffix = random_str()
