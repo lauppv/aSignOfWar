@@ -104,6 +104,13 @@ export default function MapPage() {
   // header si de la care pleaca comenzile. Persistat in localStorage prin
   // api/client.ts ca sa supravietuiasca refresh-ului.
   const [activeCityId, setActiveCityIdState] = useState<string | undefined>(() => getActiveCityId() ?? undefined);
+
+  useEffect(() => {
+    const handler = (e: Event) => setActiveCityIdState((e as CustomEvent).detail);
+    window.addEventListener("activeCityChanged", handler);
+    return () => window.removeEventListener("activeCityChanged", handler);
+  }, []);
+
   // Container-ul scrollabil al hartii (div-ul cu overflow:auto).
   const scrollRef = useRef<HTMLDivElement>(null);
   // Stare pan cu mouse-ul pe harta (null = niciun drag activ).
