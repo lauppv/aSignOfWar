@@ -10,6 +10,7 @@ import {
   listDirectConversations, listDirectThread, sendDirectMessage, deleteDirectMessage,
   type DirectConversation, type DirectMessage,
 } from "../api/message.ts";
+import { getPlayerProfile } from "../api/user.ts";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 import MessageContent from "../components/MessageContent.tsx";
 
@@ -189,9 +190,19 @@ function PrivateMessages({ myId }: { myId: string | null }) {
     setSearchParams(next, { replace: true });
   }
 
-  const activePeer = useMemo(() => {
+  const conversationPeer = useMemo(() => {
     return conversations?.find(c => c.peer.id === activePeerId)?.peer ?? null;
   }, [conversations, activePeerId]);
+
+  const { data: fetchedProfile } = useQuery({
+    queryKey: ["player-profile", activePeerId],
+    queryFn: () => getPlayerProfile(activePeerId!),
+    enabled: !!activePeerId && !conversationPeer,
+  });
+
+  const activePeer = conversationPeer ?? (
+    fetchedProfile ? { id: fetchedProfile.id, username: fetchedProfile.username } : null
+  );
 
   return (
     <div className="flex w-full h-full justify-center">

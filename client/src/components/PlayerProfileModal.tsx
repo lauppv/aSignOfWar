@@ -66,10 +66,9 @@ function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void 
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="text-lg font-semibold text-[#e6b800]">{p.username}</div>
           <div className="text-[11px] text-[#8b949e] mt-0.5">
-            Joined {new Date(p.createdAt).toLocaleDateString()}
-            {p.alliance && (
+            {p.alliance ? (
               <>
-                {" · Alliance: "}
+                {"Alliance: "}
                 <button
                   type="button"
                   onClick={() => { onClose(); if (p.alliance) openAlliance(p.alliance.id); }}
@@ -78,9 +77,17 @@ function ProfileContent({ p, onClose }: { p: PlayerProfile; onClose: () => void 
                   [{p.alliance.tag}] {p.alliance.name}
                 </button>
               </>
-            )}
-            {!p.alliance && " · No alliance"}
+            ) : "No alliance"}
           </div>
+          {!isMe && (
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate(`/messages?tab=private&peer=${p.id}`); }}
+              className="mt-1.5 self-start text-[11px] px-3 py-1 rounded border border-[#58a6ff] bg-[#0c2744] text-[#58a6ff] hover:bg-[#163d6f]"
+            >
+              Send message
+            </button>
+          )}
         </div>
       </div>
 
