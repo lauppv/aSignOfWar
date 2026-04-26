@@ -12,6 +12,7 @@ RUN npm ci
 
 COPY server/tsconfig.json ./
 COPY server/src/ ./src/
+COPY server/scripts/ ./scripts/
 COPY server/prisma/ ./prisma/
 
 RUN npx prisma generate
@@ -27,6 +28,10 @@ COPY --from=builder /app/server/dist/ ./dist/
 COPY --from=builder /app/server/node_modules/ ./node_modules/
 COPY --from=builder /app/server/prisma/ ./prisma/
 COPY --from=builder /app/server/package.json ./
+COPY --from=builder /app/server/scripts/ ./scripts/
+COPY --from=builder /app/shared/ ../shared/
+COPY --from=builder /app/server/tsconfig.json ./
+
 
 EXPOSE 3000
 
