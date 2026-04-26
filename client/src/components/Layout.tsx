@@ -32,6 +32,12 @@ export default function Layout() {
   const [storedCityId, setStoredCityId] = useState(() => getActiveCityId() ?? undefined);
   const activeCityId = urlCityId ?? storedCityId;
 
+  useEffect(() => {
+    const handler = (e: Event) => setStoredCityId((e as CustomEvent).detail);
+    window.addEventListener("activeCityChanged", handler);
+    return () => window.removeEventListener("activeCityChanged", handler);
+  }, []);
+
   const { data: city, error } = useQuery({
     queryKey: ["city", activeCityId ?? "default"],
     queryFn: () => getMyCity(activeCityId),

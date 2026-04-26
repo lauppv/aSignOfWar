@@ -80,6 +80,7 @@ export function getActiveCityId(): string | null {
 
 export function setActiveCityId(id: string): void {
   localStorage.setItem(ACTIVE_CITY_KEY, id);
+  window.dispatchEvent(new CustomEvent("activeCityChanged", { detail: id }));
 }
 
 export function clearActiveCityId(): void {
