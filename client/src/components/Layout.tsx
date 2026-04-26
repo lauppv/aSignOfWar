@@ -29,7 +29,8 @@ export default function Layout() {
 
   const onCityRoute = location.pathname === "/city";
   const urlCityId = onCityRoute ? searchParams.get("cityId") : null;
-  const activeCityId = urlCityId ?? getActiveCityId() ?? undefined;
+  const [storedCityId, setStoredCityId] = useState(() => getActiveCityId() ?? undefined);
+  const activeCityId = urlCityId ?? storedCityId;
 
   const { data: city, error } = useQuery({
     queryKey: ["city", activeCityId ?? "default"],
@@ -43,7 +44,10 @@ export default function Layout() {
   }, [error, activeCityId]);
 
   useEffect(() => {
-    if (city?.id) setActiveCityId(city.id);
+    if (city?.id) {
+      setActiveCityId(city.id);
+      setStoredCityId(city.id);
+    }
   }, [city?.id]);
 
   const { data: reports } = useQuery({
@@ -109,6 +113,7 @@ export default function Layout() {
 
   function switchToCity(cityId: string) {
     setActiveCityId(cityId);
+    setStoredCityId(cityId);
     queryClient.invalidateQueries({ queryKey: ["city"] });
     queryClient.invalidateQueries({ queryKey: ["commands"] });
     if (onCityRoute) {
