@@ -26,4 +26,4 @@ COPY --from=builder /app/server/package.json ./
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server/src/app.js"]
+CMD ["sh", "-c", "export DATABASE_URL=\"postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME}?connection_limit=${DATABASE_CONNECTION_LIMIT:-10}\" && npx prisma migrate deploy && node dist/server/src/app.js"]
