@@ -29,7 +29,7 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
   });
   const cancelMutation = useMutation({ mutationFn: cancelRecruitmentOrder, onSuccess: invalidate });
 
-  const [quantities, setQuantities] = useState<Partial<Record<UnitName, number>>>({});
+  const [quantities, setQuantities] = useState<Partial<Record<UnitName, number | "">>>({});
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const now = useNow();
 
@@ -106,7 +106,8 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                 const cfg      = UNITS[name];
                 const unlocked = isUnlocked(name);
                 const timeSec  = getRecruitmentTime(name, mbLevel, GAME_SPEED);
-                const qty      = quantities[name] ?? 1;
+                const qtyRaw   = quantities[name] ?? 1;
+                const qty      = qtyRaw === "" ? 1 : qtyRaw;
 
                 const moneyOk   = city.money  >= cfg.costMoney  * qty;
                 const energyOk  = city.energy >= cfg.costEnergy * qty;
@@ -173,15 +174,17 @@ export default function MilitaryBaseView({ city, onClose }: Props) {
                           <input
                             type="text"
                             inputMode="numeric"
-                            value={qty}
+                            value={qtyRaw === "" ? "" : qty}
                             onFocus={(e) => e.currentTarget.select()}
                             onChange={(e) => {
                               const raw = e.target.value.replace(/[^0-9]/g, "");
-                              const num = parseInt(raw);
                               setQuantities((prev) => ({
                                 ...prev,
-                                [name]: raw === "" ? 1 : Math.max(1, Math.min(num, Math.max(1, affordableMax))),
+                                [name]: raw === "" ? "" : Math.max(1, Math.min(parseInt(raw), Math.max(1, affordableMax))),
                               }));
+                            }}
+                            onBlur={() => {
+                              if (qtyRaw === "" || qty < 1) setQuantities((prev) => ({ ...prev, [name]: 1 }));
                             }}
                             className="w-14 bg-[#0d1117] border border-[#30363d] rounded text-xs text-[#c9d1d9] px-1.5 py-1 text-center focus:outline-none focus:border-[#58a6ff]"
                           />
