@@ -29,7 +29,7 @@ COPY --from=builder /app/server/node_modules/ ./node_modules/
 COPY --from=builder /app/server/prisma/ ./prisma/
 COPY --from=builder /app/server/package.json ./
 COPY --from=builder /app/server/scripts/ ./scripts/
-COPY --from=builder /app/shared/ ../shared/
+COPY --from=builder /app/shared/ /shared/
 COPY --from=builder /app/server/tsconfig.json ./
 
 

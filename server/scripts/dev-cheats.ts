@@ -12,8 +12,10 @@
 //   npx tsx scripts/dev-cheats.ts maxAllBuildings 51,51
 //   npx tsx scripts/dev-cheats.ts listCities
 
-import prisma from "../src/config/db";
+import { PrismaClient } from "@prisma/client";
 import { BUILDINGS, UNITS, getWarehouseCapacity, BuildingName, UnitName } from "../../shared/gameConfig";
+
+const prisma = new PrismaClient();
 
 function parseCoords(coords: string): { x: number; y: number } {
   const m = coords.match(/^(-?\d+)\s*,\s*(-?\d+)$/);
