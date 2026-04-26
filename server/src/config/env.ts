@@ -18,7 +18,8 @@ const dbName = process.env.DATABASE_NAME!;
 const dbUser = process.env.DATABASE_USER!;
 const dbPassword = encodeURIComponent(process.env.DATABASE_PASSWORD!);
 const connLimit = process.env.DATABASE_CONNECTION_LIMIT || "10";
-process.env.DATABASE_URL = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?connection_limit=${connLimit}`;
+const sslParam = process.env.NODE_ENV === "production" ? "&sslmode=require" : "";
+process.env.DATABASE_URL = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?connection_limit=${connLimit}${sslParam}`;
 
 const env = {
   port: process.env.PORT || "3000",
