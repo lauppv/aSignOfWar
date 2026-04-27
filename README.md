@@ -34,6 +34,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - [Job Queue (BullMQ)](#job-queue-bullmq)
 - [Load Testing](#load-testing)
   - [Performance optimizations](#performance-optimizations)
+- [Deployment](#deployment)
 - [Development Approach](#development-approach)
 - [Architecture Decisions](#architecture-decisions)
 
@@ -47,7 +48,9 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **City conquest** — governor-based loyalty siege across multiple attacks
 - **Alliance system** — creation, invitations, applications, chat, member management, leaderboards
 - **World map** — 300x300 grid with ghost NPC cities for early-game farming
-- **Direct messages** with embedded shared battle/spy reports
+- **Direct messages** with embedded shared battle/spy reports and quick-message button from player profiles
+- **Alliance invite notifications** — incoming alliance invitations appear in the reports panel with accept/reject actions
+- **Deployable** — Docker container (server) + Vercel static SPA (client)
 - **Load tested** — 500 concurrent users at ~218 req/s with ~0.01% failure rate (Locust)
 
 ### Screenshots
@@ -398,6 +401,8 @@ aSignOfWar/
 │           ├── AllianceProfileModal.tsx # Alliance profile
 │           ├── MessageContent.tsx    # Message rendering (shared reports, rich text)
 │           └── ConfirmModal.tsx      # Generic confirmation dialog
+├── Dockerfile                         # Multi-stage Docker build for the server (Alpine + Prisma)
+├── vercel.json                        # Vercel config for client SPA deployment
 ├── screenshots/                       # README screenshots (city, map, buildings, units)
 ├── plan.txt                           # Game design document (Romanian)
 ├── simulations.txt                    # Tribal Wars battle simulations used as reference for balancing
@@ -714,6 +719,45 @@ The server was profiled and optimized using Locust. Key bottlenecks identified a
 - **Selective queries (`select` over `include`)** — Prisma queries across all services were rewritten to fetch only the columns actually used, instead of loading entire rows with all relations. For example, `getAllCitiesOnMap` was loading full owner, alliance, and building objects when only `id`, `username`, `tag`, `name`, and `level` were needed. Same pattern applied to `sendCommand`, `startUpgrade`, `startRecruitment`, `getCommandsForCity`, and others. Result: median response time dropped from 84ms to 13ms at 500 users.
 - **Parallel queries (`Promise.all`)** — independent database queries within the same endpoint were parallelized instead of running sequentially. For example, `getCityOverview` ran stationed support and own command queries one after the other; now they run simultaneously. Same applied to `cancelUpgrade` (building lookup + order count).
 - **Write-free resource sync** — resources (money, energy, ammo) are a pure function of time: `current = stored + production × elapsed`. Previously, every `GET /cities/mine` wrote updated values back to the database. Now resources are computed in-memory on read and only written when actually spent (upgrade, recruitment, attack). This eliminated ~250 writes/sec under load from the most frequently called endpoint.
+
+## Deployment
+
+The game is split into two deployable units: the **server** runs as a Docker container, and the **client** is deployed as a static SPA on Vercel.
+
+### Server (Docker)
+
+A multi-stage `Dockerfile` builds the Express server on Alpine with Prisma:
+
+```bash
+docker build -t asow-server .
+docker run -p 3000:3000 \
+  -e DATABASE_HOST=... \
+  -e DATABASE_PORT=5432 \
+  -e DATABASE_NAME=asow \
+  -e DATABASE_USER=asow \
+  -e DATABASE_PASSWORD=... \
+  -e DATABASE_CONNECTION_LIMIT=10 \
+  -e JWT_SECRET=... \
+  -e REDIS_URL=redis://... \
+  -e NODE_ENV=production \
+  -e GAME_SPEED=1 \
+  -e CLIENT_URL=https://your-client-domain.vercel.app \
+  asow-server
+```
+
+The container runs `prisma migrate deploy` on startup before booting the server, so the database schema is always up to date. The managed DB connection uses `sslmode=require`.
+
+### Client (Vercel)
+
+The client is deployed via `vercel.json` which builds `client/` with Vite and serves it as a static SPA with a catch-all rewrite to `index.html` for client-side routing.
+
+Set the `VITE_API_URL` environment variable in Vercel project settings to point at your server:
+
+```
+VITE_API_URL=https://your-server-domain.com/api
+```
+
+Without this, API calls default to `/api` (same-origin), which won't work when client and server are on different domains.
 
 ## Development Approach
 
