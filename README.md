@@ -623,18 +623,132 @@ Resource transports use a fixed speed of 2 minutes per field. A TRAVELING comman
 
 ### Battle Formula
 
-The overall winner is determined by comparing total attack force against the attack-weighted average of defender forces. Air defense level applies a defense bonus (4%–107%) to all defending units. Hackers (SPY category) are excluded from combat entirely — they have a dedicated spy-vs-spy system (see below).
+The combat model is inspired by Tribal Wars but adapted around three attack categories — **Infantry**, **Range**, and **Mechanized** — plus a separate **Air Defense** subsystem. The same `calculateBattle()` function in `shared/battleCalc.ts` runs both on the server (for real combat) and in the client-side simulator, so the two can never drift.
 
-Attacker losses per unit category (Infantry, Range, Mechanized):
+#### Step-by-step resolution
+
+A battle is resolved in a fixed order. Each step's output feeds the next.
+
+**1. Filter out non-combat units.** Hackers (SPY category) are removed from both sides — they have a dedicated spy-vs-spy system and never participate in regular combat.
+
+**2. Compute attacker force per category.** Each unit's `attack` stat is summed into its category bucket:
 
 ```
-loss_rate = (defender_force / attacker_force) ^ 1.5    if attacker wins
-loss_rate = 1.0                                         if attacker loses
+A.INFANTRY   = sum(unit.attack * quantity) for INFANTRY units
+A.RANGE      = sum(unit.attack * quantity) for RANGE units
+A.MECHANIZED = sum(unit.attack * quantity) for MECHANIZED units
+A_total      = A.INFANTRY + A.RANGE + A.MECHANIZED
 ```
 
-**Siege units** act before the main battle, scaled by the battle ratio:
-- **Missile launchers** destroy air defense levels, reducing the defense bonus for all defending units. This softens the city for future attacks even if the current one fails.
-- **Drones** demolish levels from a target building chosen by the attacker. If no target is selected, drones assist missile launchers in destroying air defense instead.
+**3. Compute defender force, with separate stats per attack type.** Every defender unit has three defense values: `defenseVsInfantry`, `defenseVsRange`, `defenseVsMechanized`. Air defense applies a flat bonus (4%–107% based on level) on top:
+
+```
+mult = 1 + (airDefenseBonus / 100)
+D_orig.INFANTRY   = sum(unit.defenseVsInfantry   * quantity * mult)
+D_orig.RANGE      = sum(unit.defenseVsRange      * quantity * mult)
+D_orig.MECHANIZED = sum(unit.defenseVsMechanized * quantity * mult)
+```
+
+**4. Weight the defense by attacker composition.** This is the key design decision — it rewards balanced armies and punishes one-dimensional ones:
+
+```
+D_eff_orig = (A.INFANTRY   / A_total) * D_orig.INFANTRY
+           + (A.RANGE      / A_total) * D_orig.RANGE
+           + (A.MECHANIZED / A_total) * D_orig.MECHANIZED
+```
+
+If the attacker sends 100% mechanized units, only `defenseVsMechanized` matters — sending tanks against a wall of anti-tank guns is a bad trade. A balanced 33/33/33 split forces the defender to be balanced too.
+
+**5. Compute the battle ratio.** This is `A_total / D_eff_orig`, capped at 1. It scales how effective siege units are — lose hard, you still get *some* siege damage proportional to how close you came:
+
+```
+battleRatio = min(1, A_total / D_eff_orig)
+```
+
+**6. Resolve siege (pre-battle).** Missile launchers destroy air defense levels; drones either help against air defense (no target selected) or demolish a chosen building. Effective siege count is scaled by `battleRatio`:
+
+```
+effectiveML            = floor(missileLaunchers * battleRatio)
+effectiveDronesAD      = floor(drones * battleRatio)   // only if target is AIR_DEFENSE or unset
+airDefLevelsDestroyed  = calcAirDefenseDamage(level, effectiveML, effectiveDronesAD)
+newAirDefenseLevel     = airDefenseLevel - airDefLevelsDestroyed
+```
+
+The reduced air defense applies *retroactively* to the main battle — if you destroy 2 levels of AD, the surviving defenders fight at the lower bonus.
+
+**7. Recompute defender force with the reduced air defense**, then determine the winner:
+
+```
+attackerWon = A_total >= D_eff
+```
+
+**8. Apply losses.**
+
+If the attacker wins, losses are computed *per category* using a power curve — bigger overkill = lower losses, but never zero:
+
+```
+atkLoss[cat] = (D[cat] / A_total) ^ 1.5     for each category with units
+```
+
+If the attacker loses, all attacker units die (`atkLoss = 1.0` across the board).
+
+Defender loss rate is the inverse, also a power curve:
+
+```
+defLossRate = 1.0                              if attacker won
+defLossRate = (A_total / D_eff) ^ 1.5          if attacker lost
+```
+
+The exponent of 1.5 is the same Tribal Wars curve — it makes overwhelming victories cheap, narrow victories expensive, and total defeats brutal.
+
+**9. Loot (only if attacker won).** Total carry capacity from *surviving* attackers is split equally across the three resources to prevent cherry-picking:
+
+```
+totalCarry  = sum(unit.carry * survivors)
+perResource = floor(totalCarry / 3)
+stolen[r]   = min(defender[r], perResource)   for r in (money, energy, ammo)
+```
+
+**10. Loyalty damage (conquest).** If the attacker wins, *all* defenders died, and at least one surviving Governor accompanied the attack:
+
+```
+loyaltyDamage = 20 + random(0..15)
+```
+
+The randomness is intentional — it prevents the attacker from computing the exact number of Governors needed for a clean conquest, adding strategic uncertainty.
+
+#### Worked example
+
+Attacker sends 100 Soldiers (INFANTRY, attack 10) + 100 Tanks (MECHANIZED, attack 30). Defender has 200 Soldiers (defVsInf 8, defVsMech 4), air defense level 0.
+
+```
+A.INFANTRY   = 100 * 10 = 1000
+A.MECHANIZED = 100 * 30 = 3000
+A_total      = 4000
+
+D.INFANTRY   = 200 * 8 = 1600
+D.MECHANIZED = 200 * 4 = 800
+
+D_eff = (1000/4000)*1600 + (3000/4000)*800
+      = 0.25*1600 + 0.75*800
+      = 400 + 600
+      = 1000
+
+attackerWon = 4000 >= 1000 → true
+
+atkLoss[INF]  = (1600/4000)^1.5 ≈ 0.253  → 25 of 100 soldiers die
+atkLoss[MECH] = ( 800/4000)^1.5 ≈ 0.089  → 9 of 100 tanks die
+```
+
+The attacker wins decisively but still loses more infantry than mechanized — because the defender is better at killing soldiers than tanks, and the attack-weighted formula reflects that.
+
+#### Why these choices
+
+- **Category-weighted defense** means there is no "best unit" — every army composition has a counter.
+- **Pre-battle siege scaled by battle ratio** avoids all-or-nothing siege: you can soften a fortress over multiple losing waves.
+- **Air defense applied as a multiplicative bonus on all units** means a single AD upgrade boosts every defender, making AD a high-leverage building.
+- **Hackers excluded** keeps espionage and combat as separate strategic dimensions.
+- **Random loyalty damage** prevents conquest from becoming a deterministic spreadsheet calculation.
 
 ### Spy Mechanic
 
