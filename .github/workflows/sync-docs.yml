@@ -1,0 +1,42 @@
+name: Sync README and screenshots to aSignOfWar-docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'screenshots/**'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+
+      - name: Checkout docs repo
+        uses: actions/checkout@v4
+        with:
+          repository: lauppv/aSignOfWar-docs
+          token: ${{ secrets.DOCS_PUSH_TOKEN }}
+          path: docs-repo
+
+      - name: Mirror files
+        run: |
+          cp README.md docs-repo/README.md
+          rm -rf docs-repo/screenshots
+          cp -r screenshots docs-repo/screenshots
+
+      - name: Commit and push
+        working-directory: docs-repo
+        run: |
+          git config user.name  "docs-sync-bot"
+          git config user.email "docs-sync-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to sync."
+          else
+            git commit -m "sync from aSignOfWar@${GITHUB_SHA::7}"
+            git push
+          fi
