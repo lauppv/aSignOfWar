@@ -1,0 +1,9 @@
+# Ensure shell scripts always use LF line endings.
+# Without this, git on Windows (core.autocrlf=true) would check out
+# docker-entrypoint.sh with CRLF, causing "bad interpreter" errors
+# when the Alpine container tries to run it.
+*.sh text eol=lf
+
+# Dockerfile and docker-compose should also stay LF
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf

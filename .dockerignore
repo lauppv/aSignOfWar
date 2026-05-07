@@ -1,0 +1,24 @@
+# Dependencies — reinstalled inside the image
+**/node_modules
+
+# Build artefacts — rebuilt inside the image
+**/dist
+client/tsconfig.tsbuildinfo
+
+# Environment files — secrets must never leak into the image layer
+**/.env
+**/*.env
+!**/*.env.example
+
+# Uploaded user files
+server/uploads
+
+# Dev / editor noise
+**/*.log
+.git
+.github
+.vscode
+screenshots
+__pycache__
+*.py
+*.local
