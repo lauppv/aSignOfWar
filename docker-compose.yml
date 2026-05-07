@@ -1,0 +1,71 @@
+# server/.env is the single source of truth for all secrets and config.
+# It is used for both local development and Docker.
+#
+# First-time setup:
+#   cp server/.env.example server/.env   # then fill in your values
+#
+# Run:
+#   docker compose --env-file server/.env up --build
+#
+# The --env-file flag makes compose substitute ${DATABASE_PASSWORD} etc.
+# from server/.env (instead of the default root .env).
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: asow
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}   # sourced from server/.env via --env-file
+      POSTGRES_DB: asow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Application (server + client static files) ───────────────────────────────
+  # The Express server serves the Vite SPA from /dist/client/dist, so a single
+  # container handles both the API and the front-end.
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: fullstack
+    ports:
+      - "3000:3000"
+    env_file: ./server/.env          # loads every variable from server/.env as-is
+    environment:
+      # These three override the server/.env values with Docker-specific equivalents.
+      # Everything else (DATABASE_PASSWORD, JWT_SECRET, GAME_SPEED, …) comes from env_file.
+      NODE_ENV: development          # keeps sslmode off for local postgres; CORS allows all origins
+      DATABASE_HOST: postgres        # Docker service name instead of localhost
+      REDIS_URL: redis://redis:6379  # Docker service name instead of localhost
+    volumes:
+      # Persist uploaded avatars across container restarts.
+      # Path: __dirname (/app/dist/server/src/services) + ../../uploads = /app/dist/server/uploads
+      - uploads_data:/app/dist/server/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  uploads_data:

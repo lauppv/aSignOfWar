@@ -10,6 +10,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
+- [Docker Compose](#docker-compose)
 - [Environment Variables](#environment-variables)
 - [Admin Scripts](#admin-scripts)
 - [Resetting the world](#resetting-the-world)
@@ -193,6 +194,49 @@ npm run dev
 ```
 
 Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
+
+## Docker Compose
+
+The easiest way to run the full stack locally — no need to install PostgreSQL or Redis separately. A single `docker compose` command starts the app, the database, and the cache together.
+
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+1. Copy and fill in the environment file:
+
+```bash
+cp server/.env.example server/.env
+```
+
+Edit `server/.env` and set real values for `DATABASE_PASSWORD` and `JWT_SECRET` (everything else can stay as-is).
+
+2. Build and start all services:
+
+```bash
+docker compose --env-file server/.env up --build
+```
+
+Open **http://localhost:3000** — the full app is served there (API + client SPA).
+
+Subsequent starts (no code changes) skip the `--build` flag:
+
+```bash
+docker compose --env-file server/.env up
+```
+
+**Useful commands:**
+
+```bash
+# Stop all services (data is preserved in Docker volumes)
+docker compose down
+
+# Stop and delete all data (clean slate)
+docker compose down -v
+
+# Follow logs
+docker compose logs -f app
+```
+
+> **How it works:** The `Dockerfile` builds both the Vite client and the Express server into a single image. The server serves the compiled SPA as static files alongside the API, so only one container and one port (`3000`) are needed. PostgreSQL and Redis run as sibling containers on an internal Docker network. On startup the container automatically runs `prisma migrate deploy` before booting the server.
 
 ## Environment Variables
 
@@ -907,14 +951,21 @@ The server was profiled and optimized using Locust. Key bottlenecks identified a
 
 ## Deployment
 
-The game is split into two deployable units: the **server** runs as a Docker container, and the **client** is deployed as a static SPA on Vercel.
+The `Dockerfile` has two independently buildable final targets that share the same builder stages (so Docker's layer cache makes switching between them fast):
 
-### Server (Docker)
+| Target | Image | Client | Best for |
+|--------|-------|--------|----------|
+| `fullstack` *(default)* | Express + static SPA | bundled in | single-container VPS, docker-compose |
+| `server` | Express API only | Vercel / CDN | split managed infra |
 
-A multi-stage `Dockerfile` builds the Express server on Alpine with Prisma:
+### `fullstack` target (standalone)
+
+Builds both the Vite client and the Express server into a single image. The server serves the compiled SPA as static files alongside the API — one container, one port.
+
+Startup is managed by `docker-entrypoint.sh`, which constructs `DATABASE_URL` from individual env vars, runs `prisma migrate deploy`, then starts the server. `sslmode=require` is added automatically when `NODE_ENV=production`.
 
 ```bash
-docker build -t asow-server .
+docker build -t asow .   # --target fullstack is the default
 docker run -p 3000:3000 \
   -e DATABASE_HOST=... \
   -e DATABASE_PORT=5432 \
@@ -926,11 +977,16 @@ docker run -p 3000:3000 \
   -e REDIS_URL=redis://... \
   -e NODE_ENV=production \
   -e GAME_SPEED=1 \
-  -e CLIENT_URL=https://your-client-domain.vercel.app \
-  asow-server
+  asow
 ```
 
-The container runs `prisma migrate deploy` on startup before booting the server, so the database schema is always up to date. The managed DB connection uses `sslmode=require`.
+### `server` target (API only)
+
+Express API only — no client dist bundled in. Use when the client is deployed separately (e.g. Vercel).
+
+```bash
+docker build --target server -t asow-server .
+```
 
 ### Client (Vercel)
 
