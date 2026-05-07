@@ -1,13 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getSharedReport } from "../api/report.ts";
+import { getSharedSiege } from "../api/siege.ts";
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
+import { useNow } from "../context/TickContext.tsx";
 import type { BattleReportData, SpyReportData, UnitName, BattleUnitCount } from "../types/index.ts";
+import UnitIcon from "./UnitIcon.tsx";
 import { useEffect, useState } from "react";
 
 const REPORT_TAG = /\[report:([a-f0-9-]+)\]/gi;
+const SIEGE_TAG  = /\[siege:([a-f0-9-]+)\]/gi;
+
+// Returns a token list where strings are plain text segments and objects describe an embed.
+// Tags can interleave freely in a single message body.
+type Token = string | { kind: "report"; shareId: string } | { kind: "siege"; shareId: string };
+
+function tokenize(content: string): Token[] {
+  // Find all tag positions (both kinds), sort by index, slice plain text in between.
+  const matches: { start: number; end: number; tok: Token }[] = [];
+  for (const m of content.matchAll(REPORT_TAG)) {
+    matches.push({ start: m.index!, end: m.index! + m[0].length, tok: { kind: "report", shareId: m[1] } });
+  }
+  for (const m of content.matchAll(SIEGE_TAG)) {
+    matches.push({ start: m.index!, end: m.index! + m[0].length, tok: { kind: "siege", shareId: m[1] } });
+  }
+  matches.sort((a, b) => a.start - b.start);
+
+  const tokens: Token[] = [];
+  let cursor = 0;
+  for (const m of matches) {
+    if (m.start > cursor) tokens.push(content.slice(cursor, m.start));
+    tokens.push(m.tok);
+    cursor = m.end;
+  }
+  if (cursor < content.length) tokens.push(content.slice(cursor));
+  return tokens;
+}
 const ALL_UNITS: UnitName[] = [...UNIT_ORDER.filter(n => n !== "HACKER"), "GOVERNOR"] as UnitName[];
 
 interface Props {
@@ -16,28 +46,134 @@ interface Props {
 }
 
 export default function MessageContent({ content, onExpandChange }: Props) {
-  const parts: (string | { shareId: string })[] = [];
-  let last = 0;
+  const tokens = tokenize(content);
 
-  for (const match of content.matchAll(REPORT_TAG)) {
-    if (match.index! > last) parts.push(content.slice(last, match.index!));
-    parts.push({ shareId: match[1] });
-    last = match.index! + match[0].length;
-  }
-  if (last < content.length) parts.push(content.slice(last));
-
-  if (parts.length === 1 && typeof parts[0] === "string") {
+  if (tokens.length === 1 && typeof tokens[0] === "string") {
     return <span className="whitespace-pre-wrap break-words">{content}</span>;
   }
 
   return (
     <div className="flex flex-col gap-2">
-      {parts.map((p, i) =>
-        typeof p === "string" ? (
-          <span key={i} className="whitespace-pre-wrap break-words">{p}</span>
-        ) : (
-          <SharedReportCard key={i} shareId={p.shareId} onExpandChange={onExpandChange} />
-        )
+      {tokens.map((p, i) => {
+        if (typeof p === "string") {
+          return <span key={i} className="whitespace-pre-wrap break-words">{p}</span>;
+        }
+        if (p.kind === "report") {
+          return <SharedReportCard key={i} shareId={p.shareId} onExpandChange={onExpandChange} />;
+        }
+        return <SharedSiegeCard key={i} shareId={p.shareId} onExpandChange={onExpandChange} />;
+      })}
+    </div>
+  );
+}
+
+function fmtRemainingMs(ms: number): string {
+  if (ms <= 0) return "0s";
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h > 0) return `${h}h ${m}m ${ss}s`;
+  if (m > 0) return `${m}m ${ss}s`;
+  return `${ss}s`;
+}
+
+const SIEGE_STATUS_LABEL: Record<string, { text: string; color: string }> = {
+  ACTIVE:              { text: "Under siege",         color: "#f85149" },
+  BROKEN_BY_DEFENSE:   { text: "Siege broken",        color: "#3fb950" },
+  BROKEN_BY_NEW_SIEGE: { text: "Replaced by another", color: "#e3b341" },
+  COMPLETED_CONQUEST:  { text: "City conquered",      color: "#a371f7" },
+};
+
+function SharedSiegeCard({ shareId, onExpandChange }: { shareId: string; onExpandChange?: (e: boolean) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const now = useNow();
+
+  useEffect(() => { onExpandChange?.(expanded); }, [expanded, onExpandChange]);
+
+  // Polling refetch only when the card is expanded — collapsed cards just show the cached header.
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["shared-siege", shareId],
+    queryFn:  () => getSharedSiege(shareId),
+    refetchInterval: expanded ? 5000 : false,
+  });
+
+  if (isLoading) {
+    return <div className="rounded border border-[#30363d] bg-[#161b22] p-2 text-[11px] text-[#7d8590]">Loading siege...</div>;
+  }
+  if (error || !data) {
+    return <div className="rounded border border-[#30363d] bg-[#161b22] p-2 text-[11px] text-[#7d8590]">Siege link unavailable</div>;
+  }
+
+  const meta = SIEGE_STATUS_LABEL[data.siege.status] ?? { text: data.siege.status, color: "#c9d1d9" };
+  const remaining = data.siege.status === "ACTIVE"
+    ? new Date(data.siege.endsAt).getTime() - now
+    : null;
+
+  return (
+    <div className="rounded border border-[#30363d] bg-[#0d1117] text-xs overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-3 py-1.5 bg-[#161b22] hover:bg-[#1c2129] cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-semibold" style={{ color: meta.color }}>{meta.text}</span>
+          <span className="text-[#7d8590]">
+            {data.siege.attacker.username} → {data.siege.city.name}
+            {data.siege.defender && <span className="text-[#7d8590]"> ({data.siege.defender.username})</span>}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {remaining !== null && remaining > 0 && (
+            <span className="font-mono text-[#f85149]">{fmtRemainingMs(remaining)} left</span>
+          )}
+          <span className="text-[10px] text-[#7d8590]">shared by {data.sharedBy.username}</span>
+          <span className="text-[#7d8590]">{expanded ? "▲" : "▼"}</span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="p-3 flex flex-col gap-2">
+          <div className="flex justify-between text-[#b1bac4] text-[11px]">
+            <span>City: <span className="text-[#c9d1d9]">{data.siege.city.name}</span> <span className="font-mono">({data.siege.city.x}, {data.siege.city.y})</span></span>
+            <span>Started: <span className="text-[#c9d1d9]">{new Date(data.siege.startedAt).toLocaleString()}</span></span>
+          </div>
+
+          {data.live ? (
+            <>
+              <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mt-1">Defending force</div>
+              {data.live.defendingForce.length === 0 ? (
+                <div className="text-[11px] text-[#7d8590] italic">No surviving units in the city</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {data.live.defendingForce.map(u => (
+                    <UnitIcon key={u.name} name={u.name} quantity={u.quantity} size={24} />
+                  ))}
+                </div>
+              )}
+              <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mt-1">Incoming commands</div>
+              {data.live.incomingCommands.length === 0 ? (
+                <div className="text-[11px] text-[#7d8590] italic">None inbound</div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {data.live.incomingCommands.map(c => (
+                    <div key={c.id} className="flex justify-between bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-[11px]">
+                      <span>
+                        <span className="font-semibold text-[#c9d1d9]">{c.type}</span>
+                        <span className="text-[#7d8590]"> from {c.fromCityName}{c.fromOwnerName && ` (${c.fromOwnerName})`}</span>
+                      </span>
+                      <span className="font-mono text-[#e3b341]">{fmtRemainingMs(new Date(c.arrivalAt).getTime() - now)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-[11px] text-[#7d8590] italic">
+              This siege has ended — live status no longer available.
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -251,8 +387,25 @@ function SharedAttackDetail({ report: data }: { report: BattleReportData }) {
           <img src="/images/buildings/air_defense.jpg" alt="Air defense" className="w-8 h-8 object-contain rounded" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
           <span>Air defense: {data.airDefenseInitialLevel}</span>
           {(data.airDefenseLevelsDestroyed ?? 0) > 0 && (
-            <span className="text-[#f85149]">(-{data.airDefenseLevelsDestroyed})</span>
+            <span className="text-[#f85149]">
+              → {data.airDefenseInitialLevel - (data.airDefenseLevelsDestroyed ?? 0)} (−{data.airDefenseLevelsDestroyed})
+            </span>
           )}
+        </div>
+      )}
+
+      {data.targetBuilding && (data.buildingLevelsDestroyed ?? 0) > 0 && (
+        <div className="flex items-center gap-3 text-xs text-[#b1bac4]">
+          <img
+            src={`/images/buildings/${data.targetBuilding.toLowerCase()}.jpg`}
+            alt={data.targetBuilding}
+            className="w-8 h-8 object-contain rounded"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+          <span>{data.targetBuilding}: {data.targetBuildingInitialLevel}</span>
+          <span className="text-[#f85149]">
+            → {(data.targetBuildingInitialLevel ?? 0) - (data.buildingLevelsDestroyed ?? 0)} (−{data.buildingLevelsDestroyed})
+          </span>
         </div>
       )}
 
@@ -264,12 +417,8 @@ function SharedAttackDetail({ report: data }: { report: BattleReportData }) {
         </div>
       )}
 
-      {data.loyaltyDamage > 0 && (
-        <div className="text-xs text-[#d29922]">Loyalty damage: -{data.loyaltyDamage}</div>
-      )}
-
-      {data.conquered && (
-        <div className="text-xs text-[#7ee787] font-semibold">City conquered</div>
+      {data.siegeStarted && (
+        <div className="text-xs text-[#f85149] font-semibold">Siege started</div>
       )}
     </>
   );
@@ -338,22 +487,6 @@ function SharedSpyDetail({ report: data }: { report: SpyReportData }) {
               <SharedLoot label="Money" color="#7ee787" value={data.snapshot.resources.money} />
               <SharedLoot label="Energy" color="#79c0ff" value={data.snapshot.resources.energy} />
               <SharedLoot label="Ammo" color="#e3b341" value={data.snapshot.resources.ammo} />
-            </div>
-          )}
-
-          {data.snapshot.loyalty !== undefined && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-widest text-[#7d8590]">Loyalty</span>
-              <div className="flex-1 h-2 bg-[#21262d] rounded overflow-hidden">
-                <div
-                  className="h-full rounded"
-                  style={{
-                    width: `${data.snapshot.loyalty}%`,
-                    background: data.snapshot.loyalty > 50 ? "#3fb950" : data.snapshot.loyalty > 25 ? "#e3b341" : "#f85149",
-                  }}
-                />
-              </div>
-              <span className="text-[#c9d1d9] font-mono text-[11px] font-semibold">{data.snapshot.loyalty}%</span>
             </div>
           )}
 

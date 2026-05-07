@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getReports, deleteReport, shareReport } from "../api/report.ts";
+import { shareSiege as shareSiegeApi, getSiegeStatus } from "../api/siege.ts";
+import UnitIcon from "./UnitIcon.tsx";
 import { listMyInvitations, acceptInvitation, rejectInvitation, type AllianceInvitationForMe } from "../api/alliance.ts";
 import { useUnitInfo } from "../context/UnitInfoContext.tsx";
 import { useNow } from "../context/TickContext.tsx";
-import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
+import type { BattleReport, BattleReportData, BattleUnitCount, CommandReportType, ConquestReportData, SpyReportData, UnitName, WithdrawalReportData } from "../types/index.ts";
 import { BUILDING_DISPLAY, BUILDING_ORDER, UNIT_DISPLAY, UNIT_ORDER } from "../lib/labels.ts";
 import { usePlayerProfile } from "../context/PlayerProfileContext.tsx";
 import { useAllianceProfile } from "../context/AllianceProfileContext.tsx";
@@ -21,7 +23,7 @@ interface Props {
 
 // ─── Category helpers ────────────────────────────────────────────────────────
 
-type Category = "victory" | "loss" | "resources" | "support" | "withdrawal" | "spy_success" | "spy_failed";
+type Category = "victory" | "loss" | "resources" | "support" | "withdrawal" | "spy_success" | "spy_failed" | "conquest";
 
 function isSpyReport(r: BattleReport["report"]): r is SpyReportData {
   return !!r && (r as SpyReportData).spyReport === true;
@@ -29,6 +31,12 @@ function isSpyReport(r: BattleReport["report"]): r is SpyReportData {
 
 function isWithdrawalReport(r: BattleReport["report"]): r is WithdrawalReportData {
   return !!r && (r as WithdrawalReportData).withdrawal === true;
+}
+
+// Conquest report = synthetic Command emitted by siege.worker when the timer expires and
+// ownership transfers. Has a battleAt field but no real battle units — we render a special card.
+function isConquestReport(r: BattleReport["report"]): r is ConquestReportData {
+  return !!r && (r as any).conquestCompleted === true;
 }
 
 function reportTimestamp(r: BattleReport): string | undefined {
@@ -48,6 +56,7 @@ function categoryOf(r: BattleReport): Category {
     const userWon = isOut ? attackerWon : !attackerWon;
     return userWon ? "spy_success" : "spy_failed";
   }
+  if (isConquestReport(r.report)) return "conquest";
   // ATTACK — perspective-aware
   const attackerWon = (r.report as BattleReportData | null)?.attackerWon ?? false;
   const isOut = r.direction === "outgoing";
@@ -58,6 +67,7 @@ function categoryOf(r: BattleReport): Category {
 const CATEGORY_META: Record<Category, { label: string; fg: string; bg: string; border: string }> = {
   victory:     { label: "Victory",     fg: "#3fb950", bg: "#1a3d1a", border: "#3fb950" },
   loss:        { label: "Loss",        fg: "#f85149", bg: "#3d1a1a", border: "#f85149" },
+  conquest:    { label: "Conquest",    fg: "#ffd700", bg: "#3d3000", border: "#ffd700" },
   resources:   { label: "Resources",   fg: "#e3b341", bg: "#3d2e0a", border: "#e3b341" },
   support:     { label: "Support",     fg: "#58a6ff", bg: "#0c2744", border: "#58a6ff" },
   withdrawal:  { label: "Withdrawal",  fg: "#d2a8ff", bg: "#2a1f3d", border: "#d2a8ff" },
@@ -298,6 +308,13 @@ function ReportRow({ report: r, now, active, checked, unread, onClick, onToggleC
     ) : (
       <><span className="font-semibold">{fromName}</span> is supporting your city <span className="font-semibold">{r.toCity.name}</span>.</>
     );
+  } else if (isConquestReport(r.report)) {
+    const cData = r.report;
+    message = isOut ? (
+      <>You conquered <span className="font-semibold">{cData.conqueredCityName}</span>.</>
+    ) : (
+      <><span className="font-semibold">{cData.conqueredCityName}</span> was conquered by <span className="font-semibold">{fromOwner}</span>.</>
+    );
   } else {
     const verb = VERB_BY_TYPE[r.type];
     message = (
@@ -419,6 +436,33 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
 
   const canShare = r.report && !isWithdrawalReport(r.report);
 
+  // Siege id is set in the battle report whenever an ATTACK started a siege. Both attacker
+  // and defender can share — the siege state is symmetrical between them.
+  const siegeIdFromReport = (r.report && typeof r.report === "object" && !Array.isArray(r.report))
+    ? ((r.report as unknown) as Record<string, unknown>).siegeId as string | null | undefined
+    : null;
+  const [sharingSiege, setSharingSiege] = useState(false);
+  const [siegeShareTag, setSiegeShareTag] = useState<string | null>(null);
+  const [siegeShareError, setSiegeShareError] = useState<string | null>(null);
+  const [viewingSiege, setViewingSiege] = useState(false);
+
+  async function handleShareSiege() {
+    if (!siegeIdFromReport) return;
+    setSharingSiege(true);
+    setSiegeShareError(null);
+    try {
+      const { id } = await shareSiegeApi(siegeIdFromReport);
+      const tag = `[siege:${id}]`;
+      await navigator.clipboard.writeText(tag);
+      setSiegeShareTag(tag);
+      setTimeout(() => setSiegeShareTag(null), 3000);
+    } catch {
+      setSiegeShareError("Failed to share siege");
+    } finally {
+      setSharingSiege(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {/* Header */}
@@ -468,21 +512,43 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
         </div>
         <div className="flex items-start gap-3">
 
-          <div className="text-[10px] text-[#dddddd] text-right">
-            {canShare && (
-            <button
-              onClick={() => setSharing(true)}
-              className="text-[12px] font-bold text-[#36bacf] border border-[#30363d] rounded px-2 py-0.5 hover:bg-[#1caf4d] hover:text-[#c9d1d9]"
-            >
-              Share
-            </button>
-          )}
+          <div className="text-[10px] text-[#dddddd] text-right flex flex-col items-end gap-1">
+            <div className="flex gap-1.5">
+              {canShare && (
+                <button
+                  onClick={() => setSharing(true)}
+                  className="text-[12px] font-bold text-[#36bacf] border border-[#30363d] rounded px-2 py-0.5 hover:bg-[#1caf4d] hover:text-[#c9d1d9]"
+                >
+                  Share
+                </button>
+              )}
+              {siegeIdFromReport && (
+                <>
+                  <button
+                    onClick={() => setViewingSiege(v => !v)}
+                    className="text-[12px] font-bold text-[#e3b341] border border-[#e3b341] rounded px-2 py-0.5 hover:bg-[#e3b341] hover:text-[#0d1117]"
+                  >
+                    {viewingSiege ? "Hide siege" : "View siege"}
+                  </button>
+                  <button
+                    onClick={handleShareSiege}
+                    disabled={sharingSiege}
+                    className="text-[12px] font-bold text-[#f85149] border border-[#f85149] rounded px-2 py-0.5 hover:bg-[#f85149] hover:text-[#0d1117] disabled:opacity-40"
+                    title="Share a live link to this siege"
+                  >
+                    {sharingSiege ? "Sharing..." : siegeShareTag ? "Tag copied!" : "Share siege"}
+                  </button>
+                </>
+              )}
+            </div>
+            {siegeShareError && <span className="text-[#f85149] text-[10px]">{siegeShareError}</span>}
             <div>{new Date(reportTimestamp(r) ?? r.arrivalAt).toLocaleString()}</div>
           </div>
         </div>
       </div>
 
-      {r.type === "ATTACK"    && r.report && !isSpyReport(r.report) && !isWithdrawalReport(r.report) && <AttackDetail report={r.report as BattleReportData} />}
+      {r.type === "ATTACK" && isConquestReport(r.report) && <ConquestDetail report={r.report} direction={r.direction} />}
+      {r.type === "ATTACK"    && r.report && !isConquestReport(r.report) && !isSpyReport(r.report) && !isWithdrawalReport(r.report) && <AttackDetail report={r.report as BattleReportData} />}
       {r.type === "SUPPORT"   && (
         isWithdrawalReport(r.report)
           ? <WithdrawalDetail units={r.units} direction={r.direction} />
@@ -491,7 +557,90 @@ function ReportDetail({ report: r }: { report: BattleReport }) {
       {r.type === "RESOURCES" && <ResourcesDetail money={r.resourceMoney} energy={r.resourceEnergy} ammo={r.resourceAmmo} />}
       {r.type === "SPY"       && isSpyReport(r.report) && <SpyDetail report={r.report} direction={r.direction} />}
 
+      {viewingSiege && siegeIdFromReport && <SiegeInlineView cityId={r.toCity.id} />}
+
       {sharing && <ShareReportModal report={r} onClose={() => setSharing(false)} />}
+    </div>
+  );
+}
+
+function SiegeInlineView({ cityId }: { cityId: string }) {
+  const now = useNow();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["siege", cityId],
+    queryFn: () => getSiegeStatus(cityId),
+    refetchInterval: 5000,
+  });
+
+  if (isLoading) return <div className="text-[11px] text-[#b1bac4] p-2">Loading siege status...</div>;
+  if (error || !data) return <div className="text-[11px] text-[#f85149] p-2">Failed to load siege status</div>;
+  if (!data.active) return <div className="text-[11px] text-[#7d8590] p-2 border border-[#30363d] rounded">Siege is no longer active (broken or completed).</div>;
+
+  const remainingMs = new Date(data.endsAt!).getTime() - now;
+  const fmtTime = (ms: number) => {
+    if (ms <= 0) return "0s";
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    if (h > 0) return `${h}h ${m}m ${ss}s`;
+    if (m > 0) return `${m}m ${ss}s`;
+    return `${ss}s`;
+  };
+
+  return (
+    <div className="border border-[#f85149]/40 rounded p-3 flex flex-col gap-2 bg-[#161b22]">
+      <div className="flex items-center justify-between">
+        <div className="text-[#f85149] text-xs font-bold">Siege active</div>
+        <div className="font-mono text-[#f85149] text-sm font-bold">{fmtTime(remainingMs)}</div>
+      </div>
+      {data.defender && (
+        <div className="text-[11px] text-[#b1bac4]">Defender: <span className="text-[#c9d1d9]">{data.defender.username}</span></div>
+      )}
+      <div className="text-[10px] text-[#b1bac4] mt-1">Defending force</div>
+      <div className="flex flex-wrap gap-1.5">
+        {data.defendingForce.length === 0 ? (
+          <span className="text-[11px] text-[#7d8590] italic">No units</span>
+        ) : (
+          data.defendingForce.map(u => (
+            <UnitIcon key={u.name} name={u.name} quantity={u.quantity} size={24} />
+          ))
+        )}
+      </div>
+      {data.incomingCommands.length > 0 && (
+        <>
+          <div className="text-[10px] text-[#b1bac4] mt-1">Incoming commands</div>
+          <div className="flex flex-col gap-1">
+            {data.incomingCommands.map(cmd => (
+              <div key={cmd.id} className="flex justify-between items-center bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-[11px]">
+                <span>
+                  <span className="font-semibold text-[#c9d1d9]">{cmd.type}</span>
+                  <span className="text-[#b1bac4] ml-1">from {cmd.fromCityName}</span>
+                </span>
+                <span className="font-mono text-[#e3b341]">{fmtTime(new Date(cmd.arrivalAt).getTime() - now)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ConquestDetail({ report: data, direction }: { report: ConquestReportData; direction: "outgoing" | "incoming" }) {
+  const started = new Date(data.siegeStartedAt).toLocaleString();
+  const ended   = new Date(data.siegeEndedAt).toLocaleString();
+  const isAttacker = direction === "outgoing";
+
+  return (
+    <div className="rounded border border-[#ffd700]/40 bg-[#3d3000]/50 p-3 flex flex-col gap-2">
+      <div className="text-sm font-bold text-[#ffd700]">
+        {isAttacker ? `You conquered ${data.conqueredCityName}` : `${data.conqueredCityName} was conquered`}
+      </div>
+      <div className="text-[11px] text-[#b1bac4] flex flex-col gap-0.5">
+        <span>Siege started: {started}</span>
+        <span>Conquest completed: {ended}</span>
+      </div>
     </div>
   );
 }
@@ -548,13 +697,13 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
           </table>
       </div>
       
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${data.targetBuilding ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
-          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Air defense</div>
+          <div className="text-[10px] tracking-widest text-[#b1bac4] mb-1.5">Air defense</div>
           {airDefenseHidden ? (
             <div className="flex items-center justify-center gap-2 text-[#b1bac4] italic py-2">
-              <span className="text-sm">❓</span>
-              <span className="text-[11px]">Air defense unknown</span>
+              <span className="text-sm">?</span>
+              <span className="text-[11px]">Unknown</span>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -571,9 +720,9 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
                   <span className="font-mono">{data.airDefenseInitialLevel ?? "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#c9d1d9]">After</span>
+                  <span className="text-[#c9d1d9]">Damage</span>
                   {(data.airDefenseLevelsDestroyed ?? 0) > 0 ? (
-                    <span className="font-mono font-semibold text-[#f85149]">−{data.airDefenseLevelsDestroyed}</span>
+                    <span className="font-mono font-semibold text-[#f85149]">-{data.airDefenseLevelsDestroyed}</span>
                   ) : (
                     <span className="font-mono font-semibold text-[#c9d1d9]">0</span>
                   )}
@@ -583,8 +732,39 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
           )}
         </div>
 
+        {data.targetBuilding && (
+          <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
+            <div className="text-[10px] tracking-widest text-[#b1bac4] mb-1.5">
+              {BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}
+            </div>
+            <div className="flex items-center gap-3">
+              <img
+                src={`/images/buildings/${data.targetBuilding.toLowerCase()}.jpg`}
+                alt={BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}
+                title={BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}
+                className="w-12 h-12 object-contain rounded"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+              <div className="flex-1 flex flex-col gap-0.5">
+                <div className="flex justify-between text-[#c9d1d9]">
+                  <span>Before</span>
+                  <span className="font-mono">{data.targetBuildingInitialLevel ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#c9d1d9]">Damage</span>
+                  {(data.buildingLevelsDestroyed ?? 0) > 0 ? (
+                    <span className="font-mono font-semibold text-[#f85149]">-{data.buildingLevelsDestroyed}</span>
+                  ) : (
+                    <span className="font-mono font-semibold text-[#c9d1d9]">0</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
-          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Loot</div>
+          <div className="text-[10px] tracking-widest text-[#b1bac4] mb-1.5">Loot</div>
           {data.stolenMoney + data.stolenEnergy + data.stolenAmmo === 0 ? (
             <div className="text-[#dddddd] text-[11px]">Nothing was taken.</div>
           ) : (
@@ -597,43 +777,9 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
         </div>
       </div>
 
-      {data.targetBuilding && (data.buildingLevelsDestroyed ?? 0) > 0 && (
-        <div className="rounded border border-[#d2a8ff] bg-[#2a1f3d] p-3 text-xs">
-          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-1.5">Building demolished</div>
-          <div className="flex items-center gap-3">
-            <img
-              src={`/images/buildings/${data.targetBuilding.toLowerCase()}.jpg`}
-              alt={BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}
-              className="w-10 h-10 object-contain rounded"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-            <div className="flex-1 flex flex-col gap-0.5">
-              <span className="text-[#c9d1d9]">{BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding}</span>
-              <div className="flex justify-between">
-                <span className="text-[#c9d1d9]">Level {data.targetBuildingInitialLevel} → {(data.targetBuildingInitialLevel ?? 0) - (data.buildingLevelsDestroyed ?? 0)}</span>
-                <span className="font-mono font-semibold text-[#d2a8ff]">−{data.buildingLevelsDestroyed}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {data.targetBuilding && (data.buildingLevelsDestroyed ?? 0) === 0 && (
-        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs text-[#dddddd]">
-          Target: {BUILDING_DISPLAY[data.targetBuilding as keyof typeof BUILDING_DISPLAY] ?? data.targetBuilding} — no damage dealt
-        </div>
-      )}
-
-      {data.loyaltyDamage > 0 && (
-        <div className="rounded border border-[#d29922] bg-[#3d2e0a] p-3 text-xs flex justify-between text-[#d29922]">
-          <span className="uppercase tracking-widest">Loyalty damage</span>
-          <span className="font-mono">−{data.loyaltyDamage}</span>
-        </div>
-      )}
-
-      {data.conquered && (
-        <div className="rounded border border-[#3fb950] bg-[#0e2a14] p-3 text-xs text-[#7ee787] uppercase tracking-widest text-center font-semibold">
-          City conquered — one Governor was consumed
+      {data.siegeStarted && (
+        <div className="rounded border border-[#f85149] bg-[#3d1a1a] p-3 text-xs text-[#f85149] uppercase tracking-widest text-center font-semibold">
+          Siege started — the city is now under siege
         </div>
       )}
     </>
@@ -850,24 +996,6 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
             <LootCell label="Money"  color="#7ee787" value={resources.money} />
             <LootCell label="Energy" color="#79c0ff" value={resources.energy} />
             <LootCell label="Ammo"   color="#e3b341" value={resources.ammo} />
-          </div>
-        </div>
-      )}
-
-      {data.snapshot.loyalty !== undefined && (
-        <div className="rounded border border-[#30363d] bg-[#161b22] p-3 text-xs">
-          <div className="text-[10px] uppercase tracking-widest text-[#b1bac4] mb-2">Loyalty</div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-2 bg-[#21262d] rounded overflow-hidden">
-              <div
-                className="h-full rounded"
-                style={{
-                  width: `${data.snapshot.loyalty}%`,
-                  background: data.snapshot.loyalty > 50 ? "#3fb950" : data.snapshot.loyalty > 25 ? "#e3b341" : "#f85149",
-                }}
-              />
-            </div>
-            <span className="text-[#c9d1d9] font-mono font-semibold">{data.snapshot.loyalty}%</span>
           </div>
         </div>
       )}

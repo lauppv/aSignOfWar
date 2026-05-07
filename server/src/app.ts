@@ -7,6 +7,7 @@ import buildingRoutes from "./api/routes/building.routes";
 import cityRoutes from "./api/routes/city.routes";
 import recruitmentRoutes from "./api/routes/recruitment.routes";
 import commandRoutes from "./api/routes/command.routes";
+import siegeRoutes, { siegeRouter } from "./api/routes/siege.routes";
 import mapRoutes from "./api/routes/map.routes";
 import reportRoutes from "./api/routes/report.routes";
 import configRoutes from "./api/routes/config.routes";
@@ -18,6 +19,7 @@ import userRoutes from "./api/routes/user.routes";
 import { registerBuildingWorker } from "./workers/building.worker";
 import { registerRecruitmentWorker } from "./workers/recruitment.worker";
 import { registerCommandWorker } from "./workers/command.worker";
+import { registerSiegeWorker } from "./workers/siege.worker";
 import { startGhostTicker } from "./services/ghost.service";
 
 // Entry point Express. Arhitectura:
@@ -48,6 +50,8 @@ app.use("/api/buildings", buildingRoutes);
 app.use("/api/cities", cityRoutes);
 app.use("/api/cities", recruitmentRoutes);
 app.use("/api/cities", commandRoutes);
+app.use("/api/cities", siegeRoutes);
+app.use("/api/sieges", siegeRouter);
 app.use("/api/map", mapRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/config", configRoutes);
@@ -70,6 +74,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 registerBuildingWorker();
 registerRecruitmentWorker();
 registerCommandWorker();
+registerSiegeWorker();
 startGhostTicker();
 
 app.listen(env.port, () => {

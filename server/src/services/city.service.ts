@@ -6,12 +6,12 @@ import { pickFreeSlot } from "./map.service";
 
 type TransactionClient = Prisma.TransactionClient;
 
-type CityWithBuildings = { id: string; money: number; energy: number; ammo: number; loyalty: number; lastResourceUpdate: Date; buildings: { name: string; level: number }[] };
+type CityWithBuildings = { id: string; money: number; energy: number; ammo: number; lastResourceUpdate: Date; buildings: { name: string; level: number }[] };
 
 // Functie pura — calculeaza resursele fara sa scrie in DB.
 // Folosita pe READ (getCityOverview) ca sa nu facem un WRITE la fiecare refresh.
 // Resursele sunt o functie de timp: resurse = vechi + productie * timp_trecut.
-export const computeResources = (city: CityWithBuildings): { money: number; energy: number; ammo: number; loyalty: number } | null => {
+export const computeResources = (city: CityWithBuildings): { money: number; energy: number; ammo: number } | null => {
   const now = new Date();
   const elapsedHours = (now.getTime() - city.lastResourceUpdate.getTime()) / 3_600_000;
   if (elapsedHours < 1 / 3600) return null;
@@ -28,7 +28,6 @@ export const computeResources = (city: CityWithBuildings): { money: number; ener
     money:   Math.min(cap, city.money  + getResourceProduction(bank.level, env.gameSpeed)        * elapsedHours),
     energy:  Math.min(cap, city.energy + getResourceProduction(powerPlant.level, env.gameSpeed)  * elapsedHours),
     ammo:    Math.min(cap, city.ammo   + getResourceProduction(weapFactory.level, env.gameSpeed) * elapsedHours),
-    loyalty: Math.min(100, city.loyalty + 1 * env.gameSpeed * elapsedHours),
   };
 };
 
@@ -40,10 +39,10 @@ export const syncResourcesFromCity = async (city: CityWithBuildings): Promise<{ 
 
   await prisma.city.update({
     where: { id: city.id },
-    data: { money: computed.money, energy: computed.energy, ammo: computed.ammo, loyalty: computed.loyalty, lastResourceUpdate: new Date() },
+    data: { money: computed.money, energy: computed.energy, ammo: computed.ammo, lastResourceUpdate: new Date() },
   });
 
-  return { money: computed.money, energy: computed.energy, ammo: computed.ammo };
+  return computed;
 };
 
 // Versiunea originala — apelata din building.service, command.worker unde nu avem city-ul preloaded.
@@ -51,7 +50,7 @@ export const syncResourcesFromCity = async (city: CityWithBuildings): Promise<{ 
 export const syncResources = async (cityId: string): Promise<void> => {
   const city = await prisma.city.findUnique({
     where: { id: cityId },
-    select: { id: true, money: true, energy: true, ammo: true, loyalty: true, lastResourceUpdate: true, buildings: { select: { name: true, level: true } } },
+    select: { id: true, money: true, energy: true, ammo: true, lastResourceUpdate: true, buildings: { select: { name: true, level: true } } },
   });
   if (!city) throw new Error("CITY_NOT_FOUND");
   await syncResourcesFromCity(city);

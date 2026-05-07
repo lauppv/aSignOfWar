@@ -65,4 +65,8 @@ export const sendCommandSchema = z.object({
   targetCityId: z.string().uuid(),
   units:        unitCountsSchema,
   resources:    resourcesSchema,
+  targetBuilding: z.enum([
+    "HEADQUARTERS", "BANK", "POWER_PLANT", "WEAPONS_FACTORY",
+    "MILITARY_BASE", "HOUSING", "WAREHOUSE", "HARBOR", "AIR_DEFENSE",
+  ]).optional(),
 });

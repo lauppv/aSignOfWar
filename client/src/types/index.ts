@@ -75,7 +75,6 @@ export interface CityOverview {
   money: number;
   energy: number;
   ammo: number;
-  loyalty: number;
   buildings: Building[];
   units: Unit[];
   supportUnits: BattleUnitCount[];
@@ -125,8 +124,14 @@ export interface BattleReportData {
   stolenMoney: number;
   stolenEnergy: number;
   stolenAmmo: number;
-  loyaltyDamage: number;
+  /** @deprecated kept for legacy reports; new system uses sieges, not loyalty drops. */
+  loyaltyDamage?: number;
+  /** @deprecated legacy field, kept so old reports still render. */
   conquered?: boolean;
+  /** True when this attack started a siege (governor + survivors broke through). */
+  siegeStarted?: boolean;
+  /** Siege id created by this attack — used to power the "Share siege" button. */
+  siegeId?: string | null;
   battleAt: string;
 }
 
@@ -147,8 +152,16 @@ export interface SpyReportData {
     buildings: { name: BuildingName; level: number }[];
     units:     BattleUnitCount[];
     resources?: { money: number; energy: number; ammo: number };
-    loyalty?: number;
   } | null;
+  battleAt: string;
+}
+
+export interface ConquestReportData {
+  conquestCompleted: true;
+  siegeId: string;
+  siegeStartedAt: string;
+  siegeEndedAt: string;
+  conqueredCityName: string;
   battleAt: string;
 }
 
@@ -164,5 +177,5 @@ export interface BattleReport {
   units: BattleUnitCount[];
   fromCity: { id: string; name: string; x: number; y: number; owner: { id: string; username: string } | null };
   toCity:   { id: string; name: string; x: number; y: number; owner: { id: string; username: string } | null };
-  report: BattleReportData | SpyReportData | WithdrawalReportData | null;
+  report: BattleReportData | SpyReportData | WithdrawalReportData | ConquestReportData | null;
 }

@@ -66,6 +66,13 @@ enum AllianceAccess {
   APPLICATION
 }
 
+enum SiegeStatus {
+  ACTIVE
+  BROKEN_BY_DEFENSE
+  BROKEN_BY_NEW_SIEGE
+  COMPLETED_CONQUEST
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -108,6 +115,8 @@ model User {
   commandsAttacker Command[] @relation("CommandAttacker")
   commandsDefender Command[] @relation("CommandDefender")
   sharedReports    SharedReport[] @relation("SharedReportAuthor")
+  sieges           Siege[]   @relation("SiegeAttacker")
+  sharedSieges     SharedSiege[] @relation("SharedSiegeAuthor")
 }
 
 model Alliance {
@@ -191,7 +200,6 @@ model City {
   name      String
   x         Int
   y         Int
-  loyalty   Float    @default(100.0)
   money     Float    @default(1000.0)
   energy    Float    @default(1000.0)
   ammo      Float    @default(1000.0)
@@ -208,9 +216,51 @@ model City {
   incomingCommands      Command[]              @relation("CommandTo")
   buildingUpgradeOrders BuildingUpgradeOrder[]
   recruitmentOrders     RecruitmentOrder[]
+  sieges                Siege[]
 
   @@unique([x, y])
   @@index([ownerId])
+}
+
+// Active conquest siege on a city. cityId is UNIQUE — only one active siege at a time
+// (the "lock"). When a stronger conquest attack lands while a siege is already active,
+// the existing row is updated to BROKEN_BY_NEW_SIEGE and a fresh ACTIVE one is created.
+// Historical (non-ACTIVE) sieges are kept for reporting.
+model Siege {
+  id                String      @id @default(uuid())
+  cityId            String
+  city              City        @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  attackerUserId    String
+  attacker          User        @relation("SiegeAttacker", fields: [attackerUserId], references: [id])
+  // The SUPPORT-ARRIVED command that holds the besieger's garrison (governor + escort survivors).
+  // When this command's units reach 0, the siege auto-breaks (BROKEN_BY_DEFENSE).
+  garrisonCommandId String      @unique
+  garrisonCommand   Command     @relation("SiegeGarrison", fields: [garrisonCommandId], references: [id])
+  startedAt         DateTime    @default(now())
+  endsAt            DateTime
+  status            SiegeStatus @default(ACTIVE)
+  // BullMQ job id for the timer; cleared when siege ends in any way other than expiry.
+  jobId             String?
+
+  // Partial unique index enforced via app-level guard + a regular unique on cityId for active rows.
+  // Prisma doesn't support partial indexes; we keep ACTIVE-only invariant in code (siege.service).
+  @@index([cityId, status])
+  @@index([attackerUserId, status])
+
+  sharedLinks SharedSiege[]
+}
+
+// A user-generated share link to a siege. Anyone (logged-in) can fetch the siege state by
+// the SharedSiege.id. Mirrors SharedReport but for live siege views.
+model SharedSiege {
+  id        String   @id @default(uuid())
+  siegeId   String
+  siege     Siege    @relation(fields: [siegeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("SharedSiegeAuthor", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([siegeId])
 }
 
 model Building {
@@ -318,6 +368,7 @@ model Command {
 
   units         CommandUnit[]
   sharedReports SharedReport[]
+  sieges        Siege[]        @relation("SiegeGarrison")
 
   @@index([fromCityId, status])
   @@index([toCityId, type, status])

@@ -12,3 +12,7 @@ export const recruitmentQueue = new Queue("unit-recruitment", {
 export const commandQueue = new Queue("command-travel", {
   connection: createRedisConnection(),
 });
+
+export const siegeQueue = new Queue("siege-timer", {
+  connection: createRedisConnection(),
+});

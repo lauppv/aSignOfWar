@@ -3,6 +3,7 @@ import { buildingQueue } from "../config/queue";
 import { getBuildingUpgradeCost, getBuildingUpgradeTime, BUILDINGS } from "../../../shared/gameConfig";
 import env from "../config/env";
 import { syncResourcesFromCity } from "./city.service";
+import { isCityBesieged } from "./siege.service";
 
 export const startUpgrade = async (buildingId: string, userId: string) => {
   const building = await prisma.building.findUnique({
@@ -15,7 +16,6 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
           money: true,
           energy: true,
           ammo: true,
-          loyalty: true,
           lastResourceUpdate: true,
           buildings: { select: { name: true, level: true } },
         },
@@ -25,6 +25,7 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
 
   if (!building)                        throw new Error("BUILDING_NOT_FOUND");
   if (building.city.ownerId !== userId) throw new Error("UNAUTHORIZED");
+  if (await isCityBesieged(building.city.id)) throw new Error("CITY_UNDER_SIEGE");
 
   const cfg = BUILDINGS[building.name];
 

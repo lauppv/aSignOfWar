@@ -108,7 +108,11 @@ export function calculateBattle(
           + (A.RANGE      / A_total) * D.RANGE
           + (A.MECHANIZED / A_total) * D.MECHANIZED;
   }
-  const attackerWon = A_total >= D_eff;
+  // A_total === 0 înseamnă atacator fără forță ofensivă (de ex. doar Governor, care are
+  // attack: 0). Fără armată nu poți câștiga o bătălie nici măcar împotriva unui oraș gol —
+  // toate unitățile (inclusiv Governor-ul) mor. Asta blochează exploit-ul "trimit Governor
+  // singur și sper că e gol".
+  const attackerWon = A_total > 0 && A_total >= D_eff;
 
   // 5. Pierderi atacator per categorie
   const atkLoss: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
@@ -121,11 +125,18 @@ export function calculateBattle(
 
   const attackerSurvivors: BattleUnit[] = attackerUnits.map(({ name, quantity }) => {
     if (!attackerWon) return { name, quantity: 0 };
+    if (name === "GOVERNOR") return { name, quantity };
     return {
       name,
       quantity: Math.round(quantity * (1 - atkLoss[toAtkCat(name)])),
     };
   });
+
+  // Governor survives only if at least one combat unit survived to protect him.
+  const hasCombatSurvivors = attackerSurvivors.some(u => u.name !== "GOVERNOR" && u.quantity > 0);
+  for (const u of attackerSurvivors) {
+    if (u.name === "GOVERNOR" && !hasCombatSurvivors) u.quantity = 0;
+  }
 
   // 6. Pierderi aparator
   const defLossRate = attackerWon

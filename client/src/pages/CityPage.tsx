@@ -7,6 +7,9 @@ import CancelCommandConfirm from "../components/CancelCommandConfirm.tsx";
 import { cancelCommand } from "../api/command.ts";
 import { getMyCity } from "../api/city.ts";
 import { getCityCommands } from "../api/command.ts";
+import { getSiegeStatus } from "../api/siege.ts";
+import SiegeBadge from "../components/SiegeBadge.tsx";
+import SiegeCard from "../components/SiegeCard.tsx";
 import { getActiveCityId, setActiveCityId, clearActiveCityId } from "../api/client.ts";
 import {
   getAirDefenseBonus,
@@ -82,6 +85,16 @@ export default function CityPage() {
     retry: false,
   });
 
+  // Siege status for the active city — polled at 5s, same cadence as the city overview.
+  // Cheap call (1 SELECT + a few JOINs); both attacker and defender share the same endpoint.
+  const { data: siegeStatus } = useQuery({
+    queryKey: ["siege", city?.id ?? "none"],
+    queryFn: () => getSiegeStatus(city!.id),
+    enabled: !!city?.id,
+    refetchInterval: 5000,
+    retry: false,
+  });
+
   // Daca query-ul esueaza si aveam un cityId explicit (din URL sau localStorage),
   // e probabil un ID stale de la alt cont. Curatam si reincarcam fara el.
   useEffect(() => {
@@ -147,8 +160,12 @@ export default function CityPage() {
     .filter(c => c.status === "TRAVELING" || c.status === "RETURNING")
     .sort((a, b) => new Date(a.arrivalAt).getTime() - new Date(b.arrivalAt).getTime());
 
+  const besieged = !!siegeStatus?.active;
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative">
+      {besieged && siegeStatus && <SiegeCard status={siegeStatus} />}
+      <div className={besieged ? "flex flex-col h-full overflow-hidden blur-sm pointer-events-none select-none" : "flex flex-col h-full overflow-hidden"}>
       {showSimulator ? (
         <SimulatorView onClose={closeView} />
       ) : showReports ? (
@@ -177,8 +194,8 @@ export default function CityPage() {
                 className="flex-1 p-2.5 border-r border-[#30363d] flex flex-col gap-1.5 cursor-pointer hover:bg-[#1c2129] transition-colors min-w-0"
                 onClick={() => openView("building", { name: "AIR_DEFENSE" })}
               >
-                <span className="text-[10px] uppercase tracking-widest text-[#b1bac4]">
-                  Loyalty: <span className={`font-semibold ${city.loyalty > 50 ? "text-[#3fb950]" : city.loyalty > 25 ? "text-[#e3b341]" : "text-[#f85149]"}`}>{Math.floor(city.loyalty)}%</span>
+                <span className="text-[#b1bac4]">
+                  <SiegeBadge status={siegeStatus} />
                 </span>
                 <img
                   src="/images/buildings/air_defense.jpg"
@@ -308,6 +325,7 @@ export default function CityPage() {
           );
         }}
       />
+      </div>
     </div>
   );
 }

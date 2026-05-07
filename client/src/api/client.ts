@@ -50,6 +50,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   NO_STATIONED_UNITS: "No units stationed",
   NO_UNITS_WITHDRAWN: "No units to withdraw",
   INSUFFICIENT_STATIONED_UNITS: "Insufficient stationed units",
+  CITY_UNDER_SIEGE: "City is under siege — actions blocked until the siege ends",
+  CANNOT_WITHDRAW_BESIEGER_GARRISON: "You cannot withdraw your garrison while the siege is active",
 };
 
 function humanizeError(code: string): string {

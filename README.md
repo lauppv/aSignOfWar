@@ -24,7 +24,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
   - [Commands](#commands)
   - [Battle Formula](#battle-formula)
   - [Spy Mechanic](#spy-mechanic)
-  - [Loyalty and Conquest](#loyalty-and-conquest)
+  - [Siege and Conquest](#siege-and-conquest)
   - [Battle Simulator](#battle-simulator)
   - [Ghost Cities](#ghost-cities)
   - [Multiple Cities](#multiple-cities)
@@ -45,7 +45,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **11 military units** across 6 categories (infantry, range, mechanized, siege, conquer, spy) with rock-paper-scissors defense mechanics
 - **Real-time combat** — category-weighted battle formula shared between server and client-side battle simulator
 - **Spy intelligence** — hacker-vs-hacker system separate from combat, with city snapshots on success
-- **City conquest** — governor-based loyalty siege across multiple attacks
+- **City conquest** — governor-based real-time siege (Grepolis-style): one successful conquest attack starts a 12h siege; defender breaks it by killing the besieger garrison before the timer runs out
 - **Alliance system** — creation, invitations, applications, chat, member management, leaderboards
 - **World map** — 300x300 grid with ghost NPC cities for early-game farming
 - **Direct messages** with embedded shared battle/spy reports and quick-message button from player profiles
@@ -208,6 +208,7 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 | `REDIS_URL` | Redis connection string | Yes | — |
 | `NODE_ENV` | `development` or `production` | No | `development` |
 | `GAME_SPEED` | Game speed multiplier (1 = normal, higher = faster) | No | `1` |
+| `SIEGE_DURATION_MINUTES` | How long a siege lasts before conquest completes (absolute minutes — does **not** scale with `GAME_SPEED`) | No | `720` (12h) |
 | `CLIENT_URL` | Frontend URL (production CORS origin) | Production only | — |
 
 ## Admin Scripts
@@ -215,11 +216,12 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 Located in `server/scripts/`, run from the `server/` directory:
 
 ```bash
-npx tsx scripts/dev-cheats.ts <command> [args]   # Dev cheats (refill resources, set units, etc.)
-npx tsx scripts/seed-ghosts.ts                   # Seed ghost cities around existing players
-npx tsx scripts/repack-map.ts                    # Re-arrange all cities in a spiral layout
-npx tsx scripts/backfill-ghost-buildings.ts       # Backfill buildings for legacy ghost cities
-npx tsx scripts/resolve-stuck-commands.ts         # Re-queue stuck TRAVELING commands
+npx tsx scripts/dev-cheats.ts <command> [args]      # Dev cheats (refill resources, set units, etc.)
+npx tsx scripts/reset-and-seed-test-world.ts        # Wipe the world and seed 5 maxed-out players (player1..player5 / asdasd) with alliances
+npx tsx scripts/seed-ghosts.ts                      # Seed ghost cities around existing players
+npx tsx scripts/repack-map.ts                       # Re-arrange all cities in a spiral layout
+npx tsx scripts/backfill-ghost-buildings.ts         # Backfill buildings for legacy ghost cities
+npx tsx scripts/resolve-stuck-commands.ts           # Re-queue stuck TRAVELING commands
 ```
 
 ## Resetting the world
@@ -301,6 +303,7 @@ aSignOfWar/
 │   │   │   │   ├── ranking.controller.ts
 │   │   │   │   ├── recruitment.controller.ts
 │   │   │   │   ├── report.controller.ts
+│   │   │   │   ├── siege.controller.ts
 │   │   │   │   ├── sharedReport.controller.ts
 │   │   │   │   ├── alliance.controller.ts
 │   │   │   │   ├── message.controller.ts
@@ -316,6 +319,7 @@ aSignOfWar/
 │   │   │       ├── ranking.routes.ts
 │   │   │       ├── recruitment.routes.ts
 │   │   │       ├── report.routes.ts
+│   │   │       ├── siege.routes.ts
 │   │   │       ├── alliance.routes.ts
 │   │   │       ├── message.routes.ts
 │   │   │       └── user.routes.ts
@@ -332,6 +336,7 @@ aSignOfWar/
 │   │   │   ├── ghost.service.ts       # Ghost city auto-upgrade ticker
 │   │   │   ├── ranking.service.ts     # Player and alliance leaderboards
 │   │   │   ├── report.service.ts      # Battle/spy/support/resource report queries
+│   │   │   ├── siege.service.ts       # Siege lifecycle, conquest, auto-battle, shared siege
 │   │   │   ├── sharedReport.service.ts # Report sharing with visibility options
 │   │   │   ├── alliance.service.ts    # Alliance CRUD, invites, applications, chat
 │   │   │   ├── message.service.ts     # Direct messages between players
@@ -340,7 +345,8 @@ aSignOfWar/
 │   │   └── workers/                   # BullMQ job processors
 │   │       ├── building.worker.ts     # Completes building upgrades
 │   │       ├── recruitment.worker.ts  # Completes unit recruitment
-│   │       └── command.worker.ts      # Processes command arrivals and returns
+│   │       ├── command.worker.ts      # Processes command arrivals and returns
+│   │       └── siege.worker.ts        # Siege timer expiry → conquest completion
 │   └── uploads/                       # Avatar file storage (gitignored)
 │
 ├── client/
@@ -359,6 +365,7 @@ aSignOfWar/
 │       │   ├── command.ts            # Send/cancel/list commands
 │       │   ├── map.ts                # World map data
 │       │   ├── report.ts            # Reports CRUD + sharing
+│       │   ├── siege.ts             # Siege status, share siege, shared siege view
 │       │   ├── ranking.ts           # Leaderboard queries
 │       │   ├── governor.ts          # Governor deposit/recruit
 │       │   ├── alliance.ts          # Alliance CRUD, invites, applications, chat
@@ -395,7 +402,10 @@ aSignOfWar/
 │           ├── CityActionPanel.tsx   # Map command composer (attack/support/resources/spy)
 │           ├── CommandDetailModal.tsx # Command inspection modal
 │           ├── CancelCommandConfirm.tsx # Command cancel confirmation
-│           ├── ReportsView.tsx       # Battle/spy/support/resource reports
+│           ├── ReportsView.tsx       # Battle/spy/support/resource/conquest reports
+│           ├── SiegeBadge.tsx        # Small siege indicator badge
+│           ├── SiegeCard.tsx         # Full siege overlay (timer, defending force, incoming)
+│           ├── UnitIcon.tsx          # Reusable unit image + quantity badge
 │           ├── SimulatorView.tsx     # Offline battle calculator
 │           ├── PlayerProfileModal.tsx # Player profile (stats, cities, avatar)
 │           ├── AllianceProfileModal.tsx # Alliance profile
@@ -426,6 +436,7 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 |--------|----------|------|-------------|
 | GET | `/api/cities/mine?cityId=...` | Yes | City overview (buildings, units, resources, orders). Defaults to oldest owned city. Response includes `ownedCities[]` |
 | PATCH | `/api/cities/mine/name` | Yes | Rename a city (`{ name, cityId? }`) |
+| GET | `/api/cities/:cityId/siege-status` | Yes | Active siege state for a city: timer, attacker/defender, defending force, incoming commands. Visible to the city owner, the besieger, and members of either side's alliance. |
 
 ### Buildings
 
@@ -457,6 +468,13 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 | GET | `/api/cities/:cityId/commands` | Yes | List outgoing and incoming commands |
 | POST | `/api/cities/:cityId/commands/:commandId/cancel` | Yes | Cancel a TRAVELING command (5-minute window) |
 | POST | `/api/cities/:cityId/commands/withdraw` | Yes | Withdraw stationed SUPPORT units home |
+
+### Sieges
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/sieges/:siegeId/share` | Yes | Create a shareable link to an active siege |
+| GET | `/api/sieges/shared/:id` | Yes | View a shared siege (live status if still active) |
 
 ### Map
 
@@ -540,10 +558,11 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 
 ## Database Schema
 
-15 models across 6 enums. Key entities:
+16 models across 7 enums. Key entities:
 
 - **User** — player account, governor progress, lifetime combat stats, alliance membership
-- **City** — coordinates, loyalty, resources (lazily synced), owner (nullable for ghost cities)
+- **City** — coordinates, resources (lazily synced), owner (nullable for ghost cities)
+- **Siege** — active or historical siege on a city: attacker, garrison command, expiry timestamp, status (`ACTIVE`, `BROKEN_BY_DEFENSE`, `BROKEN_BY_NEW_SIEGE`, `COMPLETED_CONQUEST`)
 - **Building** — 9 types per city, level 0–30
 - **Unit** — 11 types per city, quantity tracked
 - **Command** — attack/support/resources/spy with travel state machine (TRAVELING → ARRIVED/RETURNING → COMPLETED)
@@ -665,22 +684,27 @@ If the attacker sends 100% mechanized units, only `defenseVsMechanized` matters 
 battleRatio = min(1, A_total / D_eff_orig)
 ```
 
-**6. Resolve siege (pre-battle).** Missile launchers destroy air defense levels; drones either help against air defense (no target selected) or demolish a chosen building. Effective siege count is scaled by `battleRatio`:
+**6. Resolve siege (pre-battle).** Missile launchers destroy air defense levels; drones either help against air defense (no target selected) or demolish a chosen building. When sending an attack with drones, the attacker can select a **target building** from a dropdown — if set, drones focus on demolishing that building instead of contributing to air defense damage. Effective siege count is scaled by `battleRatio`:
 
 ```
 effectiveML            = floor(missileLaunchers * battleRatio)
 effectiveDronesAD      = floor(drones * battleRatio)   // only if target is AIR_DEFENSE or unset
 airDefLevelsDestroyed  = calcAirDefenseDamage(level, effectiveML, effectiveDronesAD)
 newAirDefenseLevel     = airDefenseLevel - airDefLevelsDestroyed
+
+// Drone building demolition (post-battle, with initial drone count):
+buildingLevelsDestroyed = calcBuildingDamage(buildingLevel, initialDrones, battleRatio)
 ```
 
-The reduced air defense applies *retroactively* to the main battle — if you destroy 2 levels of AD, the surviving defenders fight at the lower bonus.
+The reduced air defense applies *retroactively* to the main battle — if you destroy 2 levels of AD, the surviving defenders fight at the lower bonus. The battle report shows both air defense damage and drone target building damage side by side.
 
 **7. Recompute defender force with the reduced air defense**, then determine the winner:
 
 ```
-attackerWon = A_total >= D_eff
+attackerWon = A_total > 0 && A_total >= D_eff
 ```
+
+A zero-attack force (e.g. a Governor sent alone) can never win — `A_total = 0` means `attackerWon = false` regardless of the defense. This blocks the exploit of sending a Governor to an empty city without an escort.
 
 **8. Apply losses.**
 
@@ -689,6 +713,8 @@ If the attacker wins, losses are computed *per category* using a power curve —
 ```
 atkLoss[cat] = (D[cat] / A_total) ^ 1.5     for each category with units
 ```
+
+**Governor protection:** Governors are excluded from loss calculation. If the attacker wins and at least one combat unit survives, all Governors survive intact. If no combat units survive, Governors die too — they can't hold a city alone.
 
 If the attacker loses, all attacker units die (`atkLoss = 1.0` across the board).
 
@@ -709,13 +735,7 @@ perResource = floor(totalCarry / 3)
 stolen[r]   = min(defender[r], perResource)   for r in (money, energy, ammo)
 ```
 
-**10. Loyalty damage (conquest).** If the attacker wins, *all* defenders died, and at least one surviving Governor accompanied the attack:
-
-```
-loyaltyDamage = 20 + random(0..15)
-```
-
-The randomness is intentional — it prevents the attacker from computing the exact number of Governors needed for a clean conquest, adding strategic uncertainty.
+**10. Conquest trigger (siege start).** If the attacker wins and at least one surviving Governor accompanied the attack, the surviving force becomes a stationed garrison in the target city (a `SUPPORT`/`ARRIVED` command) and a `Siege` row is created with a fixed-duration timer. Ownership doesn't transfer here — that happens later, in `siege.worker`, only if the defender fails to kill the garrison before the timer expires. See [Siege and Conquest](#siege-and-conquest) for the full flow.
 
 #### Worked example
 
@@ -748,7 +768,7 @@ The attacker wins decisively but still loses more infantry than mechanized — b
 - **Pre-battle siege scaled by battle ratio** avoids all-or-nothing siege: you can soften a fortress over multiple losing waves.
 - **Air defense applied as a multiplicative bonus on all units** means a single AD upgrade boosts every defender, making AD a high-leverage building.
 - **Hackers excluded** keeps espionage and combat as separate strategic dimensions.
-- **Random loyalty damage** prevents conquest from becoming a deterministic spreadsheet calculation.
+- **Conquest is a siege, not a loyalty drain** — one decisive break-through kicks off a 12h timer, not a 4-attack stat grind. See [Siege and Conquest](#siege-and-conquest).
 
 ### Spy Mechanic
 
@@ -759,11 +779,61 @@ Only Hacker units participate. This is a separate system from regular combat —
 
 Defending hackers can never be killed in any scenario.
 
-### Loyalty and Conquest
+### Siege and Conquest
 
-Each city starts at 100 loyalty. Loyalty regenerates at 1 point per hour (scaled by game speed). When an attack clears all defenders and includes at least one surviving Governor, loyalty is reduced by 20–35 per Governor (random). Loyalty persists between attacks.
+Conquest works like Grepolis, not the original Tribal Wars: a single conquest attack that breaks through starts a real-time siege, and the defender has a fixed window to break it before ownership transfers.
 
-When loyalty drops to 0: ownership transfers to the attacker, one Governor is consumed, loyalty resets to 100, all native units in the city are reset to 0 (including hackers and governors), and any stationed support from third parties is sent home.
+#### Starting a siege
+
+When an attack with at least one **Governor** in the stack lands and at least one attacker unit survives the battle, the surviving force becomes a **garrison** stationed in the target city (modeled as a `SUPPORT`/`ARRIVED` command from the attacker), and a `Siege` row is created with `status = ACTIVE` and `endsAt = now + SIEGE_DURATION_MINUTES`. A BullMQ timer is scheduled at `endsAt`.
+
+Only one siege can be active per city. If a second conquest attack from a different player breaks through while a siege is already active, the old garrison is killed in the battle calculation, the previous `Siege` row is marked `BROKEN_BY_NEW_SIEGE`, its timer is cancelled, and a fresh `ACTIVE` siege is created with a brand-new 12h timer (chained sieges always reset).
+
+#### Breaking a siege
+
+The defender (or anyone — alliance members, third parties) can break the siege by killing the besieger garrison before the timer expires. Any incoming `ATTACK` against the besieged city goes through the normal battle resolution: the besieger garrison sits in the defending stack alongside the city's own units, and benefits from the city's `Air Defense` bonus (so it's strategically meaningful to keep AD high on key cities, or low on cities you might need to retake from a besieger). When the garrison drops to zero units, the siege is marked `BROKEN_BY_DEFENSE` and ownership stays with the original owner.
+
+#### Auto-engagement on a besieged city
+
+Two extra rules close the loops that the city owner can't act on (since the city is locked):
+
+- **Returning units** (raiders coming home, withdrawn supports arriving back) sent from the besieged city before the siege started: on arrival they automatically attack the besieger garrison instead of joining the city's units.
+- **Incoming supports** from allies sent to the besieged city: they also auto-attack the garrison instead of stationing peacefully. Survivors stay as `SUPPORT`/`ARRIVED` (and contribute to defense for any future attack).
+
+Both use the same `resolveAttackOnBesiegedCity` helper (`server/src/services/siege.service.ts`) and run the standard battle calc against besieger garrison + city units, with the city's Air Defense applied.
+
+#### What's locked, what isn't
+
+While a siege is active, the city owner cannot:
+- send any command from the besieged city (`CITY_UNDER_SIEGE`)
+- start a new building upgrade or recruitment from the besieged city
+- the besieger cannot withdraw the garrison (`CANNOT_WITHDRAW_BESIEGER_GARRISON`)
+
+Resource production, scheduled building upgrades, and recruitment orders **continue to run normally** — that's intentional. Newly recruited units land in the city's `Unit` table and from that point on count as defenders, which means they help the besieger defend the garrison against counter-attacks. The defender's responsibility is to cancel recruitment queues *before* the city falls under siege; once besieged, those units effectively reinforce the enemy.
+
+#### Siege timer expiry (conquest completion)
+
+If the timer fires and the siege is still `ACTIVE`, `completeConquest` (siege.service):
+1. consumes one Governor from the garrison;
+2. transfers `City.ownerId` to the attacker;
+3. resets all native units in the city to 0;
+4. cancels pending build/recruit orders (no refund — it's war);
+5. cancels outgoing `RESOURCES` commands from the besieged city (they evaporate);
+6. displaces third-party supports stationed in the city back home;
+7. marks the siege `COMPLETED_CONQUEST`.
+
+The garrison command stays — it becomes the new owner's own stationed support in their newly-conquered city, withdrawable normally.
+
+#### Real-time siege card
+
+While a city is besieged, both the attacker and defender (and their alliance members) see the same `SiegeCard` modal: timer, total defending force, and a list of incoming attacks/supports with ETA. Polling at 5s while the card is mounted (`GET /api/cities/:cityId/siege-status`). The composition of `ATTACK`/`SPY` commands is hidden from the defender (only direction + ETA visible); `SUPPORT`/`RESOURCES` show the units/resources being sent.
+
+#### Why this design
+
+- **Single attack starts a siege** instead of multi-attack loyalty drain → conquest commitment is one decisive battle, not a war of attrition.
+- **Time-bound conquest with a counter-window** turns sieges into a coordination test for the defender's alliance, not a stat check.
+- **Recruited units defending the besieger** is a brutal-but-consistent rule: "no control over the city" cuts both ways, and it adds a real skill check (cancel queues fast or pay for it).
+- **AD applies to the besieger** creates a strategic decision: max AD on cities you intend to defend, low AD on satellites you might need to take back from someone who siege-traps them.
 
 ### Battle Simulator
 
@@ -803,6 +873,7 @@ Three workers process async game events via Redis-backed queues:
 | `building.worker.ts` | `building-upgrade` | Completes building upgrades after construction time |
 | `recruitment.worker.ts` | `unit-recruitment` | Completes unit recruitment after training time |
 | `command.worker.ts` | `command-travel` | Processes command arrivals: battle resolution, resource delivery, spy missions, support stationing, return trips |
+| `siege.worker.ts` | `siege-timer` | Fires at `Siege.endsAt`. If the siege is still `ACTIVE`, completes the conquest (transfers ownership, consumes a Governor, displaces third-party supports, cancels in-flight orders). No-op if the defender has already broken the siege. |
 
 Additionally, `ghost.service.ts` runs a periodic ticker (not BullMQ) that auto-upgrades ghost city buildings.
 

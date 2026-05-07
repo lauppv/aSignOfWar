@@ -28,6 +28,7 @@ const env = {
   redisUrl: process.env.REDIS_URL!,
   nodeEnv: process.env.NODE_ENV || "development",
   gameSpeed: Number(process.env.GAME_SPEED) || 1,
+  siegeDurationMinutes: Number(process.env.SIEGE_DURATION_MINUTES) || 720,
 };
 
 export default env;

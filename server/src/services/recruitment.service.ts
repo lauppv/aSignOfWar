@@ -4,6 +4,7 @@ import { UNITS, getRecruitmentTime, getHousingCapacity, getGovernorCost } from "
 import env from "../config/env";
 import { UnitName, Prisma } from "@prisma/client";
 import { syncResourcesFromCity } from "./city.service";
+import { isCityBesieged } from "./siege.service";
 
 export const startRecruitment = async (
   cityId: string,
@@ -22,7 +23,6 @@ export const startRecruitment = async (
       money: true,
       energy: true,
       ammo: true,
-      loyalty: true,
       lastResourceUpdate: true,
       buildings: { select: { name: true, level: true } },
       units: { select: { name: true, quantity: true } },
@@ -31,6 +31,7 @@ export const startRecruitment = async (
 
   if (!city)                        throw new Error("CITY_NOT_FOUND");
   if (city.ownerId !== userId)      throw new Error("UNAUTHORIZED");
+  if (await isCityBesieged(cityId)) throw new Error("CITY_UNDER_SIEGE");
 
   const cfg = UNITS[unitName];
   const hq  = city.buildings.find(b => b.name === "HEADQUARTERS")!;

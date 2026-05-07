@@ -11,6 +11,7 @@ import {
 import env from "../config/env";
 import { CommandType, UnitName, BuildingName } from "@prisma/client";
 import { syncResourcesFromCity } from "./city.service";
+import { isCityBesieged } from "./siege.service";
 
 // Lifecycle-ul unei comenzi: TRAVELING -> ARRIVING (worker) -> RETURNING -> COMPLETED
 // Fereastra de anulare: 5 min dupa plecare, intoarcerea e simetrica (mers X sec = retur X sec).
@@ -33,7 +34,7 @@ export const sendCommand = async (
       where: { id: fromCityId },
       select: {
         id: true, x: true, y: true, ownerId: true,
-        money: true, energy: true, ammo: true, loyalty: true, lastResourceUpdate: true,
+        money: true, energy: true, ammo: true, lastResourceUpdate: true,
         units:     { select: { name: true, quantity: true } },
         buildings: { select: { name: true, level: true } },
       },
@@ -44,6 +45,8 @@ export const sendCommand = async (
   if (!fromCity)             throw new Error("CITY_NOT_FOUND");
   if (!toCity)               throw new Error("TARGET_CITY_NOT_FOUND");
   if (fromCity.ownerId !== userId) throw new Error("UNAUTHORIZED");
+  // Cat timp orasul-sursa e sub asediu, nu se pot trimite comenzi noi.
+  if (await isCityBesieged(fromCityId)) throw new Error("CITY_UNDER_SIEGE");
   if (type === "ATTACK" && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_ATTACK_OWN_CITY");
   if (type === "SPY"    && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_SPY_OWN_CITY");
 
@@ -226,6 +229,15 @@ export const withdrawStationedSupport = async (
     orderBy: { arrivalAt: "asc" },
   });
   if (stationed.length === 0) throw new Error("NO_STATIONED_UNITS");
+
+  // Besieger-ul nu poate retrage garnizoana cat timp asediul e activ — guvernatorul
+  // si escortele sunt blocate in oras pana cand siege-ul se termina (cucerire reusita,
+  // spart de defender, sau inlocuit de alt atacator).
+  const activeSiege = await prisma.siege.findFirst({
+    where:  { cityId: targetCityId, status: "ACTIVE", garrisonCommandId: { in: stationed.map(s => s.id) } },
+    select: { id: true },
+  });
+  if (activeSiege) throw new Error("CANNOT_WITHDRAW_BESIEGER_GARRISON");
 
   const distance = getFieldDistance(fromCity.x, fromCity.y, targetCity.x, targetCity.y);
   const travelMsFor = (units: { name: UnitName; quantity: number }[]): number => {
