@@ -34,18 +34,16 @@ import {
   BuildingName,
   UnitName,
 } from "../../shared/gameConfig";
+import { createGhostCitiesAround, pickFreeSlot } from "../src/services/map.service";
 
 const prisma = new PrismaClient();
 
 const PLAYER_COUNT = 5;
 const UNITS_PER_TYPE = 1000;
 const GOVERNORS_PER_CITY = 4;
+const GHOSTS_PER_CITY = 3;
 const PASSWORD = "asdasd";
 
-// Coordonate de start: spaced out pe diagonala ca sa nu se calce in picioare cu ghost cities.
-function pickCoords(i: number): { x: number; y: number } {
-  return { x: 50 + i * 8, y: 50 + i * 8 };
-}
 
 async function wipeWorld() {
   console.log("Wiping existing world...");
@@ -74,11 +72,11 @@ async function wipeWorld() {
   console.log("  done.");
 }
 
-async function createPlayer(i: number) {
+async function createPlayer(i: number): Promise<{ x: number; y: number }> {
   const username = `player${i}`;
   const email    = `player${i}@fake.com`;
   const cityName = `Oras${i}`;
-  const { x, y } = pickCoords(i);
+  const { x, y } = await pickFreeSlot();
 
   const hash = await bcrypt.hash(PASSWORD, 10);
 
@@ -121,14 +119,23 @@ async function createPlayer(i: number) {
   });
 
   console.log(`  ${username}: ${cityName} at [${x},${y}] — buildings maxed, ${UNITS_PER_TYPE}× per unit, ${GOVERNORS_PER_CITY} governors`);
+  return { x, y };
 }
 
 async function main() {
   await wipeWorld();
   console.log(`Seeding ${PLAYER_COUNT} players...`);
+  const origins: { x: number; y: number }[] = [];
   for (let i = 1; i <= PLAYER_COUNT; i++) {
-    await createPlayer(i);
+    origins.push(await createPlayer(i));
   }
+
+  console.log(`\nSpawning ${GHOSTS_PER_CITY} ghost cities around each player...`);
+  for (const origin of origins) {
+    await createGhostCitiesAround(origin, GHOSTS_PER_CITY);
+  }
+  console.log(`  done — ${PLAYER_COUNT * GHOSTS_PER_CITY} ghost cities created.`);
+
   console.log(`\nDone. Login with: player1..player${PLAYER_COUNT} / ${PASSWORD}`);
 }
 
