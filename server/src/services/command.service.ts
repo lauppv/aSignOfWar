@@ -373,11 +373,11 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
     }),
   ]);
 
-  // Aparatorul NU trebuie sa stie cu ce trupe e atacat/spionat — stergem units
-  // din comenzile ATTACK/SPY incoming. SUPPORT/RESOURCES raman vizibile.
-  const sanitizedIncoming = incoming.map(c =>
-    c.type === "ATTACK" || c.type === "SPY" ? { ...c, units: [] } : c
-  );
+  // SPY-urile sunt complet invizibile pentru apărător (nu știe că vine un spionaj).
+  // ATTACK: ascundem compoziția (units), dar apărătorul vede că vine un atac.
+  const sanitizedIncoming = incoming
+    .filter(c => c.type !== "SPY")
+    .map(c => c.type === "ATTACK" ? { ...c, units: [] } : c);
 
   return { outgoing, incoming: sanitizedIncoming };
 };

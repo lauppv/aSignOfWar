@@ -913,7 +913,7 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
   const { openUnit } = useUnitInfo();
 
   const attackerLosses = data.attackerHackers - data.attackerSurvivors;
-  const defenderLosses = 0; // defender hackers never die in spy missions
+  const defenderLosses = data.defenderHackerLosses ?? 0;
 
   // Atacatorul nu afla niciodata cati hackeri avea aparatorul daca spionajul a esuat.
   const hideDefenderCount = !isIncoming && !data.success;

@@ -89,13 +89,13 @@ export const getSharedSiege = async (shareId: string) => {
     }
     live = {
       defendingForce: Array.from(totals.entries()).filter(([, q]) => q > 0).map(([name, quantity]) => ({ name, quantity })),
-      incomingCommands: incoming.map(c => ({
+      incomingCommands: incoming.filter(c => c.type !== "SPY").map(c => ({
         id:            c.id,
         type:          c.type,
         fromCityName:  c.fromCity.name,
         fromOwnerName: c.fromCity.owner?.username ?? null,
         arrivalAt:     c.arrivalAt.toISOString(),
-        units:         (c.type === "ATTACK" || c.type === "SPY") ? [] : c.units,
+        units:         c.type === "ATTACK" ? [] : c.units,
       })),
     };
   }
@@ -204,16 +204,17 @@ export const getSiegeStatusForCity = async (cityId: string, userId: string): Pro
     .filter(([, q]) => q > 0)
     .map(([name, quantity]) => ({ name, quantity }));
 
-  // Hide composition for ATTACK/SPY incoming (defender doesn't know what's coming, only that
-  // it's coming and from where). SUPPORT/RESOURCES expose units/resources.
-  const sanitizedIncoming = incoming.map(c => ({
-    id:            c.id,
-    type:          c.type,
-    fromCityName:  c.fromCity.name,
-    fromOwnerName: c.fromCity.owner?.username ?? null,
-    arrivalAt:     c.arrivalAt.toISOString(),
-    units:         (c.type === "ATTACK" || c.type === "SPY") ? [] : c.units,
-  }));
+  // SPY e complet invizibil pentru apărător. ATTACK: ascundem compoziția.
+  const sanitizedIncoming = incoming
+    .filter(c => c.type !== "SPY")
+    .map(c => ({
+      id:            c.id,
+      type:          c.type,
+      fromCityName:  c.fromCity.name,
+      fromOwnerName: c.fromCity.owner?.username ?? null,
+      arrivalAt:     c.arrivalAt.toISOString(),
+      units:         c.type === "ATTACK" ? [] : c.units,
+    }));
 
   return {
     active:           true,

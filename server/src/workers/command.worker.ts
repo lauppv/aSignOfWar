@@ -509,15 +509,16 @@ async function processAttackArrival(command: CommandWithUnits) {
   }
 }
 
-// ─── Spionaj: hacker vs hacker ────────────────────────────────────────────────
+// ─── Spionaj: hacker vs hacker (Grepolis-style) ──────────────────────────────
 // Mecanism:
-//   - atacatorul trimite N hackeri, orasul tinta are D hackeri (native + stationate).
-//   - daca N > D: supravietuiesc (N - D) hackeri atacatori, D raman in aparare intacti.
-//     Se genereaza un raport cu buildings + units din orasul tinta (snapshot).
-//   - daca N <= D: toti hackerii atacatori mor, defenderul ramane intact, niciun snapshot.
+//   - atacatorul trimite N hackeri, orașul țintă are D hackeri (native + staționate).
+//   - Succes (N > D): atacatorul pierde D hackeri, supraviețuiesc N-D. Apărătorul
+//     pierde 0 hackeri și NU e notificat. Se generează snapshot.
+//   - Eșec (N ≤ D): atacatorul pierde N hackeri (toți). Apărătorul pierde N hackeri
+//     și primește raport că a fost spionat.
 //
-// Hackerii defenderului NU mor niciodata (plan.txt).
-// Resursele, zidurile — neatinse.
+// Strategii: (1) trimite un atac mare ca să fii sigur că intri fără notificare,
+//            (2) trimite valuri mici ca să seci hackerii apărătorului.
 
 async function processSpyArrival(command: CommandWithUnits) {
   const toCity = await prisma.city.findUnique({
@@ -530,7 +531,6 @@ async function processSpyArrival(command: CommandWithUnits) {
     .filter(u => u.name === "HACKER")
     .reduce((s, u) => s + u.quantity, 0);
 
-  // Hackerii defenderului: cei din oras + cei stationati ca SUPPORT
   const nativeDefenders = toCity.units
     .filter(u => u.name === "HACKER")
     .reduce((s, u) => s + u.quantity, 0);
@@ -545,25 +545,26 @@ async function processSpyArrival(command: CommandWithUnits) {
   }, 0);
 
   const defenderHackers = nativeDefenders + supportDefenders;
+  const success = attackerHackers > defenderHackers;
 
-  const success   = attackerHackers > defenderHackers;
-  const survivors = success ? attackerHackers - defenderHackers : 0;
+  // Atacatorul pierde MEREU toți hackerii trimiși (argintul se consumă).
+  // Succes (N > D): apărătorul pierde 0, nu e notificat.
+  // Eșec (N ≤ D): apărătorul pierde N hackeri, e notificat.
+  const attackerSurvivors    = 0;
+  const defenderHackerLosses = success ? 0 : attackerHackers;
 
-  // Snapshot al orasului spionat (doar la succes)
   let snapshot: {
     buildings: { name: string; level: number }[];
     units: { name: UnitName; quantity: number }[];
     resources: { money: number; energy: number; ammo: number };
   } | null = null;
   if (success) {
-    // Sincronizam resursele target-ului inainte sa le citim, ca sa fie actuale
     await syncResources(command.toCityId);
     const freshCity = await prisma.city.findUnique({
       where: { id: command.toCityId },
       select: { money: true, energy: true, ammo: true },
     });
 
-    // Units = native + toate stack-urile stationate de SUPPORT
     const unitTotals = new Map<UnitName, number>();
     for (const u of toCity.units) {
       if (u.quantity > 0) unitTotals.set(u.name as UnitName, (unitTotals.get(u.name as UnitName) ?? 0) + u.quantity);
@@ -584,61 +585,87 @@ async function processSpyArrival(command: CommandWithUnits) {
     };
   }
 
-  const fromCityCoords = await prisma.city.findUnique({
-    where:  { id: command.fromCityId },
-    select: { x: true, y: true },
-  });
-  const distance = fromCityCoords
-    ? getFieldDistance(fromCityCoords.x, fromCityCoords.y, toCity.x, toCity.y)
-    : 0;
-  const returnDelayMs   = getUnitTravelTimeSec(distance, UNITS.HACKER.speed, env.gameSpeed) * 1000;
-  const returnArrivalAt = new Date(Date.now() + returnDelayMs);
-  const hasSurvivors    = survivors > 0;
-
   await prisma.$transaction(async (tx) => {
-    // Actualizeaza unitatile comenzii cu supravietuitorii
     await tx.commandUnit.updateMany({
       where: { commandId: command.id, name: "HACKER" },
-      data:  { quantity: survivors },
+      data:  { quantity: 0 },
     });
+
+    // La eșec, apărătorul pierde N hackeri — distribuie proporțional native/support
+    if (defenderHackerLosses > 0) {
+      let lossesLeft = defenderHackerLosses;
+      const nativeLoss = defenderHackers > 0
+        ? Math.min(nativeDefenders, Math.round((nativeDefenders / defenderHackers) * defenderHackerLosses))
+        : 0;
+      const actualNativeLoss = Math.min(nativeLoss, lossesLeft);
+      if (actualNativeLoss > 0) {
+        await tx.unit.updateMany({
+          where: { cityId: command.toCityId, name: "HACKER" },
+          data:  { quantity: nativeDefenders - actualNativeLoss },
+        });
+        lossesLeft -= actualNativeLoss;
+      }
+      for (const sc of stationedSupports) {
+        if (lossesLeft <= 0) break;
+        const had = sc.units.filter(u => u.name === "HACKER").reduce((s, u) => s + u.quantity, 0);
+        if (had <= 0) continue;
+        const stackLoss = Math.min(had, defenderHackers > 0
+          ? Math.round((had / defenderHackers) * defenderHackerLosses)
+          : lossesLeft);
+        const actual = Math.min(stackLoss, lossesLeft);
+        if (actual > 0) {
+          await tx.commandUnit.updateMany({
+            where: { commandId: sc.id, name: "HACKER" },
+            data:  { quantity: had - actual },
+          });
+          lossesLeft -= actual;
+        }
+      }
+      if (lossesLeft > 0) {
+        const currentNative = nativeDefenders - actualNativeLoss;
+        if (currentNative > 0) {
+          const take = Math.min(currentNative, lossesLeft);
+          await tx.unit.updateMany({
+            where: { cityId: command.toCityId, name: "HACKER" },
+            data:  { quantity: currentNative - take },
+          });
+        }
+      }
+    }
 
     await tx.command.update({
       where: { id: command.id },
       data: {
-        status:    hasSurvivors ? "RETURNING" : "COMPLETED",
-        arrivalAt: hasSurvivors ? returnArrivalAt : command.arrivalAt,
-        // Defenderul afla doar daca spionajul a esuat. La succes, nu e notificat.
+        status:    "COMPLETED",
         reportHiddenByDefender: success,
-        // Acelasi trade-off JSON ca la rapoartele de batalie — vezi processAttackArrival.
         report: {
           spyReport:       true,
           success,
           attackerHackers,
           defenderHackers,
-          attackerSurvivors: survivors,
-          snapshot, // null daca succes === false
+          defenderHackerLosses,
+          attackerSurvivors,
+          snapshot,
           battleAt:          new Date().toISOString(),
         } as any,
       },
     });
   });
 
-  if (hasSurvivors) {
-    await commandQueue.add("return", { commandId: command.id }, { delay: returnDelayMs });
-  }
-
-  // ── Spy stats ──────────────────────────────────────────────────────────────
   try {
-    const attackerLosses = attackerHackers - survivors;
-    if (attackerLosses > 0 && toCity.ownerId) {
-      // Defender killed the attacker's hackers (weighted by HACKER population)
-      const hackerPop = UNITS.HACKER?.population ?? 1;
+    const hackerPop = UNITS.HACKER?.population ?? 1;
+    if (attackerHackers > 0 && toCity.ownerId) {
       await prisma.user.update({
         where: { id: toCity.ownerId },
-        data:  { killsAsDefender: { increment: attackerLosses * hackerPop } },
+        data:  { killsAsDefender: { increment: attackerHackers * hackerPop } },
       });
     }
-    // Attacker never kills defender hackers in spy missions
+    if (defenderHackerLosses > 0 && command.attackerUserId) {
+      await prisma.user.update({
+        where: { id: command.attackerUserId },
+        data:  { killsAsAttacker: { increment: defenderHackerLosses * hackerPop } },
+      });
+    }
   } catch (e) {
     console.error("Failed to update spy stats:", e);
   }

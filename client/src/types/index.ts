@@ -147,6 +147,7 @@ export interface SpyReportData {
   success: boolean;
   attackerHackers: number;
   defenderHackers: number;
+  defenderHackerLosses: number;
   attackerSurvivors: number;
   snapshot: {
     buildings: { name: BuildingName; level: number }[];

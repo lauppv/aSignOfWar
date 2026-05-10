@@ -47,7 +47,7 @@ export function calculateBattle(
   //   5. Governor loyalty damage: 20 + random(0-15). Randomness-ul previne calculul
   //      exact "am nevoie de N guvernatori", adaugand incertitudine strategica.
 
-  // Hackerii nu participa la batalii — au sistem propriu (SPY vs SPY).
+  // Hackerii nu participă la bătălia normală (au sistem dedicat SPY vs SPY).
   attackerUnits = attackerUnits.filter(u => UNITS[u.name].category !== "SPY");
   defenderUnits = defenderUnits.filter(u => UNITS[u.name].category !== "SPY");
 
@@ -128,7 +128,7 @@ export function calculateBattle(
     if (name === "GOVERNOR") return { name, quantity };
     return {
       name,
-      quantity: Math.round(quantity * (1 - atkLoss[toAtkCat(name)])),
+      quantity: Math.max(0, Math.round(quantity * (1 - atkLoss[toAtkCat(name)]))),
     };
   });
 
@@ -145,7 +145,7 @@ export function calculateBattle(
 
   const defenderSurvivors: BattleUnit[] = defenderUnits.map(({ name, quantity }) => ({
     name,
-    quantity: Math.round(quantity * (1 - defLossRate)),
+    quantity: Math.max(0, Math.round(quantity * (1 - defLossRate))),
   }));
 
   // 7. Resurse furate
