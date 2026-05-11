@@ -39,7 +39,7 @@ import { createGhostCitiesAround, pickFreeSlot } from "../src/services/map.servi
 const prisma = new PrismaClient();
 
 const PLAYER_COUNT = 5;
-const UNITS_PER_TYPE = 1000;
+const UNITS_PER_TYPE = 600;
 const GOVERNORS_PER_CITY = 4;
 const GHOSTS_PER_CITY = 3;
 const PASSWORD = "asdasd";

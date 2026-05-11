@@ -816,12 +816,12 @@ The attacker wins decisively but still loses more infantry than mechanized — b
 
 ### Spy Mechanic
 
-Only Hacker units participate. This is a separate system from regular combat — hackers cannot be sent in attack or support commands. Attacker sends N hackers; defender has D hackers (native + stationed support).
+Only Hacker units participate. This is a separate system from regular combat — hackers cannot be sent in attack or support commands, and hackers cannot be included in attack or support commands. Attacker sends N hackers; defender has D hackers (native + stationed support).
 
-- If `N > D`: spy succeeds. Attacker gets a snapshot of the target city (buildings, units, resources). `N - D` hackers return home. Defender hackers are untouched. The defender is not notified.
-- If `N <= D`: spy fails. All attacker hackers die, no intel is retrieved. The defender receives a report about the failed spy attempt.
+- If `N > D`: spy succeeds. Attacker gets a full snapshot of the target city (buildings, units, resources). All N attacker hackers are consumed. Defender hackers are untouched. The defender is **not notified** — they receive no report.
+- If `N <= D`: spy fails. All N attacker hackers are consumed, no intel is retrieved. The defender loses N hackers (distributed proportionally across native and stationed support stacks). The defender receives a report about the failed spy attempt.
 
-Defending hackers can never be killed in any scenario.
+The attacker always loses all sent hackers regardless of outcome — espionage is a one-way expenditure. On failure, both sides take equal losses (N hackers each). Kill stats are tracked: the defender gets kill credit for the attacker's hackers, and on failure, the attacker gets kill credit for the defender's losses.
 
 ### Siege and Conquest
 
