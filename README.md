@@ -8,9 +8,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 
 - [Features](#features)
 - [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
 - [Setup](#setup)
-- [Docker Compose](#docker-compose)
 - [Environment Variables](#environment-variables)
 - [Admin Scripts](#admin-scripts)
 - [Resetting the world](#resetting-the-world)
@@ -87,123 +85,15 @@ These screenshots were taken with GAME_SPEED=600 (see server/.env) for testing p
 
 **File uploads:** Multer (player/alliance avatars, stored in `server/uploads/`)
 
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18+)
-- [PostgreSQL](https://www.postgresql.org/) (v14+)
-- [Redis](https://redis.io/) (v6+)
-
-### Installing prerequisites
-
-**Ubuntu/Debian:**
-
-```bash
-# Node.js (via NodeSource)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# PostgreSQL
-sudo apt install -y postgresql postgresql-contrib
-sudo systemctl start postgresql
-
-# Redis
-sudo apt install -y redis-server
-sudo systemctl start redis-server
-```
-
-**macOS (Homebrew):**
-
-```bash
-brew install node postgresql@14 redis
-brew services start postgresql@14
-brew services start redis
-```
-
-**Windows:** Install Node.js from the official site, PostgreSQL from the installer at postgresql.org, and Redis via WSL2 or Memurai.
-
-### Setting up the database
-
-```bash
-sudo -u postgres psql
-```
-
-```sql
-CREATE USER asow WITH PASSWORD 'your_password';
-CREATE DATABASE asow OWNER asow;
-\q
-```
-
 ## Setup
 
-1. Clone the repo and install dependencies:
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + docker-compose-v2)
+
+1. Clone the repo and configure environment variables:
 
 ```bash
 git clone https://github.com/lauppv/aSignOfWar
 cd aSignOfWar
-
-cd server
-npm install
-cd ..
-
-cd client
-npm install
-cd ..
-```
-
-2. Copy and configure environment variables (the `.env` file must live in `server/`):
-
-```bash
-cp server/.env.example server/.env
-```
-
-Edit `server/.env`:
-
-```env
-PORT=3000
-
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_NAME=asow
-DATABASE_USER=asow
-DATABASE_PASSWORD=your_silly_password_here
-
-JWT_SECRET=strong_secret_key_here
-REDIS_URL=redis://localhost:6379
-NODE_ENV=development
-GAME_SPEED=1
-```
-
-3. Run database migrations and generate Prisma client:
-
-```bash
-cd server
-npm run db:migrate
-cd ..
-```
-
-4. Start the development server and client (two terminals):
-
-```bash
-# Terminal 1 — server
-cd server
-npm run dev
-
-# Terminal 2 — client
-cd client
-npm run dev
-```
-
-Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
-
-## Docker Compose
-
-The easiest way to run the full stack locally — no need to install PostgreSQL or Redis separately. A single `docker compose` command starts the app, the database, and the cache together.
-
-**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-
-1. Copy and fill in the environment file:
-
-```bash
 cp server/.env.example server/.env
 ```
 
@@ -238,6 +128,66 @@ docker compose logs -f app
 
 > **How it works:** The `Dockerfile` builds both the Vite client and the Express server into a single image. The server serves the compiled SPA as static files alongside the API, so only one container and one port (`3000`) are needed. PostgreSQL and Redis run as sibling containers on an internal Docker network. On startup the container automatically runs `prisma migrate deploy` before booting the server.
 
+<details>
+<summary><strong>Alternative: Local setup (without Docker)</strong></summary>
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [PostgreSQL](https://www.postgresql.org/) (v14+)
+- [Redis](https://redis.io/) (v6+)
+
+**Ubuntu/Debian:**
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs postgresql postgresql-contrib redis-server
+sudo systemctl start postgresql redis-server
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew install node postgresql@14 redis
+brew services start postgresql@14
+brew services start redis
+```
+
+**Windows:** Install Node.js from the official site, PostgreSQL from the installer at postgresql.org, and Redis via WSL2 or Memurai.
+
+### Database setup
+
+```bash
+sudo -u postgres psql
+```
+
+```sql
+CREATE USER asow WITH PASSWORD 'your_password';
+CREATE DATABASE asow OWNER asow;
+\q
+```
+
+### Running
+
+```bash
+cd server && npm install && npm run db:migrate && cd ..
+cd client && npm install && cd ..
+```
+
+Start in two terminals:
+
+```bash
+# Terminal 1 — server
+cd server && npm run dev
+
+# Terminal 2 — client
+cd client && npm run dev
+```
+
+Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
+
+</details>
+
 ## Environment Variables
 
 | Variable | Description | Required | Default |
@@ -257,15 +207,15 @@ docker compose logs -f app
 
 ## Admin Scripts
 
-Located in `server/scripts/`, run from the `server/` directory:
+Run admin scripts inside the running `app` container via `docker compose exec`:
 
 ```bash
-npx tsx scripts/dev-cheats.ts <command> [args]      # Dev cheats (refill resources, set units, etc.)
-npx tsx scripts/reset-and-seed-test-world.ts        # Wipe the world and seed 5 maxed-out players (player1..player5 / asdasd) with alliances
-npx tsx scripts/seed-ghosts.ts                      # Seed ghost cities around existing players
-npx tsx scripts/repack-map.ts                       # Re-arrange all cities in a spiral layout
-npx tsx scripts/backfill-ghost-buildings.ts         # Backfill buildings for legacy ghost cities
-npx tsx scripts/resolve-stuck-commands.ts           # Re-queue stuck TRAVELING commands
+docker compose exec app npx tsx scripts/dev-cheats.ts <command> [args]      # Dev cheats (refill resources, set units, etc.)
+docker compose exec app npx tsx scripts/reset-and-seed-test-world.ts        # Wipe the world and seed 5 maxed-out players (player1..player5 / asdasd) with alliances
+docker compose exec app npx tsx scripts/seed-ghosts.ts                      # Seed ghost cities around existing players
+docker compose exec app npx tsx scripts/repack-map.ts                       # Re-arrange all cities in a spiral layout
+docker compose exec app npx tsx scripts/backfill-ghost-buildings.ts         # Backfill buildings for legacy ghost cities
+docker compose exec app npx tsx scripts/resolve-stuck-commands.ts           # Re-queue stuck TRAVELING commands
 ```
 
 ## Resetting the world
@@ -273,37 +223,27 @@ npx tsx scripts/resolve-stuck-commands.ts           # Re-queue stuck TRAVELING c
 To wipe all data and start fresh (like a new world in Tribal Wars):
 
 ```bash
-cd server
-npm run db:reset            # Drops all tables, re-runs migrations — empty DB, schema intact
-redis-cli FLUSHDB           # Clears BullMQ job queues
+docker compose down -v                              # Deletes all Docker volumes (Postgres data + Redis)
+docker compose --env-file server/.env up --build     # Rebuild and start fresh
 ```
 
 ## Playing with friends (ngrok)
 
-You can host the game locally and let friends on different networks join via [ngrok](https://ngrok.com/). The server serves the built client as static files, so only one tunnel is needed.
+You can host the game locally and let friends on different networks join via [ngrok](https://ngrok.com/). Docker serves the full app on port 3000, so only one tunnel is needed.
 
-1. Build the client:
-
-```bash
-cd client
-npm run build
-cd ..
-```
-
-2. Start the server:
+1. Start the app:
 
 ```bash
-cd server
-npm run dev
+docker compose --env-file server/.env up --build
 ```
 
-3. Start ngrok:
+2. Start ngrok (in a separate terminal):
 
 ```bash
 ngrok http 3000
 ```
 
-4. Share the ngrok URL (e.g. `https://abc123.ngrok-free.app`) with your friends. They open it in a browser and register/play normally.
+3. Share the ngrok URL (e.g. `https://abc123.ngrok-free.app`) with your friends. They open it in a browser and register/play normally.
 
 The ngrok URL is random and unlisted — only people you share it with can access the game. For extra security, ngrok supports basic auth (`ngrok http 3000 --basic-auth="user:password"`) or IP restrictions on paid plans.
 

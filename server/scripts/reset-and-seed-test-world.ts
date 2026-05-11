@@ -16,7 +16,7 @@
 import path from "path";
 import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-if (!process.env.DATABASE_URL && process.env.DATABASE_HOST) {
+if (process.env.DATABASE_HOST) {
   const u = process.env.DATABASE_USER!;
   const p = encodeURIComponent(process.env.DATABASE_PASSWORD!);
   const h = process.env.DATABASE_HOST!;
