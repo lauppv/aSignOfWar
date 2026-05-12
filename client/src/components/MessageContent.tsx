@@ -420,6 +420,14 @@ function SharedAttackDetail({ report: data }: { report: BattleReportData }) {
       {data.siegeStarted && (
         <div className="text-xs text-[#f85149] font-semibold">Siege started</div>
       )}
+
+      {data.siegeDefenseReport && data.siegeBroken && (
+        <div className="text-xs text-[#f85149] font-semibold">Siege destroyed</div>
+      )}
+
+      {data.siegeDefenseReport && !data.siegeBroken && (
+        <div className="text-xs text-[#e3b341] font-semibold">Siege survived</div>
+      )}
     </>
   );
 }
