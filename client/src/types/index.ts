@@ -132,6 +132,10 @@ export interface BattleReportData {
   siegeStarted?: boolean;
   /** Siege id created by this attack — used to power the "Share siege" button. */
   siegeId?: string | null;
+  /** True when this report is a siege defense notification for the besieger. */
+  siegeDefenseReport?: boolean;
+  /** True when the siege was destroyed as a result of this battle. */
+  siegeBroken?: boolean;
   battleAt: string;
 }
 

@@ -85,7 +85,9 @@ async function processSupportArrival(command: CommandWithUnits) {
     const attackerUnits = command.units.map(u => ({ name: u.name as UnitName, quantity: u.quantity }));
     const { attackerSurvivors } = await resolveAttackOnBesiegedCity({
       attackerUnits,
-      toCityId: command.toCityId,
+      toCityId:       command.toCityId,
+      attackerUserId: command.attackerUserId,
+      fromCityId:     command.fromCityId,
     });
     const hasSurvivors = attackerSurvivors.some(u => u.quantity > 0);
 
@@ -375,6 +377,7 @@ async function processAttackArrival(command: CommandWithUnits) {
     // Detectie "defender a spart siege-ul prin acest atac" — daca exista deja un
     // siege ACTIV care nu a fost inlocuit, si garnizoana lui (un SUPPORT in supportStacks)
     // a ajuns la 0 unitati, marcheaza siege-ul ca BROKEN_BY_DEFENSE.
+    let oldSiegeBroken = false;
     if (preexistingSiege && !newSiegeStarts) {
       const garrisonStack = supportStacks.find(s => s.commandId === preexistingSiege!.garrisonCommandId);
       if (garrisonStack) {
@@ -385,8 +388,44 @@ async function processAttackArrival(command: CommandWithUnits) {
             data:  { status: "BROKEN_BY_DEFENSE" },
           });
           cancelledOldSiegeJobId = preexistingSiege.jobId;
+          oldSiegeBroken = true;
         }
       }
+    }
+    if (newSiegeStarts && preexistingSiege) {
+      oldSiegeBroken = true;
+    }
+
+    // Siege defense report: notify the besieger about the attack on their garrison.
+    if (preexistingSiege && preexistingSiege.attackerUserId !== command.attackerUserId) {
+      await tx.command.create({
+        data: {
+          type:           "ATTACK",
+          status:         "COMPLETED",
+          fromCityId:     command.fromCityId,
+          toCityId:       command.toCityId,
+          arrivalAt:      new Date(),
+          attackerUserId: command.attackerUserId,
+          defenderUserId: preexistingSiege.attackerUserId,
+          report: {
+            siegeDefenseReport: true,
+            siegeBroken:                oldSiegeBroken,
+            siegeId:                    preexistingSiege.id,
+            attackerWon,
+            attackerInitial:            attackerUnits,
+            attackerSurvivors:          result.attackerSurvivors,
+            defenderInitial:            defenderUnits,
+            defenderSurvivors:          result.defenderSurvivors,
+            airDefenseInitialLevel:     airDefenseLevel,
+            airDefenseLevelsDestroyed:  result.airDefenseLevelsDestroyed,
+            newAirDefenseLevel:         result.newAirDefenseLevel,
+            stolenMoney: 0,
+            stolenEnergy: 0,
+            stolenAmmo: 0,
+            battleAt:                   new Date().toISOString(),
+          } as any,
+        },
+      });
     }
 
     const hasSurvivors = result.attackerSurvivors.some(u => u.quantity > 0);
@@ -687,8 +726,10 @@ async function processReturn(commandId: string) {
   const totalReturning = unitsToReturn.reduce((s, u) => s + u.quantity, 0);
   if (totalReturning > 0 && await isCityBesieged(command.fromCityId)) {
     const { attackerSurvivors } = await resolveAttackOnBesiegedCity({
-      attackerUnits: unitsToReturn,
-      toCityId:      command.fromCityId,
+      attackerUnits:  unitsToReturn,
+      toCityId:       command.fromCityId,
+      attackerUserId: command.attackerUserId,
+      fromCityId:     command.fromCityId,
     });
     unitsToReturn = attackerSurvivors;
   }

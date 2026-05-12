@@ -39,6 +39,10 @@ function isConquestReport(r: BattleReport["report"]): r is ConquestReportData {
   return !!r && (r as any).conquestCompleted === true;
 }
 
+function isSiegeDefenseReport(r: BattleReport["report"]): r is BattleReportData {
+  return !!r && (r as any).siegeDefenseReport === true;
+}
+
 function reportTimestamp(r: BattleReport): string | undefined {
   if (isWithdrawalReport(r.report)) return r.report.withdrawnAt;
   if (isSpyReport(r.report))        return r.report.battleAt;
@@ -314,6 +318,13 @@ function ReportRow({ report: r, now, active, checked, unread, onClick, onToggleC
       <>You conquered <span className="font-semibold">{cData.conqueredCityName}</span>.</>
     ) : (
       <><span className="font-semibold">{cData.conqueredCityName}</span> was conquered by <span className="font-semibold">{fromOwner}</span>.</>
+    );
+  } else if (isSiegeDefenseReport(r.report)) {
+    const broken = (r.report as BattleReportData).siegeBroken;
+    message = broken ? (
+      <><span className="font-semibold">{fromOwner}</span> destroyed your siege at <span className="font-semibold">{r.toCity.name}</span>.</>
+    ) : (
+      <><span className="font-semibold">{fromOwner}</span> attacked your siege at <span className="font-semibold">{r.toCity.name}</span>.</>
     );
   } else {
     const verb = VERB_BY_TYPE[r.type];
@@ -780,6 +791,18 @@ function AttackDetail({ report: data }: { report: BattleReportData }) {
       {data.siegeStarted && (
         <div className="rounded border border-[#f85149] bg-[#3d1a1a] p-3 text-xs text-[#f85149] uppercase tracking-widest text-center font-semibold">
           Siege started — the city is now under siege
+        </div>
+      )}
+
+      {data.siegeDefenseReport && data.siegeBroken && (
+        <div className="rounded border border-[#f85149] bg-[#3d1a1a] p-3 text-xs text-[#f85149] uppercase tracking-widest text-center font-semibold">
+          Siege destroyed — your siege has been broken
+        </div>
+      )}
+
+      {data.siegeDefenseReport && !data.siegeBroken && (
+        <div className="rounded border border-[#e3b341] bg-[#3d2e0a] p-3 text-xs text-[#e3b341] uppercase tracking-widest text-center font-semibold">
+          Your siege survived this attack
         </div>
       )}
     </>

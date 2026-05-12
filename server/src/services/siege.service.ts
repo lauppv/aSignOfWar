@@ -461,6 +461,8 @@ export const completeConquest = async (siegeId: string): Promise<void> => {
 export const resolveAttackOnBesiegedCity = async (args: {
   attackerUnits: { name: UnitName; quantity: number }[];
   toCityId: string;
+  attackerUserId: string;
+  fromCityId: string;
 }): Promise<{ attackerSurvivors: { name: UnitName; quantity: number }[]; siegeBroken: boolean }> => {
   const { attackerUnits, toCityId } = args;
 
@@ -573,6 +575,38 @@ export const resolveAttackOnBesiegedCity = async (args: {
         cancelledJobId = activeSiege.jobId;
         siegeBroken = true;
       }
+    }
+
+    // Siege defense report: notify the besieger about the attack on their garrison.
+    if (activeSiege.attackerUserId !== args.attackerUserId) {
+      await tx.command.create({
+        data: {
+          type:           "ATTACK",
+          status:         "COMPLETED",
+          fromCityId:     args.fromCityId,
+          toCityId,
+          arrivalAt:      new Date(),
+          attackerUserId: args.attackerUserId,
+          defenderUserId: activeSiege.attackerUserId,
+          report: {
+            siegeDefenseReport: true,
+            siegeBroken,
+            siegeId:                  activeSiege.id,
+            attackerWon:              result.attackerSurvivors.some(u => u.quantity > 0),
+            attackerInitial:          attackerUnits,
+            attackerSurvivors:        result.attackerSurvivors,
+            defenderInitial:          defenderUnits,
+            defenderSurvivors:        result.defenderSurvivors,
+            airDefenseInitialLevel:   airDefenseLevel,
+            airDefenseLevelsDestroyed: result.airDefenseLevelsDestroyed,
+            newAirDefenseLevel:       result.newAirDefenseLevel,
+            stolenMoney: 0,
+            stolenEnergy: 0,
+            stolenAmmo: 0,
+            battleAt:                 new Date().toISOString(),
+          } as any,
+        },
+      });
     }
   });
 
