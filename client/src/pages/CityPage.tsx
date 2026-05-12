@@ -164,8 +164,7 @@ export default function CityPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      {besieged && siegeStatus && <SiegeCard status={siegeStatus} />}
-      <div className={besieged ? "flex flex-col h-full overflow-hidden blur-sm pointer-events-none select-none" : "flex flex-col h-full overflow-hidden"}>
+      <div className="flex flex-col h-full overflow-hidden">
       {showSimulator ? (
         <SimulatorView onClose={closeView} />
       ) : showReports ? (
@@ -180,8 +179,10 @@ export default function CityPage() {
       ) : detailBuilding ? (
         <BuildingDetailView name={detailBuilding} city={city} onClose={closeView} />
       ) : (
-        /* 3-column main */
-        <div className="flex flex-1 overflow-hidden">
+        /* 3-column main — blocked during siege */
+        <>
+        {besieged && siegeStatus && <SiegeCard status={siegeStatus} />}
+        <div className={`flex flex-1 overflow-hidden ${besieged ? "blur-sm pointer-events-none select-none" : ""}`}>
 
           {/* LEFT: Air defense + Commands */}
           <div className="flex-1 flex flex-col bg-[#161b22] border-r border-[#30363d] overflow-hidden">
@@ -307,6 +308,7 @@ export default function CityPage() {
           </div>
 
         </div>
+        </>
       )}
 
       {selectedCmd && (
