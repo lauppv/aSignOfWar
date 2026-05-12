@@ -5,7 +5,7 @@
 //   - 4 GOVERNOR + governorsRecruited = 4 (deci urmatorul costa mai mult)
 //   - resurse la capacitate maxima
 //
-// Ruleaza cu:  npx tsx scripts/reset-and-seed-test-world.ts
+// Ruleaza cu: docker compose exec app npx tsx scripts/reset-and-seed-test-world.ts
 //
 // Scriptul incarca .env si construieste DATABASE_URL la fel ca src/config/env.ts,
 // ca sa poata fi rulat direct fara wrapper npm.
