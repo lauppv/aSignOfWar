@@ -16,7 +16,7 @@
 import path from "path";
 import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-if (!process.env.DATABASE_URL && process.env.DATABASE_HOST) {
+if (process.env.DATABASE_HOST) {
   const u = process.env.DATABASE_USER!;
   const p = encodeURIComponent(process.env.DATABASE_PASSWORD!);
   const h = process.env.DATABASE_HOST!;
@@ -39,7 +39,7 @@ import { createGhostCitiesAround, pickFreeSlot } from "../src/services/map.servi
 const prisma = new PrismaClient();
 
 const PLAYER_COUNT = 5;
-const UNITS_PER_TYPE = 1000;
+const UNITS_PER_TYPE = 600;
 const GOVERNORS_PER_CITY = 4;
 const GHOSTS_PER_CITY = 3;
 const PASSWORD = "asdasd";

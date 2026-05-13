@@ -63,6 +63,7 @@ COPY --from=server-builder /app/server/node_modules/ ./node_modules/
 COPY --from=server-builder /app/server/prisma/     ./prisma/
 COPY --from=server-builder /app/server/package.json ./
 COPY --from=server-builder /app/server/scripts/    ./scripts/
+COPY --from=server-builder /app/server/src/        ./src/
 COPY --from=server-builder /app/shared/            /shared/
 COPY --from=server-builder /app/server/tsconfig.json ./
 

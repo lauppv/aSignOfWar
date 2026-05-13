@@ -12,6 +12,18 @@
 //   npx tsx scripts/dev-cheats.ts maxAllBuildings 51,51
 //   npx tsx scripts/dev-cheats.ts listCities
 
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+if (process.env.DATABASE_HOST) {
+  const u = process.env.DATABASE_USER!;
+  const p = encodeURIComponent(process.env.DATABASE_PASSWORD!);
+  const h = process.env.DATABASE_HOST!;
+  const port = process.env.DATABASE_PORT || "5432";
+  const db = process.env.DATABASE_NAME!;
+  process.env.DATABASE_URL = `postgresql://${u}:${p}@${h}:${port}/${db}`;
+}
+
 import { PrismaClient } from "@prisma/client";
 import { BUILDINGS, UNITS, getWarehouseCapacity, BuildingName, UnitName } from "../../shared/gameConfig";
 
