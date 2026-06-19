@@ -23,8 +23,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    /* Shared */
+    /* Path aliases — @/ for app source, @shared/ for the cross-cutting game config */
+    "baseUrl": ".",
     "paths": {
+      "@/*": ["src/*"],
       "@shared/*": ["../shared/*"]
     }
   },
