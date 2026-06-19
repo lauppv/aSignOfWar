@@ -2,8 +2,8 @@
 // sablonului de start) cu GHOST_STARTER_BUILDINGS. Ruleaza cu:
 //   npx tsx scripts/backfill-ghost-buildings.ts
 
-import prisma from "../src/config/db";
-import { GHOST_STARTER_BUILDINGS } from "../src/services/map.service";
+import prisma from "../src/core/db";
+import { GHOST_STARTER_BUILDINGS } from "../src/modules/map/map.service";
 import { getWarehouseCapacity } from "../../shared/gameConfig";
 
 async function main() {

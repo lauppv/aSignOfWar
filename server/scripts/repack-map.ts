@@ -1,8 +1,8 @@
 // One-off: re-aseaza toate orasele existente in spirala, cu distanta intre ele.
 // Ruleaza cu: npx tsx scripts/repack-map.ts
 
-import prisma from "../src/config/db";
-import { MAP_SIZE } from "../src/services/map.service";
+import prisma from "../src/core/db";
+import { MAP_SIZE } from "../src/modules/map/map.service";
 
 async function main() {
   const cities = await prisma.city.findMany({

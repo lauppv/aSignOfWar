@@ -1,8 +1,8 @@
 import { Worker } from "bullmq";
-import { createRedisConnection } from "../config/redis";
-import prisma from "../config/db";
-import { commandQueue, buildingQueue, recruitmentQueue } from "../config/queue";
-import { calculateBattle } from "../services/battle.service";
+import { createRedisConnection } from "../core/redis";
+import prisma from "../core/db";
+import { commandQueue, buildingQueue, recruitmentQueue } from "../core/queue";
+import { calculateBattle } from "../modules/command/battle.service";
 import {
   UNITS,
   getFieldDistance,
@@ -10,9 +10,9 @@ import {
   getUnitTravelTimeSec,
   calcBuildingDamage,
 } from "../../../shared/gameConfig";
-import env from "../config/env";
-import { syncResources } from "../services/city.service";
-import { getActiveSiege, startSiege, endSiege, cancelSiegeJob, scheduleSiegeExpiry, resolveAttackOnBesiegedCity, isCityBesieged } from "../services/siege.service";
+import env from "../core/env";
+import { syncResources } from "../modules/city/city.service";
+import { getActiveSiege, startSiege, endSiege, cancelSiegeJob, scheduleSiegeExpiry, resolveAttackOnBesiegedCity, isCityBesieged } from "../modules/siege/siege.service";
 import { UnitName, CommandType, BuildingName } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 

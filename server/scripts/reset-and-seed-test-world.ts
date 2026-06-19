@@ -7,7 +7,7 @@
 //
 // Ruleaza cu: docker compose exec app npx tsx scripts/reset-and-seed-test-world.ts
 //
-// Scriptul incarca .env si construieste DATABASE_URL la fel ca src/config/env.ts,
+// Scriptul incarca .env si construieste DATABASE_URL la fel ca src/core/env.ts,
 // ca sa poata fi rulat direct fara wrapper npm.
 //
 // Atentie: scriptul SCAPA tot — sterge useri, orase, comenzi, alianțe, asedii. Foloseste
@@ -34,7 +34,7 @@ import {
   BuildingName,
   UnitName,
 } from "../../shared/gameConfig";
-import { createGhostCitiesAround, pickFreeSlot } from "../src/services/map.service";
+import { createGhostCitiesAround, pickFreeSlot } from "../src/modules/map/map.service";
 
 const prisma = new PrismaClient();
 
