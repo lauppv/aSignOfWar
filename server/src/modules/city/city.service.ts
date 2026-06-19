@@ -3,6 +3,16 @@ import { Prisma } from "@prisma/client";
 import { getResourceProduction, getWarehouseCapacity, UNITS } from "../../../../shared/gameConfig";
 import env from "../../core/env";
 import { pickFreeSlot } from "../map/map.service";
+import {
+  updateCityResources,
+  findCityForSync,
+  findCityOverview,
+  findStationedSupports,
+  findOutgoingCommands,
+  findOwnedCities,
+  findCityIdForOwner,
+  updateCityName,
+} from "./city.repository";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -37,10 +47,7 @@ export const syncResourcesFromCity = async (city: CityWithBuildings): Promise<{ 
   const computed = computeResources(city);
   if (!computed) return null;
 
-  await prisma.city.update({
-    where: { id: city.id },
-    data: { money: computed.money, energy: computed.energy, ammo: computed.ammo, lastResourceUpdate: new Date() },
-  });
+  await updateCityResources(city.id, computed);
 
   return computed;
 };
@@ -48,25 +55,13 @@ export const syncResourcesFromCity = async (city: CityWithBuildings): Promise<{ 
 // Versiunea originala — apelata din building.service, command.worker unde nu avem city-ul preloaded.
 // Face un singur findUnique apoi delega la syncResourcesFromCity.
 export const syncResources = async (cityId: string): Promise<void> => {
-  const city = await prisma.city.findUnique({
-    where: { id: cityId },
-    select: { id: true, money: true, energy: true, ammo: true, lastResourceUpdate: true, buildings: { select: { name: true, level: true } } },
-  });
+  const city = await findCityForSync(cityId);
   if (!city) throw new Error("CITY_NOT_FOUND");
   await syncResourcesFromCity(city);
 };
 
 export const getCityOverview = async (userId: string, cityId?: string) => {
-  const city = await prisma.city.findFirst({
-    where: cityId ? { id: cityId, ownerId: userId } : { ownerId: userId },
-    orderBy: { createdAt: "asc" },
-    include: {
-      buildings:             { orderBy: { name: "asc" } },
-      units:                 { orderBy: { name: "asc" } },
-      buildingUpgradeOrders: { orderBy: { finishAt: "asc" } },
-      recruitmentOrders:     { orderBy: { finishAt: "asc" } },
-    },
-  });
+  const city = await findCityOverview(cityId ? { id: cityId, ownerId: userId } : { ownerId: userId });
   if (!city) throw new Error("CITY_NOT_FOUND");
 
   // Calculez resursele fara sa scriu in DB — pe READ nu are rost sa facem WRITE.
@@ -75,19 +70,9 @@ export const getCityOverview = async (userId: string, cityId?: string) => {
 
   // Toate query-urile independente in paralel — zero secventialitate
   const [stationedSupports, ownCommands, ownedCities] = await Promise.all([
-    prisma.command.findMany({
-      where:  { toCityId: city.id, type: "SUPPORT", status: "ARRIVED" },
-      select: { units: { select: { name: true, quantity: true } } },
-    }),
-    prisma.command.findMany({
-      where:  { fromCityId: city.id, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
-      select: { units: { select: { name: true, quantity: true } } },
-    }),
-    prisma.city.findMany({
-      where:   { ownerId: userId },
-      select:  { id: true, name: true, x: true, y: true },
-      orderBy: { createdAt: "asc" },
-    }),
+    findStationedSupports(city.id),
+    findOutgoingCommands(city.id),
+    findOwnedCities(userId),
   ]);
   const supportMap = new Map<string, number>();
   for (const c of stationedSupports) {
@@ -113,17 +98,9 @@ export const getCityOverview = async (userId: string, cityId?: string) => {
 };
 
 export const renameMyCity = async (userId: string, name: string, cityId?: string) => {
-  const city = await prisma.city.findFirst({
-    where:   cityId ? { id: cityId, ownerId: userId } : { ownerId: userId },
-    orderBy: { createdAt: "asc" },
-    select:  { id: true },
-  });
+  const city = await findCityIdForOwner(cityId ? { id: cityId, ownerId: userId } : { ownerId: userId });
   if (!city) throw new Error("CITY_NOT_FOUND");
-  return prisma.city.update({
-    where: { id: city.id },
-    data: { name },
-    select: { id: true, name: true },
-  });
+  return updateCityName(city.id, name);
 };
 
 export const createStarterCity = async (

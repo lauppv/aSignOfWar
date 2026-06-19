@@ -1,4 +1,4 @@
-import prisma from "../../core/db";
+import * as messages from "./message.repository";
 
 const MESSAGE_MAX = 2000;
 
@@ -9,60 +9,25 @@ export async function sendDirect(fromId: string, toUsername: string, rawContent:
   if (!content) throw new Error("MESSAGE_REQUIRED");
   if (content.length > MESSAGE_MAX) throw new Error("MESSAGE_TOO_LONG");
 
-  const to = await prisma.user.findUnique({ where: { username: toUsername }, select: { id: true, username: true } });
+  const to = await messages.findUserByUsername(toUsername);
   if (!to) throw new Error("RECIPIENT_NOT_FOUND");
   if (to.id === fromId) throw new Error("CANNOT_MESSAGE_SELF");
 
-  const row = await prisma.directMessage.create({
-    data: { fromId, toId: to.id, content },
-    include: {
-      from: { select: { id: true, username: true } },
-      to:   { select: { id: true, username: true } },
-    },
-  });
+  const row = await messages.insertDirect(fromId, to.id, content);
   return serializeDirect(row, fromId);
 }
 
 export async function listThread(userId: string, peerId: string) {
   // Marcam ca citite toate mesajele primite de la peer cand userul deschide firul.
-  await prisma.directMessage.updateMany({
-    where: { fromId: peerId, toId: userId, readByRecipient: false },
-    data:  { readByRecipient: true },
-  });
+  await messages.markThreadRead(peerId, userId);
 
-  const rows = await prisma.directMessage.findMany({
-    where: {
-      OR: [
-        { fromId: userId, toId: peerId, deletedByFrom: false },
-        { fromId: peerId, toId: userId, deletedByTo:   false },
-      ],
-    },
-    include: {
-      from: { select: { id: true, username: true } },
-      to:   { select: { id: true, username: true } },
-    },
-    orderBy: { createdAt: "asc" },
-    take: 500,
-  });
+  const rows = await messages.findThread(userId, peerId);
   return rows.map(r => serializeDirect(r, userId));
 }
 
 export async function listConversations(userId: string) {
   // Toate mesajele nesterse implicate de user, sortate desc; deduplicam pe peer.
-  const rows = await prisma.directMessage.findMany({
-    where: {
-      OR: [
-        { fromId: userId, deletedByFrom: false },
-        { toId:   userId, deletedByTo:   false },
-      ],
-    },
-    include: {
-      from: { select: { id: true, username: true } },
-      to:   { select: { id: true, username: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 1000,
-  });
+  const rows = await messages.findConversations(userId);
 
   const byPeer = new Map<string, {
     peer: { id: string; username: string };
@@ -100,21 +65,16 @@ export async function listConversations(userId: string) {
 }
 
 export async function deleteDirect(userId: string, messageId: string) {
-  const msg = await prisma.directMessage.findUnique({ where: { id: messageId } });
+  const msg = await messages.findDirectById(messageId);
   if (!msg) throw new Error("MESSAGE_NOT_FOUND");
   if (msg.fromId !== userId && msg.toId !== userId) throw new Error("NOT_PARTICIPANT");
 
   const isAuthor = msg.fromId === userId;
-  await prisma.directMessage.update({
-    where: { id: messageId },
-    data: isAuthor ? { deletedByFrom: true } : { deletedByTo: true },
-  });
+  await messages.softDeleteDirect(messageId, isAuthor);
 }
 
 export async function countUnreadDirect(userId: string) {
-  return prisma.directMessage.count({
-    where: { toId: userId, readByRecipient: false, deletedByTo: false },
-  });
+  return messages.countUnreadDirect(userId);
 }
 
 // ─── Shared shape for client ──────────────────────────────────────────────────

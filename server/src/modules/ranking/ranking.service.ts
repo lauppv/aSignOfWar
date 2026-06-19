@@ -1,4 +1,4 @@
-import prisma from "../../core/db";
+import { findPlayersForRanking, findAlliancesForRanking } from "./ranking.repository";
 import { getBuildingPoints, BuildingName } from "../../../../shared/gameConfig";
 
 export interface PlayerRankingEntry {
@@ -42,24 +42,7 @@ export async function getRankings(): Promise<PlayerRankingEntry[]> {
   const now = Date.now();
   if (rankingsCache && now < rankingsCache.expiresAt) return rankingsCache.data;
 
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      username: true,
-      killsAsAttacker: true,
-      killsAsDefender: true,
-      killsAsSupporter: true,
-      lootedMoney: true,
-      lootedEnergy: true,
-      lootedAmmo: true,
-      cities: {
-        select: {
-          buildings: { select: { name: true, level: true } },
-        },
-      },
-      alliance: { select: { id: true, name: true, tag: true } },
-    },
-  });
+  const users = await findPlayersForRanking();
 
   const rows: PlayerRankingEntry[] = users.map((u) => {
     let points = 0;
@@ -91,23 +74,7 @@ export async function getRankings(): Promise<PlayerRankingEntry[]> {
 export async function getAllianceRankings(): Promise<AllianceRankingEntry[]> {
   const now = Date.now();
   if (allianceRankingsCache && now < allianceRankingsCache.expiresAt) return allianceRankingsCache.data;
-  const alliances = await prisma.alliance.findMany({
-    include: {
-      members: {
-        select: {
-          id: true,
-          killsAsAttacker: true,
-          killsAsDefender: true,
-          killsAsSupporter: true,
-          cities: {
-            select: {
-              buildings: { select: { name: true, level: true } },
-            },
-          },
-        },
-      },
-    },
-  });
+  const alliances = await findAlliancesForRanking();
 
   const rows: AllianceRankingEntry[] = alliances.map((a) => {
     let points = 0;

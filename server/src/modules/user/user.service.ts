@@ -1,4 +1,4 @@
-import prisma from "../../core/db";
+import { findUserProfileById, findAllUsersWithBuildings, updateUserDescription } from "./user.repository";
 import { getBuildingPoints, BuildingName } from "../../../../shared/gameConfig";
 
 const DESCRIPTION_MAX = 500;
@@ -26,27 +26,7 @@ export interface PlayerProfile {
 }
 
 export async function getPlayerProfile(userId: string): Promise<PlayerProfile | null> {
-  const target = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      username: true,
-      description: true,
-      avatarUrl: true,
-      createdAt: true,
-      alliance: { select: { id: true, name: true, tag: true } },
-      cities: {
-        select: {
-          id: true,
-          name: true,
-          x: true,
-          y: true,
-          buildings: { select: { name: true, level: true } },
-        },
-        orderBy: { name: "asc" },
-      },
-    },
-  });
+  const target = await findUserProfileById(userId);
   if (!target) return null;
 
   const targetCities: PlayerProfileCity[] = target.cities.map(c => {
@@ -57,12 +37,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
   const targetPoints = targetCities.reduce((s, c) => s + c.points, 0);
 
   // Compute rank by recomputing all players' points (cheap enough for our scale).
-  const all = await prisma.user.findMany({
-    select: {
-      id: true,
-      cities: { select: { buildings: { select: { name: true, level: true } } } },
-    },
-  });
+  const all = await findAllUsersWithBuildings();
   const scored = all.map(u => {
     let pts = 0;
     for (const c of u.cities) {
@@ -93,8 +68,5 @@ export async function updateMyDescription(userId: string, raw: string | null) {
   if (description != null && description.length > DESCRIPTION_MAX) {
     throw new Error("DESCRIPTION_TOO_LONG");
   }
-  await prisma.user.update({
-    where: { id: userId },
-    data: { description: description && description.length > 0 ? description : null },
-  });
+  await updateUserDescription(userId, description && description.length > 0 ? description : null);
 }
