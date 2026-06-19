@@ -7,6 +7,9 @@
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:url": "DOTENV_CONFIG_QUIET=true node -e \"require('dotenv').config(); const e=process.env; console.log('postgresql://'+e.DATABASE_USER+':'+encodeURIComponent(e.DATABASE_PASSWORD)+'@'+e.DATABASE_HOST+':'+(e.DATABASE_PORT||5432)+'/'+e.DATABASE_NAME+'?connection_limit=20')\"",
     "db:migrate": "DATABASE_URL=$(npm run db:url --silent) npx prisma migrate dev",
     "db:reset": "DATABASE_URL=$(npm run db:url --silent) npx prisma migrate reset",
@@ -37,7 +40,9 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.9",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.9"
   }
 }
