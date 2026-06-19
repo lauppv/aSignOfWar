@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import prisma from "../../core/db";
 
-const UPLOADS_DIR = path.join(__dirname, "../../uploads/avatars");
+const UPLOADS_DIR = path.join(__dirname, "../../../uploads/avatars");
 const MIN_SIZE = 20;
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
