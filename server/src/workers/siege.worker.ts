@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
-import { createRedisConnection } from "../config/redis";
-import { completeConquest } from "../services/siege.service";
+import { createRedisConnection } from "../core/redis";
+import { completeConquest } from "../modules/siege/siege.service";
 
 // BullMQ worker pentru expiry-ul timer-ului de siege.
 // Cand job-ul programat la siege.endsAt se executa, completeConquest verifica

@@ -1,26 +1,26 @@
 import path from "path";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import env from "./config/env";
-import authRoutes from "./api/routes/auth.routes";
-import buildingRoutes from "./api/routes/building.routes";
-import cityRoutes from "./api/routes/city.routes";
-import recruitmentRoutes from "./api/routes/recruitment.routes";
-import commandRoutes from "./api/routes/command.routes";
-import siegeRoutes, { siegeRouter } from "./api/routes/siege.routes";
-import mapRoutes from "./api/routes/map.routes";
-import reportRoutes from "./api/routes/report.routes";
-import configRoutes from "./api/routes/config.routes";
-import governorRoutes from "./api/routes/governor.routes";
-import rankingRoutes from "./api/routes/ranking.routes";
-import allianceRoutes from "./api/routes/alliance.routes";
-import messageRoutes from "./api/routes/message.routes";
-import userRoutes from "./api/routes/user.routes";
+import env from "./core/env";
+import authRoutes from "./modules/auth/auth.routes";
+import buildingRoutes from "./modules/building/building.routes";
+import cityRoutes from "./modules/city/city.routes";
+import recruitmentRoutes from "./modules/recruitment/recruitment.routes";
+import commandRoutes from "./modules/command/command.routes";
+import siegeRoutes, { siegeRouter } from "./modules/siege/siege.routes";
+import mapRoutes from "./modules/map/map.routes";
+import reportRoutes from "./modules/report/report.routes";
+import configRoutes from "./modules/config/config.routes";
+import governorRoutes from "./modules/governor/governor.routes";
+import rankingRoutes from "./modules/ranking/ranking.routes";
+import allianceRoutes from "./modules/alliance/alliance.routes";
+import messageRoutes from "./modules/message/message.routes";
+import userRoutes from "./modules/user/user.routes";
 import { registerBuildingWorker } from "./workers/building.worker";
 import { registerRecruitmentWorker } from "./workers/recruitment.worker";
 import { registerCommandWorker } from "./workers/command.worker";
 import { registerSiegeWorker } from "./workers/siege.worker";
-import { startGhostTicker } from "./services/ghost.service";
+import { startGhostTicker } from "./modules/map/ghost.service";
 
 // Entry point Express. Arhitectura:
 //   Controllers -> Services -> Prisma (DB) + BullMQ (cozi)

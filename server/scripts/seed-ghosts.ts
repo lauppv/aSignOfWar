@@ -2,8 +2,8 @@
 // genereaza 3 ghost cities langa orasul lui starter. Ruleaza cu:
 //   npx tsx scripts/seed-ghosts.ts
 
-import prisma from "../src/config/db";
-import { createGhostCitiesAround } from "../src/services/map.service";
+import prisma from "../src/core/db";
+import { createGhostCitiesAround } from "../src/modules/map/map.service";
 
 async function main() {
   const players = await prisma.user.findMany({

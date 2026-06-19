@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
-import { createRedisConnection } from "../config/redis";
-import prisma from "../config/db";
+import { createRedisConnection } from "../core/redis";
+import prisma from "../core/db";
 import { UnitName } from "@prisma/client";
 import { UNITS } from "../../../shared/gameConfig";
 

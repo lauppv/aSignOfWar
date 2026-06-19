@@ -4,8 +4,8 @@
 // cu delay 0 ca sa fie procesate imediat.
 // Ruleaza cu: npx tsx scripts/resolve-stuck-commands.ts
 
-import prisma from "../src/config/db";
-import { commandQueue } from "../src/config/queue";
+import prisma from "../src/core/db";
+import { commandQueue } from "../src/core/queue";
 
 async function main() {
   const stuck = await prisma.command.findMany({
