@@ -27,12 +27,18 @@ jobs:
       - run: npx prisma generate
       - run: npm run build
       - run: npm run test:coverage
-      - name: Report coverage
-        if: ${{ !cancelled() }}
-        uses: davelosert/vitest-coverage-report-action@v2
+      - name: Build coverage comment
+        if: ${{ github.event_name == 'pull_request' && !cancelled() }}
+        working-directory: ${{ github.workspace }}
+        run: node .github/scripts/coverage-comment.mjs "server" server/coverage/coverage-summary.json > coverage-comment.txt
+      - name: Comment coverage on PR
+        if: ${{ github.event_name == 'pull_request' && !cancelled() }}
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          name: server
-          working-directory: server
+          header: coverage-server
+          recreate: true
+          path: coverage-comment.txt
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   client:
     name: client (typecheck + 90% coverage)
@@ -50,9 +56,15 @@ jobs:
       - run: npm ci
       - run: npx tsc -b
       - run: npm run test:coverage
-      - name: Report coverage
-        if: ${{ !cancelled() }}
-        uses: davelosert/vitest-coverage-report-action@v2
+      - name: Build coverage comment
+        if: ${{ github.event_name == 'pull_request' && !cancelled() }}
+        working-directory: ${{ github.workspace }}
+        run: node .github/scripts/coverage-comment.mjs "client" client/coverage/coverage-summary.json > coverage-comment.txt
+      - name: Comment coverage on PR
+        if: ${{ github.event_name == 'pull_request' && !cancelled() }}
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          name: client
-          working-directory: client
+          header: coverage-client
+          recreate: true
+          path: coverage-comment.txt
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
