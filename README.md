@@ -51,7 +51,7 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - **World map** — 300x300 grid with ghost NPC cities for early-game farming
 - **Direct messages** with embedded shared battle/spy reports and quick-message button from player profiles
 - **Alliance invite notifications** — incoming alliance invitations appear in the reports panel with accept/reject actions
-- **Deployable** — Docker container (server) + Vercel static SPA (client)
+- **Deployable** — single Docker container (API + SPA bundled), or a split API container + static client on any host/CDN
 - **Load tested** — 500 concurrent users at ~218 req/s with ~0.01% failure rate (Locust)
 
 ### Screenshots
@@ -135,7 +135,7 @@ docker compose logs -f app
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
+- [Node.js](https://nodejs.org/) (v20+; CI runs Node 24)
 - [PostgreSQL](https://www.postgresql.org/) (v14+)
 - [Redis](https://redis.io/) (v6+)
 
@@ -200,6 +200,7 @@ Client runs on `http://localhost:5173`. Server runs on `http://localhost:3000`.
 | `DATABASE_NAME` | Database name | Yes | — |
 | `DATABASE_USER` | Database user | Yes | — |
 | `DATABASE_PASSWORD` | Database password | Yes | — |
+| `DATABASE_CONNECTION_LIMIT` | Prisma connection pool size (appended to `DATABASE_URL`) | No | `10` |
 | `JWT_SECRET` | Secret for signing JWT tokens | Yes | — |
 | `REDIS_URL` | Redis connection string | Yes | — |
 | `NODE_ENV` | `development` or `production` | No | `development` |
@@ -251,159 +252,14 @@ The ngrok URL is random and unlisted — only people you share it with can acces
 
 ## Project Structure
 
-```
-aSignOfWar/
-├── shared/                            # Shared code (imported by both client and server)
-│   ├── gameConfig.ts                  # Single source of truth: buildings, units, costs, speeds
-│   └── battleCalc.ts                  # Battle formula (used server-side + client simulator)
-│
-├── server/
-│   ├── test.rest                       # API-first testing file (VS Code REST Client)
-│   ├── prisma/
-│   │   └── schema.prisma              # Database schema (15 models, 6 enums)
-│   ├── scripts/                       # One-off admin/maintenance scripts
-│   │   ├── dev-cheats.ts              # Dev CLI: refill, setUnits, setBuilding, maxAll, etc.
-│   │   ├── seed-ghosts.ts             # Seed ghost cities around players
-│   │   ├── repack-map.ts             # Re-arrange city positions on the map
-│   │   ├── backfill-ghost-buildings.ts # Backfill buildings for legacy ghosts
-│   │   └── resolve-stuck-commands.ts  # Re-queue stuck commands
-│   ├── src/
-│   │   ├── app.ts                     # Express entry point, route mounting, worker boot
-│   │   ├── config/
-│   │   │   ├── db.ts                  # Prisma client singleton
-│   │   │   ├── env.ts                 # Environment variable loader + validation
-│   │   │   ├── redis.ts               # IORedis connection
-│   │   │   └── queue.ts              # BullMQ queue definitions
-│   │   ├── middleware/
-│   │   │   ├── auth.ts                # JWT verification, attaches userId to request
-│   │   │   └── validate.ts            # Zod schema validation middleware
-│   │   ├── api/
-│   │   │   ├── schemas.ts             # Zod schemas for all request bodies
-│   │   │   ├── controllers/           # Request handlers (13 controllers)
-│   │   │   │   ├── auth.controller.ts
-│   │   │   │   ├── building.controller.ts
-│   │   │   │   ├── city.controller.ts
-│   │   │   │   ├── command.controller.ts
-│   │   │   │   ├── governor.controller.ts
-│   │   │   │   ├── map.controller.ts
-│   │   │   │   ├── ranking.controller.ts
-│   │   │   │   ├── recruitment.controller.ts
-│   │   │   │   ├── report.controller.ts
-│   │   │   │   ├── siege.controller.ts
-│   │   │   │   ├── sharedReport.controller.ts
-│   │   │   │   ├── alliance.controller.ts
-│   │   │   │   ├── message.controller.ts
-│   │   │   │   └── user.controller.ts
-│   │   │   └── routes/                # Route definitions (13 route files)
-│   │   │       ├── auth.routes.ts
-│   │   │       ├── building.routes.ts
-│   │   │       ├── city.routes.ts
-│   │   │       ├── command.routes.ts
-│   │   │       ├── config.routes.ts
-│   │   │       ├── governor.routes.ts
-│   │   │       ├── map.routes.ts
-│   │   │       ├── ranking.routes.ts
-│   │   │       ├── recruitment.routes.ts
-│   │   │       ├── report.routes.ts
-│   │   │       ├── siege.routes.ts
-│   │   │       ├── alliance.routes.ts
-│   │   │       ├── message.routes.ts
-│   │   │       └── user.routes.ts
-│   │   ├── services/                  # Business logic (16 services)
-│   │   │   ├── auth.service.ts        # Register, login, password hashing
-│   │   │   ├── building.service.ts    # Building upgrades, cancel, queue scheduling
-│   │   │   ├── city.service.ts        # City overview, resource sync, rename
-│   │   │   ├── recruitment.service.ts # Unit recruitment, cancel, queue scheduling
-│   │   │   ├── command.service.ts     # Send/cancel commands, travel time calculation
-│   │   │   ├── battle.service.ts      # Battle resolution, loot, loyalty, conquest
-│   │   │   ├── governor.service.ts    # Governor deposit/recruit (account-wide)
-│   │   │   ├── map.service.ts         # World map, city placement, ghost city spawning
-│   │   │   ├── slotAllocator.ts      # In-memory slot allocator with async mutex
-│   │   │   ├── ghost.service.ts       # Ghost city auto-upgrade ticker
-│   │   │   ├── ranking.service.ts     # Player and alliance leaderboards
-│   │   │   ├── report.service.ts      # Battle/spy/support/resource report queries
-│   │   │   ├── siege.service.ts       # Siege lifecycle, conquest, auto-battle, shared siege
-│   │   │   ├── sharedReport.service.ts # Report sharing with visibility options
-│   │   │   ├── alliance.service.ts    # Alliance CRUD, invites, applications, chat
-│   │   │   ├── message.service.ts     # Direct messages between players
-│   │   │   ├── user.service.ts        # Player profiles, description, search
-│   │   │   └── avatar.service.ts      # Avatar upload (player + alliance)
-│   │   └── workers/                   # BullMQ job processors
-│   │       ├── building.worker.ts     # Completes building upgrades
-│   │       ├── recruitment.worker.ts  # Completes unit recruitment
-│   │       ├── command.worker.ts      # Processes command arrivals and returns
-│   │       └── siege.worker.ts        # Siege timer expiry → conquest completion
-│   └── uploads/                       # Avatar file storage (gitignored)
-│
-├── client/
-│   ├── index.html
-│   ├── vite.config.ts
-│   └── src/
-│       ├── main.tsx                   # React entry point
-│       ├── App.tsx                    # Router, context providers, route definitions
-│       ├── index.css                  # Tailwind imports
-│       ├── types/
-│       │   └── index.ts              # Shared TypeScript types (API responses, game entities)
-│       ├── api/                       # API client functions (fetch wrappers)
-│       │   ├── client.ts             # Base fetch wrapper, auth token, error handling
-│       │   ├── auth.ts               # Login, register
-│       │   ├── city.ts               # City data, rename
-│       │   ├── command.ts            # Send/cancel/list commands
-│       │   ├── map.ts                # World map data
-│       │   ├── report.ts            # Reports CRUD + sharing
-│       │   ├── siege.ts             # Siege status, share siege, shared siege view
-│       │   ├── ranking.ts           # Leaderboard queries
-│       │   ├── governor.ts          # Governor deposit/recruit
-│       │   ├── alliance.ts          # Alliance CRUD, invites, applications, chat
-│       │   ├── message.ts           # Direct messages
-│       │   └── user.ts              # Player profiles, avatar upload
-│       ├── context/                   # React context providers
-│       │   ├── TickContext.tsx        # Real-time clock (1s tick) for countdowns
-│       │   ├── UnitInfoContext.tsx    # Unit info modal (click any unit icon)
-│       │   ├── PlayerProfileContext.tsx   # Player profile modal
-│       │   └── AllianceProfileContext.tsx # Alliance profile modal
-│       ├── hooks/
-│       │   └── useClickOutside.ts    # Click-outside + Escape key hook
-│       ├── lib/                       # Shared utilities
-│       │   ├── labels.ts            # Display names, colors, unit/building order
-│       │   ├── cityHelpers.ts       # Helper functions for city data
-│       │   └── gameSpeed.ts         # Loads game speed from server config
-│       ├── pages/                     # Route-level page components
-│       │   ├── LoginPage.tsx
-│       │   ├── RegisterPage.tsx
-│       │   ├── CityPage.tsx          # Main city dashboard (buildings, units, commands)
-│       │   ├── MapPage.tsx           # World map (scrollable grid, city selection)
-│       │   ├── RankingsPage.tsx      # Player and alliance leaderboards
-│       │   ├── AlliancePage.tsx      # Alliance management (members, chat, settings)
-│       │   └── MessagesPage.tsx      # Direct messages between players
-│       └── components/                # Reusable UI components
-│           ├── Layout.tsx            # Authenticated layout (nav bar, resource bar)
-│           ├── ResourceBar.tsx       # Live resource totals + production rates + city switcher
-│           ├── CityMap.tsx           # Isometric city canvas (building slots)
-│           ├── BuildingsView.tsx     # Building list
-│           ├── BuildingDetailView.tsx # Building upgrade panel
-│           ├── MilitaryBaseView.tsx  # Unit recruitment UI
-│           ├── UnitCard.tsx          # Single unit display card
-│           ├── UnitInfoModal.tsx     # Unit stats popup
-│           ├── CityActionPanel.tsx   # Map command composer (attack/support/resources/spy)
-│           ├── CommandDetailModal.tsx # Command inspection modal
-│           ├── CancelCommandConfirm.tsx # Command cancel confirmation
-│           ├── ReportsView.tsx       # Battle/spy/support/resource/conquest reports
-│           ├── SiegeBadge.tsx        # Small siege indicator badge
-│           ├── SiegeCard.tsx         # Full siege overlay (timer, defending force, incoming)
-│           ├── UnitIcon.tsx          # Reusable unit image + quantity badge
-│           ├── SimulatorView.tsx     # Offline battle calculator
-│           ├── PlayerProfileModal.tsx # Player profile (stats, cities, avatar)
-│           ├── AllianceProfileModal.tsx # Alliance profile
-│           ├── MessageContent.tsx    # Message rendering (shared reports, rich text)
-│           └── ConfirmModal.tsx      # Generic confirmation dialog
-├── Dockerfile                         # Multi-stage Docker build for the server (Alpine + Prisma)
-├── vercel.json                        # Vercel config for client SPA deployment
-├── screenshots/                       # README screenshots (city, map, buildings, units)
-├── plan.txt                           # Game design document (Romanian)
-├── simulations.txt                    # Tribal Wars battle simulations used as reference for balancing
-└── locustfile.py                      # Load test (Locust) — simulates concurrent players
-```
+The full directory tree and the design rules behind it live in
+[ARCHITECTURE.md](ARCHITECTURE.md#project-layout) — kept in one place so the docs
+and the code never drift. In short, both packages are **feature-first**: the server
+groups code under `src/modules/<feature>/` (with process-wide singletons in
+`src/core/` and BullMQ consumers in `src/workers/`), and the client groups code
+under `src/features/<feature>/` (with the composition root in `src/app/` and
+feature-agnostic building blocks in `src/shared/`). Game logic shared by both sides
+lives in `shared/`.
 
 ## API Endpoints
 
@@ -436,7 +292,7 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/cities/:cityId/recruit` | Yes | Start unit recruitment |
-| DELETE | `/api/recruitment/orders/:orderId` | Yes | Cancel a pending recruitment order (75% refund) |
+| DELETE | `/api/cities/recruitment/orders/:orderId` | Yes | Cancel a pending recruitment order (75% refund) |
 
 ### Governor
 
@@ -559,6 +415,7 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 - **AllianceMessage** — alliance chat (soft-deletable)
 - **DirectMessage** — player-to-player messages (read tracking, soft-delete per side)
 - **SharedReport** — shared battle/spy reports with visibility toggles
+- **SharedSiege** — shareable link to a live siege view
 
 ## Game Mechanics
 
@@ -592,17 +449,17 @@ Production rates increase per building level. Resources are synced lazily before
 
 | Unit | Category | Attack | Defense (I/R/M) | Speed | Pop | HQ | MB |
 |------|----------|--------|-----------------|-------|-----|----|----|
-| Light infantry | Infantry | 10 | 15/25/10 | 8 | 1 | — | — |
-| Defender infantry | Infantry | 5 | 30/30/30 | 12 | 1 | 5 | — |
-| Heavy infantry | Infantry | 40 | 20/10/20 | 12 | 2 | — | — |
-| Sniper | Range | 60 | 10/30/10 | 10 | 3 | 10 | 10 |
-| Special forces | Range | 80 | 40/40/40 | 6 | 4 | 15 | 10 |
-| Raider | Mechanized | 30 | 10/10/20 | 4 | 3 | 10 | — |
-| Tank | Mechanized | 100 | 50/20/50 | 14 | 6 | 20 | 15 |
-| Missile launcher | Siege | 40 | 5/5/5 | 16 | 5 | 20 | 15 |
-| Drone | Siege | 50 | 5/5/5 | 18 | 6 | 20 | 20 |
-| Governor | Conquer | 0 | 10/10/10 | 16 | 0 | 30 | — |
-| Hacker | Spy | 0 | 0/0/0 | 6 | 1 | 10 | — |
+| Light infantry | Infantry | 40 | 10/10/5 | 18 | 1 | — | — |
+| Defender infantry | Infantry | 25 | 50/40/15 | 22 | 1 | 5 | — |
+| Heavy infantry | Infantry | 10 | 15/20/45 | 18 | 1 | — | — |
+| Sniper | Range | 15 | 50/5/40 | 18 | 1 | 10 | 10 |
+| Special forces | Range | 120 | 40/50/30 | 10 | 5 | 15 | 10 |
+| Raider | Mechanized | 130 | 30/30/40 | 10 | 4 | 10 | — |
+| Tank | Mechanized | 150 | 200/180/80 | 11 | 6 | 20 | 15 |
+| Missile launcher | Siege | 2 | 20/20/50 | 30 | 5 | 20 | 15 |
+| Drone | Siege | 100 | 100/100/50 | 30 | 8 | 20 | 20 |
+| Governor | Conquer | 0 | 0/0/0 | 18 | 100 | 30 | — |
+| Hacker | Spy | 0 | 2/2/1 | 9 | 2 | 10 | — |
 
 *Speed = minutes per map field. Lower = faster. I/R/M = defense vs Infantry/Range/Mechanized.*
 
@@ -786,7 +643,7 @@ Two extra rules close the loops that the city owner can't act on (since the city
 - **Returning units** (raiders coming home, withdrawn supports arriving back) sent from the besieged city before the siege started: on arrival they automatically attack the besieger garrison instead of joining the city's units.
 - **Incoming supports** from allies sent to the besieged city: they also auto-attack the garrison instead of stationing peacefully. Survivors stay as `SUPPORT`/`ARRIVED` (and contribute to defense for any future attack).
 
-Both use the same `resolveAttackOnBesiegedCity` helper (`server/src/services/siege.service.ts`) and run the standard battle calc against besieger garrison + city units, with the city's Air Defense applied.
+Both use the same `resolveAttackOnBesiegedCity` helper (`server/src/modules/siege/siege.service.ts`) and run the standard battle calc against besieger garrison + city units, with the city's Air Defense applied.
 
 #### What's locked, what isn't
 
@@ -852,7 +709,7 @@ Sharing generates a `[report:id]` tag that can be pasted into any message.
 
 ## Job Queue (BullMQ)
 
-Three workers process async game events via Redis-backed queues:
+Four workers process async game events via Redis-backed queues:
 
 | Worker | Queue | Purpose |
 |--------|-------|---------|
@@ -898,7 +755,7 @@ The `Dockerfile` has two independently buildable final targets that share the sa
 | Target | Image | Client | Best for |
 |--------|-------|--------|----------|
 | `fullstack` *(default)* | Express + static SPA | bundled in | single-container VPS, docker-compose |
-| `server` | Express API only | Vercel / CDN | split managed infra |
+| `server` | Express API only | any static host / CDN | split managed infra |
 
 ### `fullstack` target (standalone)
 
@@ -924,17 +781,23 @@ docker run -p 3000:3000 \
 
 ### `server` target (API only)
 
-Express API only — no client dist bundled in. Use when the client is deployed separately (e.g. Vercel).
+Express API only — no client dist bundled in. Use when the client is deployed separately on a static host or CDN.
 
 ```bash
 docker build --target server -t asow-server .
 ```
 
-### Client (Vercel)
+### Client (static hosting)
 
-The client is deployed via `vercel.json` which builds `client/` with Vite and serves it as a static SPA with a catch-all rewrite to `index.html` for client-side routing.
+Build the client and serve `client/dist/` from any static host or CDN. The build is
+a plain Vite SPA, so it needs a catch-all rewrite of unknown routes to `index.html`
+for client-side routing to work.
 
-Set the `VITE_API_URL` environment variable in Vercel project settings to point at your server:
+```bash
+cd client && npm install && npm run build   # outputs to client/dist/
+```
+
+Set the `VITE_API_URL` environment variable at build time to point at your server:
 
 ```
 VITE_API_URL=https://your-server-domain.com/api
@@ -950,7 +813,7 @@ The `test.rest` file covers every endpoint in the project: auth, cities, buildin
 
 ## Architecture Decisions
 
-- **Express over NestJS**: Manual layering (Controller → Service → Prisma) is simpler for a project with ~50 endpoints. NestJS decorators add ceremony without benefit at this scale.
+- **Express over NestJS**: Manual layering (Controller → Service → Prisma) stays simple to follow even at ~60 endpoints. NestJS decorators add ceremony without benefit at this scale.
 - **Lazy resource sync**: Resources are computed on-read from production rate and elapsed time, rather than ticked by a background worker. This eliminates an entire worker and keeps resource values consistent without race conditions.
 - **Shared game config**: `shared/gameConfig.ts` is the single source of truth for all game balance data (costs, speeds, formulas). Both client and server import it directly, so they never drift.
 - **Optimistic locking**: Resource deductions use Prisma transactions with conditional updates to prevent double-spending under concurrent requests.

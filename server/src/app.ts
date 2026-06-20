@@ -27,9 +27,9 @@ import { startGhostTicker } from "./modules/map/ghost.service";
 //   Workers proceseaza job-uri async (upgrade cladiri, recrutare, sosire comenzi)
 //   Shared config (gameConfig.ts) e sursa unica de adevar pentru balansul jocului
 //
-// De ce nu NestJS? YAGNI — Express + layering manual e mai usor pentru un proiect
-// portofoliu cu ~12 endpoint-uri. Decoratorii NestJS adauga ceremonie fara beneficiu
-// la scala asta. Daca as scala la 50+ endpoint-uri, as migra.
+// De ce nu NestJS? YAGNI — Express + layering manual (feature-first) ramane usor de
+// urmarit chiar si la ~60 de endpoint-uri. Decoratorii NestJS ar adauga ceremonie
+// fara beneficiu real la scala asta.
 
 const app = express();
 
