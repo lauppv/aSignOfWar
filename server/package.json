@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
-    "start": "node dist/app.js",
+    "start": "node dist/server/src/app.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -31,7 +31,6 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "prisma": "^5.22.0",
-    "socket.io": "^4.8.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {

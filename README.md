@@ -94,7 +94,7 @@ These screenshots were taken with GAME_SPEED=600 (see server/.env) for testing p
 1. Clone the repo and configure environment variables:
 
 ```bash
-git clone https://github.com/lauppv/aSignOfWar
+git clone https://github.com/lauppv/aSignOfWar.git
 cd aSignOfWar
 cp server/.env.example server/.env
 ```
@@ -170,6 +170,16 @@ CREATE DATABASE asow OWNER asow;
 ```
 
 ### Running
+
+First create `server/.env` from the example and fill in the database user,
+password, and `JWT_SECRET` you chose above (the `localhost` defaults already match
+a local Postgres/Redis):
+
+```bash
+cp server/.env.example server/.env
+```
+
+Then install dependencies, run migrations, and start both dev servers:
 
 ```bash
 cd server && npm install && npm run db:migrate && cd ..
@@ -396,7 +406,7 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/config` | No | Returns shared game config (buildings, units, speed, travel constants) |
+| GET | `/api/config` | No | Returns public runtime config (the world game-speed multiplier) |
 
 ## Database Schema
 
@@ -405,7 +415,7 @@ Authentication uses Bearer tokens: `Authorization: Bearer <token>`
 - **User** — player account, governor progress, lifetime combat stats, alliance membership
 - **City** — coordinates, resources (lazily synced), owner (nullable for ghost cities)
 - **Siege** — active or historical siege on a city: attacker, garrison command, expiry timestamp, status (`ACTIVE`, `BROKEN_BY_DEFENSE`, `BROKEN_BY_NEW_SIEGE`, `COMPLETED_CONQUEST`)
-- **Building** — 9 types per city, level 0–30
+- **Building** — 9 types per city, level 0 up to a per-building max (20–30)
 - **Unit** — 11 types per city, quantity tracked
 - **Command** — attack/support/resources/spy with travel state machine (TRAVELING → ARRIVED/RETURNING → COMPLETED)
 - **CommandUnit** — units attached to a command
@@ -445,7 +455,7 @@ Production rates increase per building level. Resources are synced lazily before
 
 ### Units
 
-11 unit types across 6 categories. Most are recruited from Military base; Governor is recruited via a special account-wide deposit mechanic, and Hacker is recruited from Headquarters.
+11 unit types across 6 categories. Most are recruited from the Military base; the Governor is recruited via a special account-wide deposit mechanic in the Headquarters.
 
 | Unit | Category | Attack | Defense (I/R/M) | Speed | Pop | HQ | MB |
 |------|----------|--------|-----------------|-------|-----|----|----|

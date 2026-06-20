@@ -111,7 +111,7 @@ they pass locally first.
 
 - **TypeScript everywhere**, strict mode.
 - **Backend uses relative imports, never `@/` aliases.** `tsc` does not rewrite
-  path aliases, so the built `node dist/app.js` would fail at runtime. Cross-module
+  path aliases, so the built `node dist/server/src/app.js` would fail at runtime. Cross-module
   imports look like `../city/city.service`. (`@shared/*` is the one exception.)
 - **Frontend uses the `@/` alias** (`@/features/...`, `@/shared/...`) plus
   `@shared/*` for the game config. Avoid `../../..` chains.

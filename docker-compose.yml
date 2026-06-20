@@ -56,7 +56,7 @@ services:
       REDIS_URL: redis://redis:6379  # Docker service name instead of localhost
     volumes:
       # Persist uploaded avatars across container restarts.
-      # Path: __dirname (/app/dist/server/src/services) + ../../uploads = /app/dist/server/uploads
+      # avatar.service.ts writes to /app/dist/server/uploads/avatars; app.ts serves /uploads from /app/dist/server/uploads.
       - uploads_data:/app/dist/server/uploads
     depends_on:
       postgres:

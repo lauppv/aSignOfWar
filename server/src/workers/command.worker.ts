@@ -551,10 +551,9 @@ async function processAttackArrival(command: CommandWithUnits) {
 // ─── Spionaj: hacker vs hacker (Grepolis-style) ──────────────────────────────
 // Mecanism:
 //   - atacatorul trimite N hackeri, orașul țintă are D hackeri (native + staționate).
-//   - Succes (N > D): atacatorul pierde D hackeri, supraviețuiesc N-D. Apărătorul
-//     pierde 0 hackeri și NU e notificat. Se generează snapshot.
-//   - Eșec (N ≤ D): atacatorul pierde N hackeri (toți). Apărătorul pierde N hackeri
-//     și primește raport că a fost spionat.
+//   - atacatorul pierde MEREU toți cei N hackeri trimiși (argintul se consumă oricum).
+//   - Succes (N > D): apărătorul pierde 0 hackeri și NU e notificat. Se generează snapshot.
+//   - Eșec (N ≤ D): apărătorul pierde N hackeri și primește raport că a fost spionat.
 //
 // Strategii: (1) trimite un atac mare ca să fii sigur că intri fără notificare,
 //            (2) trimite valuri mici ca să seci hackerii apărătorului.
