@@ -4,6 +4,10 @@ Guidance for working in this repo. **aSignOfWar** is a browser-based war/strateg
 MMO: build a city, manage resources, recruit units, and attack/besiege other
 players in real time.
 
+The full game-design spec — mechanics, buildings, units, formulas, and the
+rationale behind them — lives in `plan.txt`. `shared/gameConfig.ts` holds the
+actual balance values; `plan.txt` explains the *why*.
+
 ## Stack
 
 - **server/** — Express 5 + TypeScript (CommonJS). Prisma 5 → PostgreSQL.
@@ -30,10 +34,22 @@ Run these from the relevant package directory.
 - `npm run build` — `tsc -b && vite build`
 - `npm run preview` — preview the production build
 
+### Tests (Vitest)
+Both packages run Vitest with a **90% coverage gate** (lines/branches/functions/
+statements) enforced over an explicit allow-list in each `vitest.config.ts`.
+- `npm test` — run the suite once
+- `npm run test:watch` — watch mode
+- `npm run test:coverage` — run with coverage; fails under 90%
+
+The server suite runs in Node and also covers `shared/` (pure game logic); the
+client suite runs in jsdom. DB/Redis are mocked, so no live services are needed.
+A file is only under the gate once it has tests — grow `coverage.include` as you
+add suites. CI (`.github/workflows/ci.yml`) runs both gates on every PR.
+
 ### Verifying changes
 There is no live DB/Redis in most working environments. The reliable green check is:
-- server: `npm run build` (typecheck + emit)
-- client: `npx tsc -b` (typecheck) and `npx vite build` (bundle)
+- server: `npm run build` (typecheck + emit) and `npm run test:coverage`
+- client: `npx tsc -b` (typecheck), `npx vite build` (bundle), and `npm run test:coverage`
 
 Run these after edits. They are the project's safety net.
 
