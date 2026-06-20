@@ -13,7 +13,7 @@ need Node, PostgreSQL, and Redis.
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker
   Engine + docker compose v2), **or**
-- Node.js 18+, PostgreSQL 14+, and Redis 6+ for a manual setup
+- Node.js 20+ (CI runs Node 24), PostgreSQL 14+, and Redis 6+ for a manual setup
 
 ### Setup (Docker)
 

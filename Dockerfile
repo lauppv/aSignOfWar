@@ -1,6 +1,6 @@
 # Two independently buildable final targets:
 #
-#   server    — Express API only; use when the client is on Vercel or another CDN
+#   server    — Express API only; use when the client is on a static host or CDN
 #   fullstack — server + client dist bundled in (default; used by docker-compose)
 #
 # Examples:
@@ -51,7 +51,7 @@ RUN npm run build
 
 # ─── Target: server ───────────────────────────────────────────────────────────
 # Express API only — no client dist bundled in. Use when the client is deployed
-# separately (Vercel, CDN, etc.).
+# separately on a static host or CDN.
 FROM node:20-alpine AS server
 
 RUN apk add --no-cache openssl

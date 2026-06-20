@@ -122,7 +122,7 @@ Content-Type: application/json
 ### cancel recruitment order
 @recruitOrderId = ORDER_ID_HERE
 
-DELETE http://localhost:3000/api/buildings/recruitment/orders/{{recruitOrderId}}
+DELETE http://localhost:3000/api/cities/recruitment/orders/{{recruitOrderId}}
 Authorization: Bearer {{tokenAtk}}
 
 ###

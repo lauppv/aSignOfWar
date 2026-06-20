@@ -12,9 +12,53 @@ touches one directory instead of fanning out across `controllers/`, `services/`,
 `schemas/`.
 
 We deliberately did **not** adopt a framework (NestJS on the back, a meta-framework
-on the front). At ~12 endpoints the ceremony costs more than it saves — see the
-note in `server/src/app.ts`. The layering below is enforced by convention, not
-decorators.
+on the front). Even at ~60 endpoints, manual feature-first layering stays easy to
+follow and the decorator ceremony would cost more than it saves — see the note in
+`server/src/app.ts`. The layering below is enforced by convention, not decorators.
+
+## Project layout
+
+```
+aSignOfWar/
+├── shared/                     # imported by both client and server (@shared/*)
+│   ├── gameConfig.ts           # single source of truth: buildings, units, costs, speeds
+│   └── battleCalc.ts           # battle formula (server combat + client simulator)
+│
+├── server/
+│   ├── prisma/schema.prisma    # database schema (16 models, 7 enums)
+│   ├── scripts/                # one-off admin/maintenance CLIs (seed, repack, cheats…)
+│   ├── test.rest               # API-first endpoint tests (VS Code REST Client)
+│   └── src/
+│       ├── app.ts              # Express entry: route mounting, worker boot, ghost ticker
+│       ├── core/               # process-wide singletons: db, env, redis, queue
+│       ├── middleware/         # auth (JWT), validate (zod)
+│       ├── modules/<feature>/  # feature-first: <f>.{routes,controller,service}.ts (+ .schema, .repository)
+│       │   ├── auth/  building/  city/  command/  config/  governor/
+│       │   ├── map/   message/   ranking/  recruitment/  report/
+│       │   └── siege/ user/      alliance/
+│       │   #  command/ also holds battle.service.ts (battle resolution)
+│       │   #  map/     also holds ghost.service.ts + slotAllocator.ts
+│       │   #  report/  also holds sharedReport.{service,controller}.ts
+│       │   #  user/    also holds avatar.service.ts
+│       └── workers/            # BullMQ consumers: building, recruitment, command, siege
+│
+├── client/
+│   └── src/
+│       ├── app/                # composition root: App, main, Layout, index.css
+│       ├── features/<f>/       # api/ components/ context/ lib/ + <Feature>Page.tsx
+│       │   #  auth city map rankings alliance messages reports siege simulator
+│       └── shared/             # api/client, ui/, context/, lib/, hooks/, types/
+│
+├── Dockerfile                  # multi-stage build (fullstack | server targets)
+├── docker-compose.yml          # app + Postgres + Redis
+├── locustfile.py               # load test (Locust)
+├── plan.txt                    # game design document
+└── simulations.txt             # Tribal Wars battle references used for balancing
+```
+
+The rules behind this layout follow; the per-feature file naming
+(`<feature>.routes.ts`, `<feature>.controller.ts`, …) is consistent across every
+module.
 
 ## Backend
 
