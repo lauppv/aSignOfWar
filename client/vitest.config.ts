@@ -21,7 +21,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       all: true,
-      reporter: ["text", "text-summary", "html"],
+      reporter: ["text", "text-summary", "html", "json", "json-summary"],
       include: [
         "src/shared/lib/labels.ts",
         "src/features/city/lib/cityHelpers.ts",

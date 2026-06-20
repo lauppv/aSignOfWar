@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   server:
     name: server (typecheck + 90% coverage)
@@ -23,6 +27,12 @@ jobs:
       - run: npx prisma generate
       - run: npm run build
       - run: npm run test:coverage
+      - name: Report coverage
+        if: ${{ !cancelled() }}
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          name: server
+          working-directory: server
 
   client:
     name: client (typecheck + 90% coverage)
@@ -40,3 +50,9 @@ jobs:
       - run: npm ci
       - run: npx tsc -b
       - run: npm run test:coverage
+      - name: Report coverage
+        if: ${{ !cancelled() }}
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          name: client
+          working-directory: client
