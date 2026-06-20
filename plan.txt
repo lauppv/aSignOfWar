@@ -61,25 +61,34 @@ Unit types:
     5) Conquer: Governor
 
 
-All units are recruited from the Military base.
+Every unit except the Governor is recruited from the Military base; the Governor
+is "recruited" through a resource deposit in the Headquarters (see "Conquering a
+city").
 
 We will also have a map with coordinates. To send commands (attack, support, resources) to a city, there will be a Command field where you select the command type (military (attack, support) or resources) and the target player's name. If the player exists, show their cities and you select the target city. Depending on the command type, the component shows different information:
 1) attack/support:
     city name
     owner name
     where the command comes from (your city)
-    travel time (without a map we assume every command takes 60 seconds)
+    travel time (distance- and speed-based — see "Distance and travel times")
     command arrival time (updated in real time, every second, like in Tribal Wars, for attack/support timing)
     which troops are about to be sent
 2) resources:
     Energy amount
     Money amount
     Ammo amount
-    travel time (without a map, 60 seconds)
+    travel time (distance- and speed-based — see "Distance and travel times")
     arrival time (same as for attack/support)
 If the ID is not valid, the component shows a simple message "the city with ID X does not exist"
 
-Every city has something called Loyalty (adhesion in Tribal Wars). Every city starts with Loyalty = 100%. When it drops below 0%, the city is conquered. To lower Loyalty you need one or more Governors. A Governor can lower Loyalty by 20-35%, and this only happens if the attacked city has no defending unit at all. A Governor has no offensive or defensive values, but occupies 100 population.
+Conquest is siege-based (Grepolis-style), NOT loyalty-based as in Tribal Wars
+(loyalty was the original design, replaced by the siege system). To take a city you
+send an attack that includes one or more Governors. If the attack clears the city's
+entire defense and at least one Governor survives, the surviving force stays as a
+besieging garrison and a 12h siege timer starts; if the timer runs out while your
+garrison still holds, the city is conquered. A Governor has no offensive or
+defensive values, but occupies 100 population. (Full siege rules: see "Conquering a
+city".)
 To recruit a Governor, Headquarters must be at Level 30 (max). It is recruited from Headquarters. In Headquarters we have the count of current Governors in the city. Since we don't have coins like in Tribal Wars, each Governor costs exponentially more. There will be 3 progress bars that must be filled with the 3 resources (like the Wonders of the World in Grepolis or the legendary building levels in Forge of Empires).
 
 The Governor counter is PER ACCOUNT (not per city). That is, the Nth Governor recruited on the account costs the same regardless of which city you recruit it from — including Governors lost in failed attacks, which stay counted (the counter does not reset). The 3 recipients (Money/Energy/Ammo) accept partial deposits from any of your own cities: you can contribute gradually until all 3 bars are full, at which point the Governor is recruited in the city where you completed the last bar.
@@ -277,7 +286,6 @@ Buildings:
   Air defense      Level 0
 
 Resources: full (equal to the capacity of Warehouse Level 3 = 1511 of each).
-Loyalty: 100%.
 Units: none (the ghost city has no initial army).
 
 --------------------------------------------------------------------------------
@@ -321,8 +329,8 @@ Army (forbidden)
 The ghost city CANNOT recruit units. The Military base grows in score/Level, but
 produces no troops. As a consequence:
   - the ghost city never sends commands (attack, support, resources, spy)
-  - having no defending units (unless supported by a player), any Governor sent
-    against the ghost reduces its Loyalty by 20-35% (the standard conquest rule)
+  - having no defending units (unless supported by a player), an attack carrying a
+    Governor besieges the ghost like any other city (the standard siege rule)
   - after conquest, the buildings stay at their current Levels, but the
     new-owner player starts recruiting normally from the Military base
 
@@ -495,7 +503,11 @@ There will also be a Battle Simulator, but not as a building — instead at the 
 
 To spy, you send hackers. This is a command different from attack, called spy.
 The mechanic is hacker vs hacker. A hacker ignores the defending units in the target city. The battle is hacker vs hacker.
-If the target city has 100 hackers, you need at least 101 hackers to be able to spy on the city. Of the 101 attacking hackers, 1 will survive. So you need at least one surviving hacker to spy successfully. The defending hackers will NOT die.
+If the target city has 100 hackers, you need at least 101 hackers (strictly more
+than the defender) to spy successfully. The attacker ALWAYS loses every hacker sent
+— the silver is spent either way. On success the defender loses 0 hackers and is
+NOT notified; on failure (you sent ≤ the defender's count) the defender loses as
+many hackers as you sent and is told they were spied on.
 
 ================================================================================
 SCORING (city points + account points)
@@ -654,24 +666,40 @@ server for the real BullMQ job delay.
 CONQUERING A CITY
 ================================================================================
 
-A Governor does not conquer on its own — it only reduces loyalty when its package
-clears all the defense. Each surviving Governor lowers loyalty by 20-35%
-(random roll per Governor). When loyalty reaches 0 or below, the following
-happens, atomically, in the same transaction:
+A Governor does not conquer on its own, and conquest is no longer loyalty-based:
+the game uses a SIEGE (loyalty was the original Tribal-Wars-style design, replaced
+by a Grepolis-style siege).
 
-  1) One Governor is consumed from the package (the rest remain).
-  2) Loyalty resets to 100.
-  3) The city's ownerId changes to the attacking player.
-  4) All "ARRIVED" SUPPORT commands from other players that were stationed in the
-     city are "displaced" back home: each command recomputes its travel time
-     based on its own distance and its own slowest unit, then is re-scheduled as
-     a return job. This is important: they do not disappear and do not stay in the
-     city under the new owner.
-  5) The attacker's survivors (minus the consumed Governor) do NOT become units of
-     the new city. Instead, a SUPPORT command with status "ARRIVED" is created
-     from the attacker's city to the newly conquered city.
-     The reportHidden* flags are both true so as not to generate a redundant
-     "support arrived" report.
+You send an ATTACK that includes one or more Governors. The battle is resolved
+first; if it clears the city's entire defense AND at least one Governor survives,
+a siege begins instead of an instant capture:
+
+  - the surviving force (Governor + escort) stays at the city as a besieging
+    garrison, modelled as a SUPPORT command in the "ARRIVED" state,
+  - a siege timer of SIEGE_DURATION_MINUTES (default 720 = 12h) starts.
+
+While the siege is ACTIVE:
+
+  - the defender can break it by clearing the garrison with a counterattack
+    (siege status BROKEN_BY_DEFENSE),
+  - another attacker who clears the current garrison starts their own siege and
+    resets the timer (BROKEN_BY_NEW_SIEGE).
+
+If the timer runs out while the garrison still holds, the conquest completes —
+atomically, in one transaction:
+
+  1) One Governor is consumed from the garrison (the rest remain).
+  2) The city's ownerId changes to the attacking player.
+  3) The city's native units are reset to 0 — units recruited during the siege
+     belonged to the old defender and do not follow the city to its new owner.
+  4) All "ARRIVED" SUPPORT commands from OTHER players that were stationed in the
+     city are "displaced" back home: each recomputes its travel time from its own
+     distance and slowest unit, then is re-scheduled as a return job. They do not
+     disappear and do not stay in the city under the new owner.
+  5) Queued build and recruitment orders on the city are cancelled.
+
+The besieging garrison is itself a SUPPORT "ARRIVED" command, so once the conquest
+completes it simply belongs to the new owner as stationed support.
 
 Why is the garrison a SUPPORT and not "troops on the city"?
 

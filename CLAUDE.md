@@ -11,7 +11,7 @@ actual balance values; `plan.txt` explains the *why*.
 ## Stack
 
 - **server/** — Express 5 + TypeScript (CommonJS). Prisma 5 → PostgreSQL.
-  BullMQ + ioredis for async jobs. socket.io. JWT auth (bcrypt). zod validation.
+  BullMQ + ioredis for async jobs. JWT auth (bcrypt). zod validation.
 - **client/** — React 18 + Vite 5 + TypeScript. Tailwind 4. TanStack Query 5.
   react-router-dom 6.
 - **shared/** — `gameConfig.ts` (game balance: costs, times, unit stats — the
@@ -25,7 +25,7 @@ Run these from the relevant package directory.
 ### server/
 - `npm run dev` — watch mode (`tsx watch src/app.ts`)
 - `npm run build` — `tsc` → `dist/`
-- `npm start` — run the built server (`node dist/app.js`)
+- `npm start` — run the built server (`node dist/server/src/app.js`)
 - `npm run db:migrate` / `db:reset` / `db:generate` — Prisma (build `DATABASE_URL`
   from the discrete `DATABASE_*` env vars via `db:url`)
 
@@ -74,7 +74,7 @@ See `ARCHITECTURE.md` for the design rules behind this layout.
 ## Conventions (read before editing)
 
 - **Backend uses RELATIVE imports, never `@/` aliases.** `tsc` does not rewrite
-  path aliases, so `node dist/app.js` would fail at runtime. Cross-module imports
+  path aliases, so `node dist/server/src/app.js` would fail at runtime. Cross-module imports
   look like `../city/city.service`. (The `@shared/*` alias is the one exception and
   is configured for ts-node/tsx + the build.)
 - **Frontend uses the `@/` alias** (`@/features/...`, `@/shared/...`) — Vite and
