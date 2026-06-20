@@ -18,9 +18,9 @@ type TransactionClient = Prisma.TransactionClient;
 
 type CityWithBuildings = { id: string; money: number; energy: number; ammo: number; lastResourceUpdate: Date; buildings: { name: string; level: number }[] };
 
-// Functie pura — calculeaza resursele fara sa scrie in DB.
-// Folosita pe READ (getCityOverview) ca sa nu facem un WRITE la fiecare refresh.
-// Resursele sunt o functie de timp: resurse = vechi + productie * timp_trecut.
+// Pure function — computes resources without writing to the DB.
+// Used on READ (getCityOverview) so we don't do a WRITE on every refresh.
+// Resources are a function of time: resources = old + production * elapsed_time.
 export const computeResources = (city: CityWithBuildings): { money: number; energy: number; ammo: number } | null => {
   const now = new Date();
   const elapsedHours = (now.getTime() - city.lastResourceUpdate.getTime()) / 3_600_000;
@@ -41,8 +41,8 @@ export const computeResources = (city: CityWithBuildings): { money: number; ener
   };
 };
 
-// Scrie resursele in DB — apelata DOAR inainte de operatii care scad resurse
-// (upgrade, recrutare, atac). Pe READ nu scriem — calculam si returnam.
+// Writes the resources to the DB — called ONLY before operations that spend resources
+// (upgrade, recruitment, attack). On READ we don't write — we compute and return.
 export const syncResourcesFromCity = async (city: CityWithBuildings): Promise<{ money: number; energy: number; ammo: number } | null> => {
   const computed = computeResources(city);
   if (!computed) return null;
@@ -52,8 +52,8 @@ export const syncResourcesFromCity = async (city: CityWithBuildings): Promise<{ 
   return computed;
 };
 
-// Versiunea originala — apelata din building.service, command.worker unde nu avem city-ul preloaded.
-// Face un singur findUnique apoi delega la syncResourcesFromCity.
+// The original version — called from building.service, command.worker where we don't have the city preloaded.
+// Does a single findUnique then delegates to syncResourcesFromCity.
 export const syncResources = async (cityId: string): Promise<void> => {
   const city = await findCityForSync(cityId);
   if (!city) throw new Error("CITY_NOT_FOUND");
@@ -64,11 +64,11 @@ export const getCityOverview = async (userId: string, cityId?: string) => {
   const city = await findCityOverview(cityId ? { id: cityId, ownerId: userId } : { ownerId: userId });
   if (!city) throw new Error("CITY_NOT_FOUND");
 
-  // Calculez resursele fara sa scriu in DB — pe READ nu are rost sa facem WRITE.
-  // Scriem doar cand se cheltuiesc resurse (upgrade, recrutare, atac).
+  // Compute resources without writing to the DB — on READ there's no point doing a WRITE.
+  // We only write when resources are spent (upgrade, recruitment, attack).
   const updated = computeResources(city);
 
-  // Toate query-urile independente in paralel — zero secventialitate
+  // All independent queries in parallel — zero sequentiality
   const [stationedSupports, ownCommands, ownedCities] = await Promise.all([
     findStationedSupports(city.id),
     findOutgoingCommands(city.id),
@@ -108,7 +108,7 @@ export const createStarterCity = async (
   cityName: string,
   tx: TransactionClient = prisma
 ) => {
-  // pickFreeSlot nu mai primeste tx — merge prin SlotAllocator (in-memory, mutex)
+  // pickFreeSlot no longer takes tx — it goes through SlotAllocator (in-memory, mutex)
   const { x, y } = await pickFreeSlot();
   return tx.city.create({
     data: {

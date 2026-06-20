@@ -49,9 +49,9 @@ export default function App() {
   }
 
   return (
-    // Nesting de context providers: TickProvider trebuie sa fie cel mai exterior pentru ca
-    // hook-urile de countdown depind de el. Restul pot fi reordonate liber. Daca creste
-    // peste 5-6 provideri, as extrage un <Providers> wrapper — dar cu 4 nu merita indirectia.
+    // Context provider nesting: TickProvider must be the outermost one because the
+    // countdown hooks depend on it. The rest can be reordered freely. If this grows
+    // past 5-6 providers, I'd extract a <Providers> wrapper — but with 4 the indirection isn't worth it.
     <TickProvider>
     <BrowserRouter>
     <UnitInfoProvider>

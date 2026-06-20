@@ -18,7 +18,7 @@ export async function sendDirect(fromId: string, toUsername: string, rawContent:
 }
 
 export async function listThread(userId: string, peerId: string) {
-  // Marcam ca citite toate mesajele primite de la peer cand userul deschide firul.
+  // Mark all messages received from the peer as read when the user opens the thread.
   await messages.markThreadRead(peerId, userId);
 
   const rows = await messages.findThread(userId, peerId);
@@ -26,7 +26,7 @@ export async function listThread(userId: string, peerId: string) {
 }
 
 export async function listConversations(userId: string) {
-  // Toate mesajele nesterse implicate de user, sortate desc; deduplicam pe peer.
+  // All non-deleted messages the user is involved in, sorted desc; we deduplicate by peer.
   const rows = await messages.findConversations(userId);
 
   const byPeer = new Map<string, {

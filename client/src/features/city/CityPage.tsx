@@ -37,10 +37,10 @@ function canCancel(cmd: OutgoingCommand, now: number): boolean {
 }
 
 export default function CityPage() {
-  // Dashboard principal oras: layout 3 coloane (stanga=aparare+comenzi, centru=harta oras, dreapta=unitati).
-  // Sub-view-urile (cladiri, baza militara, rapoarte, simulator) inlocuiesc tot continutul
-  // prin URL search params — asta inseamna ca browser back/forward merge natural intre view-uri
-  // fara management custom de history.
+  // Main city dashboard: 3-column layout (left=defense+commands, center=city map, right=units).
+  // The sub-views (buildings, military base, reports, simulator) replace the entire content
+  // via URL search params — this means browser back/forward works naturally between views
+  // without custom history management.
   const navigate = useNavigate();
   const location = useLocation();
   const now = useNow();
@@ -55,8 +55,8 @@ export default function CityPage() {
   const urlCityId       = searchParams.get("cityId");
   const activeCityId    = urlCityId ?? getActiveCityId() ?? undefined;
 
-  // Daca URL-ul nu are cityId dar avem unul salvat, promoveaza-l in URL ca
-  // link-urile sa fie share-abile si back-button-ul sa functioneze corect.
+  // If the URL has no cityId but we have a saved one, promote it into the URL so
+  // links are shareable and the back button works correctly.
   useEffect(() => {
     if (!urlCityId && activeCityId) {
       const next = new URLSearchParams(searchParams);
@@ -95,8 +95,8 @@ export default function CityPage() {
     retry: false,
   });
 
-  // Daca query-ul esueaza si aveam un cityId explicit (din URL sau localStorage),
-  // e probabil un ID stale de la alt cont. Curatam si reincarcam fara el.
+  // If the query fails and we had an explicit cityId (from URL or localStorage),
+  // it's probably a stale ID from another account. Clear it and reload without it.
   useEffect(() => {
     if (error && activeCityId) {
       clearActiveCityId();
@@ -106,8 +106,8 @@ export default function CityPage() {
     }
   }, [error, activeCityId, searchParams, setSearchParams]);
 
-  // Persista id-ul orasului incarcat efectiv (poate fi diferit de activeCityId
-  // daca acel id era invalid si backend-ul a picat pe default).
+  // Persist the id of the city actually loaded (may differ from activeCityId
+  // if that id was invalid and the backend fell back to the default).
   useEffect(() => {
     if (city?.id) setActiveCityId(city.id);
   }, [city?.id]);
@@ -129,8 +129,8 @@ export default function CityPage() {
     refetchInterval: 5000,
   });
 
-  // Snapshot-ul "what was already read" la momentul deschiderii listei vine din
-  // Layout (care marcheaza totul ca vazut inainte de navigare).
+  // The "what was already read" snapshot at the moment the list is opened comes from
+  // Layout (which marks everything as seen before navigating).
   const navState = location.state as { initiallyRead?: string[] } | null;
   const readSnapshot = new Set<string>(navState?.initiallyRead ?? []);
 
@@ -151,8 +151,8 @@ export default function CityPage() {
   for (const u of city.units)                   unitTotals.set(u.name, (unitTotals.get(u.name) ?? 0) + u.quantity);
   for (const u of city.supportUnits ?? [])      unitTotals.set(u.name, (unitTotals.get(u.name) ?? 0) + u.quantity);
 
-  // City view arata doar comenzi in desfasurare (TRAVELING/RETURNING).
-  // Sprijinul stationat (ARRIVED) se vede in map → city action panel si in rapoarte.
+  // City view shows only commands in progress (TRAVELING/RETURNING).
+  // Stationed support (ARRIVED) is shown in map → city action panel and in reports.
   const mergedCommands: MergedCommand[] = [
     ...(commands?.outgoing.map((c) => ({ ...c, direction: "outgoing" as const })) ?? []),
     ...(commands?.incoming.map((c) => ({ ...c, direction: "incoming" as const })) ?? []),
@@ -232,10 +232,10 @@ export default function CityPage() {
                 const isIncomingAttack = !isOut && cmd.type === "ATTACK";
                 const isReturning = cmd.status === "RETURNING";
 
-                // Aspect:
-                //  - OUT: bordura stanga (pleaca din orasul tau spre dreapta) + sageata "→ TARGET"
-                //  - IN : bordura dreapta (vine din afara, spre orasul tau) + sageata "FROM ←"
-                //  - INCOMING ATTACK: tinta vizibila — fundal rosu sangeriu + glow
+                // Appearance:
+                //  - OUT: left border (leaves your city toward the right) + arrow "→ TARGET"
+                //  - IN : right border (comes from outside, toward your city) + arrow "FROM ←"
+                //  - INCOMING ATTACK: highlighted target — blood-red background + glow
                 return (
                   <div
                     key={cmd.id}

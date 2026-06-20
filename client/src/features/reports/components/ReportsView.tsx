@@ -198,10 +198,10 @@ export default function ReportsView({ onClose, initiallyRead }: Props) {
     else            setCheckedIds(new Set(list.map(r => r.id)));
   }
 
-  // Layout pe 2 coloane: lista rapoarte (stanga) + detaliu raport (dreapta). Panoul de detaliu
-  // randeaza breakdown-ul complet: pierderi, prada, damage cladiri, snapshot-uri spy.
-  // Am considerat un modal, dar side-by-side iti permite sa scanezi mai multe rapoarte
-  // fara sa tot deschizi/inchizi.
+  // 2-column layout: report list (left) + report detail (right). The detail panel
+  // renders the full breakdown: losses, loot, building damage, spy snapshots.
+  // I considered a modal, but side-by-side lets you scan multiple reports
+  // without constantly opening/closing.
   return (
     <div className="relative flex flex-col flex-1 overflow-hidden bg-[#0d1117]">
       {/* Header */}
@@ -938,7 +938,7 @@ function SpyDetail({ report: data, direction }: { report: SpyReportData; directi
   const attackerLosses = data.attackerHackers - data.attackerSurvivors;
   const defenderLosses = data.defenderHackerLosses ?? 0;
 
-  // Atacatorul nu afla niciodata cati hackeri avea aparatorul daca spionajul a esuat.
+  // The attacker never learns how many hackers the defender had if the spy attempt failed.
   const hideDefenderCount = !isIncoming && !data.success;
 
   const hackerBox = (

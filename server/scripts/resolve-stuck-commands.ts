@@ -1,8 +1,8 @@
 // One-off: re-queue ATTACK commands stuck in TRAVELING with arrivalAt in the past.
-// Cauza: workerul a crapat pe ghost cities din cauza syncResources care presupunea
-// ca exista cladirile BANK/POWER_PLANT/etc. Acum ca bug-ul e fixat, le re-queueam
-// cu delay 0 ca sa fie procesate imediat.
-// Ruleaza cu: npx tsx scripts/resolve-stuck-commands.ts
+// Cause: the worker crashed on ghost cities because of syncResources, which assumed
+// the BANK/POWER_PLANT/etc. buildings existed. Now that the bug is fixed, we re-queue
+// them with delay 0 so they're processed immediately.
+// Run with: npx tsx scripts/resolve-stuck-commands.ts
 
 import prisma from "../src/core/db";
 import { commandQueue } from "../src/core/queue";

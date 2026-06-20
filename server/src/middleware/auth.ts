@@ -7,11 +7,11 @@ export interface AuthRequest extends Request {
   userId?: string;
 }
 
-// Cache de userId-uri valide cu TTL scurt. Sub load, fiecare request autentificat
-// facea findUnique pe User doar ca sa verifice ca contul nu a fost sters —
-// dar nu exista nicio cale in cod prin care un user sa fie sters. Verificarea
-// ramane (defensiv), dar e efectiv un set in memorie pentru durata TTL-ului,
-// asa ca elimina sute de query-uri/sec sub locust fara sa schimbe comportamentul.
+// Cache of valid userIds with a short TTL. Under load, every authenticated request
+// ran findUnique on User just to verify the account hadn't been deleted —
+// but there's no code path that deletes a user. The check stays (defensively),
+// but it's effectively an in-memory set for the TTL duration, so it eliminates
+// hundreds of queries/sec under locust without changing behavior.
 const userValidCache = new Map<string, number>();
 const USER_CACHE_TTL_MS = 60_000;
 

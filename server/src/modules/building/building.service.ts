@@ -49,9 +49,9 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
   let startAt!: Date;
   let finishAt!: Date;
 
-  // Prevenire race condition: lookup-ul lastOrder + deducerea resurselor se fac intr-o
-  // singura tranzactie Prisma. Fara asta, doua click-uri rapide de upgrade ar putea vedea
-  // ambele acelasi lastOrder si se suprapune in coada, sau ambele trec verificarea de resurse.
+  // Race condition prevention: the lastOrder lookup + resource deduction happen in a
+  // single Prisma transaction. Without this, two rapid upgrade clicks could both see
+  // the same lastOrder and overlap in the queue, or both pass the resource check.
   await prisma.$transaction(async (tx) => {
     const lastOrder = await tx.buildingUpgradeOrder.findFirst({
       where:   { cityId: building.city.id },
@@ -85,10 +85,10 @@ export const startUpgrade = async (buildingId: string, userId: string) => {
     orderId = order.id;
   });
 
-  // Compensating transaction: daca BullMQ esueaza sa programeze job-ul, refundam
-  // resursele si stergem order-ul. E un pattern saga simplificat — un sistem distribuit
-  // real ar folosi outbox sau 2PC, dar pentru un joc single-server catch-and-rollback
-  // e suficient si mult mai simplu. YAGNI.
+  // Compensating transaction: if BullMQ fails to schedule the job, we refund
+  // the resources and delete the order. It's a simplified saga pattern — a real
+  // distributed system would use an outbox or 2PC, but for a single-server game
+  // catch-and-rollback is enough and much simpler. YAGNI.
   const delay = finishAt.getTime() - Date.now();
 
   try {
@@ -139,19 +139,19 @@ export const cancelUpgrade = async (orderId: string, userId: string) => {
     ammo:   Math.floor(cost.ammo   * 0.75),
   };
 
-  // Sterge job-ul din coada daca exista
+  // Remove the job from the queue if it exists
   if (order.jobId) {
     const job = await buildingQueue.getJob(order.jobId);
     if (job) await job.remove();
   }
 
-  // Gaseste toate order-urile care vin DUPA cel anulat (trebuie recalculate)
+  // Find all orders that come AFTER the canceled one (they need recalculating)
   const laterOrders = await prisma.buildingUpgradeOrder.findMany({
     where: { cityId: order.cityId, startAt: { gte: order.startAt }, id: { not: orderId } },
     orderBy: { startAt: "asc" },
   });
 
-  // Sterge order-ul anulat si returneaza resursele
+  // Delete the canceled order and return the resources
   await prisma.$transaction([
     prisma.buildingUpgradeOrder.delete({ where: { id: orderId } }),
     prisma.city.update({
@@ -164,9 +164,9 @@ export const cancelUpgrade = async (orderId: string, userId: string) => {
     }),
   ]);
 
-  // Recalculeaza startAt/finishAt pentru order-urile ulterioare
+  // Recalculate startAt/finishAt for the subsequent orders
   if (laterOrders.length > 0) {
-    // Gaseste ultimul order din INAINTE de cel anulat (daca exista)
+    // Find the last order from BEFORE the canceled one (if any)
     const previousOrder = await prisma.buildingUpgradeOrder.findFirst({
       where: { cityId: order.cityId, finishAt: { lte: order.startAt } },
       orderBy: { finishAt: "desc" },

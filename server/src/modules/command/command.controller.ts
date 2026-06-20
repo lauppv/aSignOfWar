@@ -4,7 +4,7 @@ import { AuthRequest } from "../../middleware/auth";
 
 export const sendCommandHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // Body deja validat de Zod (sendCommandSchema)
+    // Body already validated by Zod (sendCommandSchema)
     const userId     = req.userId!;
     const fromCityId = req.params.cityId as string;
     const { type, targetCityId, units, resources, targetBuilding } = req.body;

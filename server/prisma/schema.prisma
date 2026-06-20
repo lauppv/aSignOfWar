@@ -85,7 +85,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Governor recruitment (per cont)
+  // Governor recruitment (per account)
   governorsRecruited Int   @default(0)
   governorMoney      Float @default(0)
   governorEnergy     Float @default(0)
@@ -183,10 +183,10 @@ model DirectMessage {
   content    String
   createdAt  DateTime @default(now())
 
-  // marcam vazut cand destinatarul deschide firul
+  // mark as seen when the recipient opens the thread
   readByRecipient Boolean @default(false)
 
-  // soft-delete per-parte: dispare din view-ul celui care a sters, dar celalalt il mai vede
+  // per-party soft-delete: disappears from the view of whoever deleted it, but the other still sees it
   deletedByFrom Boolean @default(false)
   deletedByTo   Boolean @default(false)
 
@@ -336,19 +336,19 @@ model Command {
   departureAt DateTime      @default(now())
   arrivalAt   DateTime
 
-  // resurse trimise (RESOURCES) sau furate (ATTACK return)
+  // resources sent (RESOURCES) or stolen (ATTACK return)
   resourceMoney  Float @default(0)
   resourceEnergy Float @default(0)
   resourceAmmo   Float @default(0)
 
-  // cladirea tinta pentru drone (optional, doar ATTACK cu drone)
+  // target building for drones (optional, only ATTACK with drones)
   targetBuilding BuildingName?
 
-  // raport de lupta (completat dupa sosire, pentru ATTACK)
+  // battle report (filled in after arrival, for ATTACK)
   report Json?
 
-  // Fiecare parte isi poate "sterge" raportul (ascunde din lista).
-  // Cand ambele sunt true, raportul e invizibil pentru toata lumea.
+  // Each party can "delete" its report (hide it from the list).
+  // When both are true, the report is invisible to everyone.
   reportHiddenByAttacker Boolean @default(false)
   reportHiddenByDefender Boolean @default(false)
 
@@ -358,9 +358,9 @@ model Command {
   toCityId String
   toCity   City   @relation("CommandTo", fields: [toCityId], references: [id])
 
-  // Proprietarii la momentul crearii raportului. Decuplati de ownerId-ul
-  // curent al oraselor — altfel, daca un oras e cucerit ulterior, raportul
-  // "schimba" de partea cui e si verificarile de acces/stergere esueaza.
+  // The owners at the time the report was created. Decoupled from the cities'
+  // current ownerId — otherwise, if a city is conquered later, the report would
+  // "switch" sides and the access/deletion checks would fail.
   attackerUserId String
   attacker       User    @relation("CommandAttacker", fields: [attackerUserId], references: [id])
   defenderUserId String?

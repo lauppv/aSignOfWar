@@ -1,10 +1,10 @@
-// Dev cheats. Ruleaza cu:
+// Dev cheats. Run with:
 //   npx tsx scripts/dev-cheats.ts <command> [args...]
 //
-// Orasele sunt identificate prin coordonate "x,y" (ex. 51,51). Foloseste
-// `listCities` daca nu stii coordonatele.
+// Cities are identified by "x,y" coordinates (e.g. 51,51). Use
+// `listCities` if you don't know the coordinates.
 //
-// Exemple:
+// Examples:
 //   npx tsx scripts/dev-cheats.ts refill 51,51
 //   npx tsx scripts/dev-cheats.ts setResources 51,51 50000 50000 50000
 //   npx tsx scripts/dev-cheats.ts setUnits 51,51 LIGHT_INFANTRY 500
@@ -47,7 +47,7 @@ async function findCity(coords: string) {
 
 // ── Cheats ────────────────────────────────────────────────────────────────────
 
-/** Umple depozitul la capacitatea maxima (pe baza nivelului curent de Warehouse). */
+/** Fill the warehouse to max capacity (based on the current Warehouse level). */
 export async function refill(coords: string) {
   const city = await findCity(coords);
   const whLevel = city.buildings.find(b => b.name === "WAREHOUSE")?.level ?? 0;
@@ -59,7 +59,7 @@ export async function refill(coords: string) {
   console.log(`refilled ${city.name} [${city.x},${city.y}] to ${cap} each (warehouse L${whLevel})`);
 }
 
-/** Seteaza resursele la valori exacte. */
+/** Set the resources to exact values. */
 export async function setResources(coords: string, money: number, energy: number, ammo: number) {
   const city = await findCity(coords);
   await prisma.city.update({
@@ -69,7 +69,7 @@ export async function setResources(coords: string, money: number, energy: number
   console.log(`${city.name} [${city.x},${city.y}]: money=${money} energy=${energy} ammo=${ammo}`);
 }
 
-/** Seteaza numarul de unitati de un anumit tip la valoarea exacta. */
+/** Set the number of units of a given type to the exact value. */
 export async function setUnits(coords: string, unitName: string, qty: number) {
   const city = await findCity(coords);
   const name = unitName.toUpperCase() as UnitName;
@@ -87,7 +87,7 @@ export async function setUnits(coords: string, unitName: string, qty: number) {
   }
 }
 
-/** Seteaza nivelul unei cladiri (creeaza randul daca nu exista). */
+/** Set a building's level (creates the row if it doesn't exist). */
 export async function setBuilding(coords: string, buildingName: string, level: number) {
   const city = await findCity(coords);
   const name = buildingName.toUpperCase() as BuildingName;
@@ -104,7 +104,7 @@ export async function setBuilding(coords: string, buildingName: string, level: n
   }
 }
 
-/** Urca toate cladirile existente la max level. */
+/** Raise all existing buildings to max level. */
 export async function maxAllBuildings(coords: string) {
   const city = await findCity(coords);
   for (const b of city.buildings) {
@@ -117,7 +117,7 @@ export async function maxAllBuildings(coords: string) {
   console.log(`${city.name} [${city.x},${city.y}]: all buildings maxed`);
 }
 
-/** Listeaza orasele tale (owner-ul e util ca sa stii pe care le poti cheat-ui). */
+/** List your cities (the owner is useful to know which ones you can cheat on). */
 export async function listCities() {
   const cities = await prisma.city.findMany({
     orderBy: [{ y: "asc" }, { x: "asc" }],

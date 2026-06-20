@@ -5,9 +5,9 @@ import env from "../../core/env";
 import { createStarterCity } from "../city/city.service";
 import { createGhostCitiesAround } from "../map/map.service";
 
-// Inainte avea un retry loop cu 5 incercari (MAX_REGISTER_RETRIES) pentru ca
-// doua registrari simultane puteau alege acelasi slot si una pica cu P2002 (unique constraint).
-// Cu allocator-ul nu se mai poate intampla asta, deci nu mai e nevoie de retry.
+// This used to have a retry loop with 5 attempts (MAX_REGISTER_RETRIES) because
+// two simultaneous registrations could pick the same slot and one would fail with P2002 (unique constraint).
+// With the allocator this can no longer happen, so retries are no longer needed.
 export const registerUser = async (
   username: string,
   email: string,
@@ -33,8 +33,8 @@ export const registerUser = async (
     return { user: newUser, starter };
   });
 
-  // Fire-and-forget — userul nu asteapta dupa ghost cities, intra direct in joc.
-  // Sloturile sunt deja rezervate in memorie de allocator, DB insert-ul vine async.
+  // Fire-and-forget — the user doesn't wait for ghost cities, they enter the game directly.
+  // The slots are already reserved in memory by the allocator, the DB insert happens async.
   createGhostCitiesAround({ x: result.starter.x, y: result.starter.y }, 3)
     .catch(err => console.error("Ghost city creation failed:", err));
 
@@ -49,9 +49,9 @@ export const loginUser = async (username: string, password: string) => {
     throw new Error("INVALID_CREDENTIALS");
   }
 
-  const potrivire = await bcrypt.compare(password, user.password);
+  const passwordMatches = await bcrypt.compare(password, user.password);
 
-  if (!potrivire) {
+  if (!passwordMatches) {
     throw new Error("INVALID_CREDENTIALS");
   }
 

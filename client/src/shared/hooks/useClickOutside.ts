@@ -1,7 +1,7 @@
-// Inchide un dropdown/meniu cand utilizatorul da click in afara sau apasa Escape.
-// Folosit de ResourceBar pentru city switcher si settings dropdown.
-// As fi putut folosi Radix/HeadlessUI <Popover>, dar un hook e mai lejer si am doar
-// 2 dropdown-uri in toata aplicatia — nu merita o dependinta de librarie. YAGNI.
+// Closes a dropdown/menu when the user clicks outside or presses Escape.
+// Used by ResourceBar for the city switcher and settings dropdown.
+// I could have used Radix/HeadlessUI <Popover>, but a hook is lighter and I only have
+// 2 dropdowns in the whole app — not worth a library dependency. YAGNI.
 
 import { useEffect, type RefObject } from "react";
 

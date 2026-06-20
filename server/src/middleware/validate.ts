@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 
-// Middleware care valideaza req.body cu o schema Zod
-// Daca e valid, pune datele parsate in req.body si continua
-// Daca nu, returneaza 400 cu erorile
+// Middleware that validates req.body against a Zod schema.
+// If valid, it puts the parsed data on req.body and continues.
+// If not, it returns 400 with the errors.
 export const validate = (schema: z.ZodType) =>
   (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);

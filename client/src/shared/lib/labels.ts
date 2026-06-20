@@ -1,7 +1,7 @@
-// String-uri de afisare centralizate si palete de culori pentru UI. Toate numele vizibile
-// (cladiri, unitati, comenzi) stau aici ca sa evit magic strings imprastiate in 20+ componente.
-// NU e i18n — jocul e doar in engleza. Daca as avea nevoie de multi-language, as inlocui
-// aceste record-uri cu o librarie propriu-zisa (react-intl, i18next).
+// Centralized display strings and color palettes for the UI. All visible names
+// (buildings, units, commands) live here so I avoid magic strings scattered across 20+ components.
+// This is NOT i18n — the game is English-only. If I needed multi-language, I'd replace
+// these records with an actual library (react-intl, i18next).
 import type { BuildingName, UnitName, UnitCategory } from "@/shared/types";
 import type { CommandType } from "@/features/city/api/command";
 import type { AllianceAccess } from "@/features/alliance/api/alliance";
@@ -62,8 +62,8 @@ export const BUILDING_DISPLAY: Record<BuildingName, string> = {
   AIR_DEFENSE:     "Air defense",
 };
 
-// Unitatile care apar in lista de recrutare a Military Base
-// Ordinea: infanterie, range, spy, cavalry/mixed, siege (ca in TW)
+// The units that appear in the Military Base recruitment list.
+// Order: infantry, range, spy, cavalry/mixed, siege (as in TW)
 export const UNIT_ORDER: UnitName[] = [
   "HEAVY_INFANTRY", "DEFENDER_INFANTRY", "LIGHT_INFANTRY", "SNIPER", "HACKER", "RAIDER", "SPECIAL_FORCES",  "TANK", "MISSILE_LAUNCHER", "DRONE",
 ];

@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-// Un singur tick global (1 Hz) partajat de toate componentele cu countdown. Fara asta,
-// fiecare rand de comanda, fiecare timer de recrutare, fiecare progress bar de cladire
-// ar rula propriul setInterval — adica 50+ timere pe o pagina activa. Un provider,
-// un rerender/sec, React diffing se ocupa de rest. Trade-off: TOTI consumatorii se
-// rerandeaza in fiecare secunda chiar daca nimic nu s-a schimbat pentru ei.
-// La complexitatea UI-ului actual, e neglijabil.
+// A single global tick (1 Hz) shared by all components with countdowns. Without this,
+// every command row, every recruitment timer, every building progress bar would run
+// its own setInterval — i.e. 50+ timers on an active page. One provider,
+// one rerender/sec, React diffing handles the rest. Trade-off: ALL consumers
+// rerender every second even if nothing changed for them.
+// At the current UI complexity, that's negligible.
 const TickContext = createContext<number>(Date.now());
 
 export function TickProvider({ children }: { children: ReactNode }) {

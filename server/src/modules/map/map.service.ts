@@ -24,11 +24,11 @@ export const getMapCenter = () => ({
   y: Math.floor(MAP_SIZE / 2),
 });
 
-// Functie pura (fara DB) — cauta in cercuri din ce in ce mai mari din origin.
-// Preferinta: sloturi fara vecini (ca orasele sa nu fie lipite). Daca nu gaseste, ia oricare liber.
-// Acumuleaza candidati peste mai multe ring-uri — daca ring-ul curent are doar sloturi
-// cu vecini, continua sa caute in ring-urile urmatoare pana gaseste cel putin 10 fara vecini
-// sau epuizeaza 20 de sloturi libere. Fara asta, orasele se lipeau in centrul hartii.
+// Pure function (no DB) — searches in ever-larger rings out from the origin.
+// Preference: slots without neighbors (so cities aren't crammed together). If none is found, take any free one.
+// Accumulates candidates across several rings — if the current ring only has slots
+// with neighbors, it keeps searching the following rings until it finds at least 10 without neighbors
+// or exhausts 20 free slots. Without this, cities would clump together in the center of the map.
 export const pickFreeSlotNear = (
   originX: number,
   originY: number,
@@ -65,10 +65,10 @@ export const pickFreeSlotNear = (
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
-// Originea e un punct random pe un cerc in jurul centrului. Raza cercului creste
-// cu numarul de orase deja ocupate — primii jucatori sunt aproape de centru,
-// urmatorii se distribuie pe cercuri din ce in ce mai mari. Randomizarea pe cerc
-// evita pattern-ul de diamant pe care il genereaza cautarea pe ring-uri patrate.
+// The origin is a random point on a circle around the center. The circle's radius grows
+// with the number of cities already occupied — the first players are near the center,
+// later ones spread out over ever-larger circles. Randomizing on a circle
+// avoids the diamond pattern that the square-ring search produces.
 export const pickFreeSlot = async (): Promise<{ x: number; y: number }> => {
   const center = getMapCenter();
   const occupiedCount = slotAllocator.getOccupiedCount();
@@ -86,12 +86,12 @@ export const pickFreeSlot = async (): Promise<{ x: number; y: number }> => {
   );
 };
 
-// Inainte avea getOccupiedSet (SELECT pe tot), skipDuplicates (masca race conditions),
-// si un query OR cu buildings: { none: {} } ca sa gaseasca orasele tocmai create.
-// Acum sloturile vin pre-alocate din allocator, garantat unice — nu mai trebuie skipDuplicates.
-// ID-urile le generam in JS (randomUUID) ca sa scapam de findMany-ul de dupa createMany
-// — Prisma createMany nu intoarce randurile, asa ca era nevoie de un SELECT extra
-// pe (x, y) doar ca sa stim ce ID-uri sa folosim pentru building.createMany.
+// Before, it had getOccupiedSet (a SELECT on everything), skipDuplicates (masking race conditions),
+// and an OR query with buildings: { none: {} } to find the just-created cities.
+// Now the slots come pre-allocated from the allocator, guaranteed unique — skipDuplicates is no longer needed.
+// We generate the IDs in JS (randomUUID) to avoid the findMany after createMany
+// — Prisma createMany does not return the rows, so an extra SELECT
+// on (x, y) was needed just to know which IDs to use for building.createMany.
 export const createGhostCitiesAround = async (
   origin: { x: number; y: number },
   count: number
@@ -122,9 +122,9 @@ export const createGhostCitiesAround = async (
   ]);
 };
 
-// Cache in-memory cu TTL — harta nu se schimba la fiecare request, nu are rost sa
-// incarci toate orasele cu toate buildings la fiecare GET /map. La 500 useri care
-// dau refresh la harta, fara cache se faceau sute de queries identice pe secunda.
+// In-memory cache with TTL — the map doesn't change on every request, so there's no point
+// loading every city with all its buildings on each GET /map. With 500 users
+// refreshing the map, without a cache hundreds of identical queries ran per second.
 let mapCache: { data: any; expiresAt: number } | null = null;
 const MAP_CACHE_TTL_MS = 5_000;
 

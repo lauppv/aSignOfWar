@@ -3,10 +3,10 @@ import env from "../../core/env";
 import { BUILDINGS, BuildingName } from "../../../../shared/gameConfig";
 import { GHOST_STARTER_BUILDINGS } from "./map.service";
 
-// Fiecare ghost city urca la fiecare tick un Level la o cladire random eligibila.
-// Reguli complete in plan.txt → GHOST CITIES → Auto-upgrade cladiri.
-// Upgrade-ul e GRATUIT (nu consuma resursele orasului) — jucatorii farmeaza
-// ghost cities, deci acestea rareori au resurse suficiente pentru upgrade real.
+// On each tick, every ghost city raises one Level on a random eligible building.
+// Full rules in plan.txt → GHOST CITIES → Auto-upgrade buildings.
+// The upgrade is FREE (it does not consume the city's resources) — players farm
+// ghost cities, so they rarely have enough resources for a real upgrade.
 const GHOST_TICK_BASE_HOURS = 6;
 
 export const tickGhostCity = async (cityId: string): Promise<void> => {
@@ -14,10 +14,10 @@ export const tickGhostCity = async (cityId: string): Promise<void> => {
     where: { id: cityId },
     include: { buildings: true },
   });
-  if (!city || city.ownerId) return; // safety: doar ghosts
+  if (!city || city.ownerId) return; // safety: ghosts only
 
-  // Ghost istoric fara cladiri (creat inainte de introducerea sablonului) —
-  // seedeaza-l cu sablonul de start si lasa urmatorul tick sa-l upgradeze.
+  // Legacy ghost without buildings (created before the template was introduced) —
+  // seed it with the starter template and let the next tick upgrade it.
   if (city.buildings.length === 0) {
     await prisma.building.createMany({
       data: GHOST_STARTER_BUILDINGS.map(b => ({ ...b, cityId: city.id })),
@@ -34,7 +34,7 @@ export const tickGhostCity = async (cityId: string): Promise<void> => {
     return true;
   });
 
-  if (eligible.length === 0) return; // totul la max
+  if (eligible.length === 0) return; // everything at max
 
   const pick = eligible[Math.floor(Math.random() * eligible.length)];
   await prisma.building.update({
@@ -43,9 +43,9 @@ export const tickGhostCity = async (cityId: string): Promise<void> => {
   });
 };
 
-// Inainte: iterare secventiala peste toate ghost cities, un UPDATE per oras.
-// Cu 1500 ghosts = 1500 queries secventiale care blocau connection pool-ul.
-// Acum: procesam in batch-uri de 50, paralel in fiecare batch.
+// Before: sequential iteration over all ghost cities, one UPDATE per city.
+// With 1500 ghosts = 1500 sequential queries that blocked the connection pool.
+// Now: we process in batches of 50, in parallel within each batch.
 const GHOST_BATCH_SIZE = 50;
 
 export const tickAllGhosts = async (): Promise<void> => {

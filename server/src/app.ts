@@ -22,21 +22,21 @@ import { registerCommandWorker } from "./workers/command.worker";
 import { registerSiegeWorker } from "./workers/siege.worker";
 import { startGhostTicker } from "./modules/map/ghost.service";
 
-// Entry point Express. Arhitectura:
-//   Controllers -> Services -> Prisma (DB) + BullMQ (cozi)
-//   Workers proceseaza job-uri async (upgrade cladiri, recrutare, sosire comenzi)
-//   Shared config (gameConfig.ts) e sursa unica de adevar pentru balansul jocului
+// Express entry point. Architecture:
+//   Controllers -> Services -> Prisma (DB) + BullMQ (queues)
+//   Workers process async jobs (building upgrades, recruitment, command arrivals)
+//   Shared config (gameConfig.ts) is the single source of truth for game balance
 //
-// De ce nu NestJS? YAGNI — Express + layering manual (feature-first) ramane usor de
-// urmarit chiar si la ~60 de endpoint-uri. Decoratorii NestJS ar adauga ceremonie
-// fara beneficiu real la scala asta.
+// Why not NestJS? YAGNI — Express + manual (feature-first) layering stays easy to
+// follow even at ~60 endpoints. NestJS decorators would add ceremony with no real
+// benefit at this scale.
 
 const app = express();
 
 app.use(cors({
   origin: env.nodeEnv === "production"
     ? process.env.CLIENT_URL
-    : true,                          // in development, permite orice origin (ngrok, localhost)
+    : true,                          // in development, allow any origin (ngrok, localhost)
   credentials: true,
 }));
 app.use(express.json());
@@ -78,5 +78,5 @@ registerSiegeWorker();
 startGhostTicker();
 
 app.listen(env.port, () => {
-  console.log(`Server pornit pe http://localhost:${env.port}`);
+  console.log(`Server started on http://localhost:${env.port}`);
 });

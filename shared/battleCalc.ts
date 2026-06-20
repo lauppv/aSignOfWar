@@ -37,28 +37,28 @@ export function calculateBattle(
   defenderAmmo: number,
   targetBuilding?: string
 ): BattleResult {
-  // Sistemul de lupta inspirat din Tribal Wars. Decizii de design:
-  //   1. Atacul e split pe categorii (INF/RANGE/MECH), apararea e ponderata dupa
-  //      compozitia atacatorului — asta recompenseaza armatele echilibrate.
-  //   2. Air defense damage e calculat PRE-batalie dar scalat cu battleRatio —
-  //      atacatorii care pierd tot dau ceva damage de siege, nu e all-or-nothing.
-  //   3. Hackerii NU participa la batalii — au sistem dedicat (SPY vs SPY).
-  //   4. Prada se imparte egal pe 3 resurse (carry / 3) — previne cherry-picking.
-  //   5. Governor loyalty damage: 20 + random(0-15). Randomness-ul previne calculul
-  //      exact "am nevoie de N guvernatori", adaugand incertitudine strategica.
+  // Battle system inspired by Tribal Wars. Design decisions:
+  //   1. The attack is split across categories (INF/RANGE/MECH), the defense is weighted by
+  //      the attacker's composition — this rewards balanced armies.
+  //   2. Air defense damage is computed PRE-battle but scaled by battleRatio —
+  //      attackers who lose everything still deal some siege damage, it's not all-or-nothing.
+  //   3. Hackers do NOT take part in battles — they have a dedicated system (SPY vs SPY).
+  //   4. Loot is split equally across the 3 resources (carry / 3) — prevents cherry-picking.
+  //   5. Governor loyalty damage: 20 + random(0-15). The randomness prevents the exact
+  //      "I need N governors" calculation, adding strategic uncertainty.
 
-  // Hackerii nu participă la bătălia normală (au sistem dedicat SPY vs SPY).
+  // Hackers do not take part in the normal battle (they have a dedicated SPY vs SPY system).
   attackerUnits = attackerUnits.filter(u => UNITS[u.name].category !== "SPY");
   defenderUnits = defenderUnits.filter(u => UNITS[u.name].category !== "SPY");
 
-  // 1. Forta de atac per categorie
+  // 1. Attack force per category
   const A: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of attackerUnits) {
     A[toAtkCat(name)] += UNITS[name].attack * quantity;
   }
   const A_total = A.INFANTRY + A.RANGE + A.MECHANIZED;
 
-  // 2. Aparare cu air defense ORIGINAL (pentru a calcula battleRatio)
+  // 2. Defense with the ORIGINAL air defense (to compute battleRatio)
   const origDefenseBonus = getAirDefenseBonus(airDefenseLevel) / 100;
   const D_orig: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of defenderUnits) {
@@ -75,12 +75,12 @@ export function calculateBattle(
                + (A.MECHANIZED / A_total) * D_orig.MECHANIZED;
   }
 
-  // 3. Battle ratio — scalează eficacitatea siege-ului (ca în TW)
-  //    A/D (capped la 1): când câștigi siege-ul e la putere maximă,
-  //    când pierzi e proporțional cu raportul de forțe
+  // 3. Battle ratio — scales the effectiveness of the siege (as in TW)
+  //    A/D (capped at 1): when you win, the siege is at full power,
+  //    when you lose it's proportional to the force ratio
   const battleRatio = D_eff_orig > 0 ? Math.min(1, A_total / D_eff_orig) : (A_total > 0 ? 1 : 0);
 
-  // 4. Air defense damage PRE-bătălie, scalat cu battleRatio
+  // 4. Air defense damage PRE-battle, scaled by battleRatio
   const mlCount    = attackerUnits.find(u => u.name === "MISSILE_LAUNCHER")?.quantity ?? 0;
   const dronesForAD = (!targetBuilding || targetBuilding === "AIR_DEFENSE")
     ? (attackerUnits.find(u => u.name === "DRONE")?.quantity ?? 0)
@@ -90,7 +90,7 @@ export function calculateBattle(
   const airDefLevelsDestroyed = calcAirDefenseDamage(airDefenseLevel, effectiveML, effectiveDronesAD);
   const newAirDefenseLevel = airDefenseLevel - airDefLevelsDestroyed;
 
-  // 5. Aparare cu air defense REDUS (pentru bătălia propriu-zisă)
+  // 5. Defense with the REDUCED air defense (for the actual battle)
   const defenseBonus = getAirDefenseBonus(newAirDefenseLevel) / 100;
   const D: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   for (const { name, quantity } of defenderUnits) {
@@ -101,20 +101,20 @@ export function calculateBattle(
     D.MECHANIZED += cfg.defenseVsMechanized * quantity * mult;
   }
 
-  // 6. Forta totala de aparare ponderata
+  // 6. Total weighted defense force
   let D_eff = 0;
   if (A_total > 0) {
     D_eff = (A.INFANTRY   / A_total) * D.INFANTRY
           + (A.RANGE      / A_total) * D.RANGE
           + (A.MECHANIZED / A_total) * D.MECHANIZED;
   }
-  // A_total === 0 înseamnă atacator fără forță ofensivă (de ex. doar Governor, care are
-  // attack: 0). Fără armată nu poți câștiga o bătălie nici măcar împotriva unui oraș gol —
-  // toate unitățile (inclusiv Governor-ul) mor. Asta blochează exploit-ul "trimit Governor
-  // singur și sper că e gol".
+  // A_total === 0 means an attacker with no offensive force (e.g. only a Governor, which has
+  // attack: 0). Without an army you can't win a battle even against an empty city —
+  // all units (including the Governor) die. This blocks the "send a Governor
+  // alone and hope it's empty" exploit.
   const attackerWon = A_total > 0 && A_total >= D_eff;
 
-  // 5. Pierderi atacator per categorie
+  // 5. Attacker losses per category
   const atkLoss: Record<AtkCat, number> = { INFANTRY: 0, RANGE: 0, MECHANIZED: 0 };
   if (attackerWon && A_total > 0) {
     for (const cat of ["INFANTRY", "RANGE", "MECHANIZED"] as AtkCat[]) {
@@ -138,7 +138,7 @@ export function calculateBattle(
     if (u.name === "GOVERNOR" && !hasCombatSurvivors) u.quantity = 0;
   }
 
-  // 6. Pierderi aparator
+  // 6. Defender losses
   const defLossRate = attackerWon
     ? 1.0
     : (A_total > 0 ? Math.pow(A_total / D_eff, 1.5) : 0);
@@ -148,7 +148,7 @@ export function calculateBattle(
     quantity: Math.max(0, Math.round(quantity * (1 - defLossRate))),
   }));
 
-  // 7. Resurse furate
+  // 7. Stolen resources
   let stolenMoney = 0, stolenEnergy = 0, stolenAmmo = 0;
   if (attackerWon) {
     const totalCarry = attackerSurvivors.reduce(
@@ -160,7 +160,7 @@ export function calculateBattle(
     stolenAmmo   = Math.floor(Math.min(defenderAmmo,   perResource));
   }
 
-  // 9. Efect Governor
+  // 9. Governor effect
   const govSurvivors = attackerSurvivors.find(u => u.name === "GOVERNOR")?.quantity ?? 0;
   const allDefDead   = defenderSurvivors.every(u => u.quantity === 0);
   let loyaltyDamage  = 0;

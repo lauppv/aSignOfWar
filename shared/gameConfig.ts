@@ -1,13 +1,13 @@
-// Sursa unica de adevar pentru toate datele statice ale jocului — importat de server SI client.
-// Asta garanteaza ca simulatorul din frontend arata exact ce calculeaza serverul.
-// Orice schimbare de balans se face DOAR aici, nu exista riscul de desync.
+// Single source of truth for all the game's static data — imported by BOTH server and client.
+// This guarantees the frontend simulator shows exactly what the server computes.
+// Any balance change is made ONLY here, so there's no risk of desync.
 //
-// Am ales lookup tables (array-uri) in loc de formule (base * growth^level) pentru ca
-// imi dau control total asupra curbei la fiecare nivel — o formula nu poate exprima
-// platourile si salturile pe care le vreau la anumite nivele. Trade-off: mentenanta
-// manuala, dar cu max 30 nivele e gestionabil.
+// I chose lookup tables (arrays) instead of formulas (base * growth^level) because
+// they give me full control over the curve at each level — a formula can't express
+// the plateaus and jumps I want at certain levels. Trade-off: manual
+// maintenance, but with max 30 levels it's manageable.
 
-// ─── Tipuri ──────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 export type BuildingName =
   | "HEADQUARTERS"
@@ -194,7 +194,7 @@ export const UNITS: Record<UnitName, UnitConfig> = {
 
 
   
-// ─── Lookup tables (hardcodate, nu urmeaza o formula) ────────────────────────
+// ─── Lookup tables (hardcoded, do not follow a formula) ────────────────────────
 
 const MILITARY_BASE_SPEED_FACTOR = [
   63, 59, 56, 53, 50, 47, 44, 42, 39, 37,
@@ -231,7 +231,7 @@ const HARBOR_CAPACITY = [
   17347, 21684, 27105, 33881, 42351,
 ];
 
-// ─── Building points (incremental per level, sursa: wiki Triburile) ─────────
+// ─── Building points (incremental per level, source: Tribal Wars wiki) ─────────
 
 const POINTS_HEADQUARTERS = [
    10,   2,   3,   4,   5,   4,   5,   6,   7,   9,
@@ -282,7 +282,7 @@ const BUILDING_POINTS: Record<BuildingName, readonly number[]> = {
   AIR_DEFENSE:     POINTS_AIR_DEFENSE,
 };
 
-// ─── Functii pure (gameSpeed e parametru, default 1) ─────────────────────────
+// ─── Pure functions (gameSpeed is a parameter, default 1) ─────────────────────────
 
 export const getHousingCapacity = (level: number): number => {
   if (level <= 0) return 0;
@@ -350,9 +350,9 @@ export const getBuildingPoints = (type: BuildingName, level: number): number => 
   return sum;
 };
 
-// Costul (per resursa) pentru al N-lea Governor (N = 1, 2, 3, ...).
-// Contorul e per cont, iar Money = Energy = Ammo.
-// Formula: N ≤ 5 creste cu ×1.5 (usor); N ≥ 6 se dubleaza (greu).
+// The cost (per resource) for the Nth Governor (N = 1, 2, 3, ...).
+// The counter is per account, and Money = Energy = Ammo.
+// Formula: N ≤ 5 grows by ×1.5 (easy); N ≥ 6 doubles (hard).
 export const getGovernorCost = (governorNumber: number): number => {
   const n = Math.max(1, Math.floor(governorNumber));
   if (n <= 5) return Math.round(10_000 * Math.pow(1.5, n - 1));
@@ -367,7 +367,7 @@ export const getGovernorRecruitmentTime = (gameSpeed: number = 1): number => {
   return Math.max(1, Math.round(UNITS.GOVERNOR.baseRecruitmentTime / gameSpeed));
 };
 
-// Negustorii (RESOURCES) merg uniform, independent de cantitate, rapid.
+// Merchants (RESOURCES) travel uniformly, fast, regardless of quantity.
 export const RESOURCE_TRAVEL_MIN_PER_FIELD = 2;
 
 export const getFieldDistance = (
@@ -375,8 +375,8 @@ export const getFieldDistance = (
   toX: number, toY: number
 ): number => Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
 
-// Cea mai lenta unitate (valoare mare in min/camp = mai lent). Intoarce 0 daca
-// nu exista unitati > 0.
+// The slowest unit (a high value in min/tile = slower). Returns 0 if
+// there are no units > 0.
 export const getSlowestUnitSpeed = (
   unitCounts: Partial<Record<UnitName, number>>
 ): number => {

@@ -1,5 +1,5 @@
-// One-off: re-aseaza toate orasele existente in spirala, cu distanta intre ele.
-// Ruleaza cu: npx tsx scripts/repack-map.ts
+// One-off: re-place all existing cities in a spiral, with spacing between them.
+// Run with: npx tsx scripts/repack-map.ts
 
 import prisma from "../src/core/db";
 import { MAP_SIZE } from "../src/modules/map/map.service";
@@ -13,7 +13,7 @@ async function main() {
   const cx = (MAP_SIZE - 1) / 2;
   const cy = (MAP_SIZE - 1) / 2;
   
-  // 1. Generăm toate sloturile posibile și le sortăm după distanța față de centru
+  // 1. Generate all possible slots and sort them by distance from the center
   const allPossibleSlots: { x: number; y: number; d: number; r: number }[] = [];
   for (let y = 0; y < MAP_SIZE; y++) {
     for (let x = 0; x < MAP_SIZE; x++) {
@@ -23,10 +23,10 @@ async function main() {
     }
   }
   
-  // Sortăm: întâi distanța (d), apoi random (r) pentru a sparge simetria perfectă
+  // Sort: distance (d) first, then random (r) to break perfect symmetry
   allPossibleSlots.sort((a, b) => (a.d - b.d) || (a.r - b.r));
 
-  // 2. Filtrăm sloturile pentru a respecta regula: "niciun vecin în jur"
+  // 2. Filter the slots to respect the rule: "no neighbor around"
   const finalSlots: { x: number; y: number }[] = [];
   const occupied = new Set<string>();
 
@@ -35,7 +35,7 @@ async function main() {
 
     const key = `${slot.x},${slot.y}`;
     
-    // Verificăm dacă slotul curent sau oricare din cei 8 vecini sunt ocupați
+    // Check whether the current slot or any of the 8 neighbors are occupied
     let canPlace = true;
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
@@ -54,12 +54,12 @@ async function main() {
   }
 
   if (finalSlots.length < cities.length) {
-    throw new Error(`Harta este prea mică pentru a păstra distanța cerută între cele ${cities.length} orașe.`);
+    throw new Error(`The map is too small to keep the required spacing between the ${cities.length} cities.`);
   }
 
-  // 3. Aplicăm mutările în baza de date
+  // 3. Apply the moves to the database
   await prisma.$transaction(async (tx) => {
-    // Mutăm orașele "în parcare" (coordonate negative) pentru a evita erorile de constrângere unică
+    // Move the cities "into parking" (negative coordinates) to avoid unique-constraint errors
     for (let i = 0; i < cities.length; i++) {
       await tx.city.update({
         where: { id: cities[i].id },
@@ -67,16 +67,16 @@ async function main() {
       });
     }
 
-    // Le așezăm în noile sloturi aerisite
+    // Place them into the new spaced-out slots
     for (let i = 0; i < cities.length; i++) {
       const s = finalSlots[i];
       await tx.city.update({
         where: { id: cities[i].id },
         data: { x: s.x, y: s.y },
       });
-      console.log(`${cities[i].name} → [${s.x}, ${s.y}] (Aerisit)`);
+      console.log(`${cities[i].name} → [${s.x}, ${s.y}] (Spaced)`);
     }
-  }, { timeout: 30000 }); // Mărim timeout-ul pentru tranzacții mari
+  }, { timeout: 30000 }); // Increase the timeout for large transactions
 
   await prisma.$disconnect();
 }

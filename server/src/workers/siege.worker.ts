@@ -2,10 +2,10 @@ import { Worker } from "bullmq";
 import { createRedisConnection } from "../core/redis";
 import { completeConquest } from "../modules/siege/siege.service";
 
-// BullMQ worker pentru expiry-ul timer-ului de siege.
-// Cand job-ul programat la siege.endsAt se executa, completeConquest verifica
-// daca siege-ul e tot ACTIVE (defender-ul nu l-a spart intre timp) si transfera
-// orasul. Daca siege-ul nu mai e activ, no-op silentios.
+// BullMQ worker for the siege timer expiry.
+// When the job scheduled at siege.endsAt runs, completeConquest checks whether
+// the siege is still ACTIVE (the defender didn't break it in the meantime) and
+// transfers the city. If the siege is no longer active, it's a silent no-op.
 export const registerSiegeWorker = () => {
   new Worker<{ siegeId: string }>(
     "siege-timer",

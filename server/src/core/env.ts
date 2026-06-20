@@ -7,11 +7,11 @@ dotenv.config({
 
 const required = ["DATABASE_HOST", "DATABASE_NAME", "DATABASE_USER", "DATABASE_PASSWORD", "JWT_SECRET", "REDIS_URL"];
 for (const key of required) {
-  if (!process.env[key]) throw new Error(`Lipseste variabila: ${key}`);
+  if (!process.env[key]) throw new Error(`Missing variable: ${key}`);
 }
 
-// Construiesc DATABASE_URL din componente separate ca sa fie clar in .env
-// ce trebuie completat, fara sa parsezi un URL lung.
+// Build DATABASE_URL from separate components so it's clear in .env what needs
+// to be filled in, without parsing a long URL.
 const dbHost = process.env.DATABASE_HOST!;
 const dbPort = process.env.DATABASE_PORT || "5432";
 const dbName = process.env.DATABASE_NAME!;

@@ -5,15 +5,15 @@ import { getBuildingLevel } from "@/features/city/lib/cityHelpers";
 
 interface Hotspot {
   name: BuildingName;
-  top: string;    // Poziția unde apare textul (Tooltip)
-  left: string;   // Poziția unde apare textul (Tooltip)
-  points: string; // Zona clickabilă a clădirii
+  top: string;    // Position where the text appears (Tooltip)
+  left: string;   // Position where the text appears (Tooltip)
+  points: string; // Clickable area of the building
 }
 
-// Coordonate SVG polygon trasate manual din ilustratia orasului. Fiecare cladire are
-// un hotspot clickable overlaid pe imagine. Nu sunt auto-generate — daca schimb imaginea,
-// coordonatele necesita update manual. Alternativa ar fi CSS image maps, dar SVG imi da
-// hover effects si styling dinamic gratis.
+// SVG polygon coordinates drawn manually from the city illustration. Each building has
+// a clickable hotspot overlaid on the image. They are not auto-generated — if I change the
+// image, the coordinates need a manual update. The alternative would be CSS image maps, but
+// SVG gives me hover effects and dynamic styling for free.
 const HOTSPOTS: Hotspot[] = [
   { 
     name: "HEADQUARTERS",    
@@ -68,7 +68,7 @@ export default function CityMap({ cityName, city, onBuildingClick }: Props) {
 
   return (
     <div className="relative h-full w-auto shrink-0 inline-block overflow-hidden">
-      {/* Imaginea Map */}
+      {/* Map image */}
       <img
         src="/images/city.jpg"
         alt={cityName}
@@ -76,7 +76,7 @@ export default function CityMap({ cityName, city, onBuildingClick }: Props) {
         draggable={false}
       />
 
-      {/* SVG Overlay - Doar logică de detecție, fără vizual */}
+      {/* SVG Overlay - detection logic only, no visuals */}
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox="0 0 100 100" 
@@ -88,7 +88,7 @@ export default function CityMap({ cityName, city, onBuildingClick }: Props) {
             key={`poly-${spot.name}`}
             points={spot.points}
             style={{ pointerEvents: 'auto' }}
-            // fill-transparent asigură că poligonul e clickabil, dar invizibil
+            // fill-transparent ensures the polygon is clickable but invisible
             className="fill-transparent stroke-transparent cursor-pointer"
             onMouseEnter={() => setHovered(spot.name)}
             onMouseLeave={() => setHovered(null)}
@@ -97,7 +97,7 @@ export default function CityMap({ cityName, city, onBuildingClick }: Props) {
         ))}
       </svg>
 
-      {/* Tooltip-ul cu numele clădirii */}
+      {/* Tooltip with the building name */}
       {HOTSPOTS.map((spot) => {
         if (hovered !== spot.name) return null;
 

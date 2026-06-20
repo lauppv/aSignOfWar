@@ -70,8 +70,8 @@ export const getGovernorState = async (userId: string) => {
   };
 };
 
-// Depune `amount` din resursa `resource` a orasului `cityId` in bara globala a userului.
-// Orasul trebuie sa aiba HQ lvl 30. Depunerea e plafonata la min(resursa in oras, cat mai e de completat la bara).
+// Deposits `amount` of city `cityId`'s `resource` into the user's global bar.
+// The city must have an HQ at lvl 30. The deposit is capped at min(resource in city, how much is left to fill the bar).
 export const depositGovernor = async (
   userId: string,
   cityId: string,
@@ -140,15 +140,15 @@ export const depositGovernor = async (
   return { deposited: actual, state };
 };
 
-// Porneste recrutarea unui Governor (toate barele trebuie sa fie pline).
-// Consuma depozitele (reset la 0) si incrementeaza contorul imediat, astfel incat
-// urmatorul ciclu de depuneri poate incepe in paralel. Guvernator apare in oras cand
-// finalizeaza job-ul din recruitmentQueue.
+// Starts recruiting a Governor (all bars must be full).
+// Consumes the deposits (resets them to 0) and increments the counter immediately, so that
+// the next deposit cycle can begin in parallel. The Governor appears in the city when
+// the recruitmentQueue job finishes.
 export const recruitGovernor = async (userId: string, cityId: string) => {
   await syncResources(cityId);
 
-  // Pending order este per oras: doua orase pot recruta in paralel, dar in
-  // acelasi oras nu se pot suprapune doi guvernatori.
+  // The pending order is per city: two cities can recruit in parallel, but in
+  // the same city two governors cannot overlap.
   const existingPendingInCity = await prisma.recruitmentOrder.findFirst({
     where: { cityId, unitName: "GOVERNOR" },
   });
@@ -183,12 +183,12 @@ export const recruitGovernor = async (userId: string, cityId: string) => {
   const now      = new Date();
   const finishAt = new Date(now.getTime() + timeSec * 1000);
 
-  // Tranzactia face: re-citeste counter-ul, calculeaza costul, executa un
-  // updateMany conditional (ATOMIC) pe (counter, bars). Daca alta cerere a
-  // mutat counter-ul sau a golit barele intre timp, updateMany matches 0 randuri
-  // si dam BARS_NOT_FULL — niciun risc de double-spend. Postgres lockeaza
-  // randul user pe durata UPDATE-ului, iar WHERE-ul evalueaza pe versiunea
-  // commited curenta.
+  // The transaction does: re-reads the counter, computes the cost, runs a
+  // conditional (ATOMIC) updateMany on (counter, bars). If another request
+  // moved the counter or emptied the bars in the meantime, updateMany matches 0 rows
+  // and we throw BARS_NOT_FULL — no risk of double-spend. Postgres locks
+  // the user row for the duration of the UPDATE, and the WHERE clause evaluates against the
+  // current committed version.
   const result = await prisma.$transaction(async (tx) => {
     const fresh = await tx.user.findUnique({ where: { id: userId } });
     if (!fresh) throw new Error("USER_NOT_FOUND");
@@ -237,7 +237,7 @@ export const recruitGovernor = async (userId: string, cityId: string) => {
       data:  { jobId: String(job.id) },
     });
   } catch (err) {
-    // Rollback manual: restaureaza depozitele si contorul, sterge orderul.
+    // Manual rollback: restore the deposits and counter, delete the order.
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },

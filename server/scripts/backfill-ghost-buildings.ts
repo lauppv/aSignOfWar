@@ -1,5 +1,5 @@
-// One-off: populeaza orasele fantoma existente (create inainte de introducerea
-// sablonului de start) cu GHOST_STARTER_BUILDINGS. Ruleaza cu:
+// One-off: populate existing ghost cities (created before the starter template was
+// introduced) with GHOST_STARTER_BUILDINGS. Run with:
 //   npx tsx scripts/backfill-ghost-buildings.ts
 
 import prisma from "../src/core/db";

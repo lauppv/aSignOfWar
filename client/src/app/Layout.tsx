@@ -62,9 +62,9 @@ export default function Layout() {
     refetchInterval: 10000,
   });
 
-  // Tin evidenta rapoartelor deja vazute in localStorage ca sa supravietuiasca refresh-ului.
-  // La navigarea catre Reports, trimit snapshot-ul ca route state ca ReportsView sa poata
-  // evidentia "rapoarte noi de la ultima vizita".
+  // Track already-seen reports in localStorage so they survive a refresh.
+  // When navigating to Reports, I pass the snapshot as route state so ReportsView can
+  // highlight "new reports since the last visit".
   const seenReportsKey = `seenReports:${getCurrentUserId() ?? "anon"}`;
 
   function readSeenIds(): Set<string> {

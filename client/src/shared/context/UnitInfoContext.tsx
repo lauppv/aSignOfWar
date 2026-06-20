@@ -6,8 +6,8 @@ interface UnitInfoContextValue {
   openUnit: (name: UnitName) => void;
 }
 
-// { openUnit: () => {} } este doar o valoare default, pentru a nu avea erori de tip atunci cand folosim contextul in afara providerului
-// In practica nu se intampla niciodata, pentru ca vom folosi contextul doar in interiorul providerului, dar TypeScript ne obliga sa dam o valoare default
+// { openUnit: () => {} } is just a default value, so we don't get type errors when using the context outside the provider.
+// In practice this never happens, since we only use the context inside the provider, but TypeScript forces us to give a default value.
 const UnitInfoContext = createContext<UnitInfoContextValue>({ openUnit: () => {} });
 
 export function useUnitInfo() {

@@ -1,5 +1,5 @@
-// One-off: pentru fiecare jucator existent care nu are inca orase fantoma in jur,
-// genereaza 3 ghost cities langa orasul lui starter. Ruleaza cu:
+// One-off: for each existing player who doesn't yet have ghost cities around them,
+// generate 3 ghost cities next to their starter city. Run with:
 //   npx tsx scripts/seed-ghosts.ts
 
 import prisma from "../src/core/db";

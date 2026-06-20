@@ -37,7 +37,7 @@ export const startRecruitment = async (
   const hq  = city.buildings.find(b => b.name === "HEADQUARTERS")!;
   const mb  = city.buildings.find(b => b.name === "MILITARY_BASE")!;
 
-  // Verificare conditii de deblocare (GOVERNOR are endpoint dedicat, vezi governor.service)
+  // Check unlock conditions (GOVERNOR has a dedicated endpoint, see governor.service)
   if (mb.level < 1) throw new Error("MILITARY_BASE_REQUIRED");
   if (cfg.requiresHQ && hq.level < cfg.requiresHQ) {
     throw new Error(`HQ_REQUIRED:${cfg.requiresHQ}`);
@@ -46,7 +46,7 @@ export const startRecruitment = async (
     throw new Error(`MB_REQUIRED:${cfg.requiresMilitaryBase}`);
   }
 
-  // Verificare populatie disponibila
+  // Check available population
   const housing    = city.buildings.find(b => b.name === "HOUSING")!;
   const maxPop     = getHousingCapacity(housing.level);
   const currentPop = city.units.reduce((sum, u) => sum + u.quantity * UNITS[u.name].population, 0);
@@ -67,8 +67,8 @@ export const startRecruitment = async (
   let startAt!: Date;
   let finishAt!: Date;
 
-  // Aceeasi prevenire race condition ca la upgrade-urile de cladiri — vezi building.service.ts.
-  // Lookup-ul lastOrder + deducerea resurselor trebuie sa fie atomice.
+  // Same race-condition prevention as for building upgrades — see building.service.ts.
+  // The lastOrder lookup + the resource deduction must be atomic.
   await prisma.$transaction(async (tx) => {
     const lastOrder = await tx.recruitmentOrder.findFirst({
       where: { cityId },
@@ -135,8 +135,8 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
   if (order.unitName === "GOVERNOR") {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error("USER_NOT_FOUND");
-    // Costul governor-ului anulat = cel al guvernatorului #governorsRecruited
-    // (a fost incrementat la pornirea recrutarii).
+    // The cost of the cancelled governor = that of governor #governorsRecruited
+    // (it was incremented when recruitment started).
     const c = getGovernorCost(user.governorsRecruited);
     cost = { money: c, energy: c, ammo: c };
   } else {
@@ -148,9 +148,9 @@ export const cancelRecruitment = async (orderId: string, userId: string) => {
     };
   }
 
-  // Refund 75% la anulare — penalizeaza cancel-spamming dar ramane fair.
-  // Aceeasi formula ca in building.service.ts. As fi putut extrage un calcRefund() helper,
-  // dar cu doar 2 call sites nu merita indirectia. KISS.
+  // Refund 75% on cancel — penalizes cancel-spamming but stays fair.
+  // Same formula as in building.service.ts. I could have extracted a calcRefund() helper,
+  // but with only 2 call sites the indirection isn't worth it. KISS.
   const refund = {
     money:  Math.floor(cost.money  * 0.75),
     energy: Math.floor(cost.energy * 0.75),

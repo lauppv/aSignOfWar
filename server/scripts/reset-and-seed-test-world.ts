@@ -1,17 +1,18 @@
-// Reset complet + seed pentru testare locala. Creeaza 5 jucatori (player1..player5),
-// fiecare cu un singur oras (Oras1..Oras5) avand:
-//   - toate cladirile la maxLevel
-//   - 1000 unitati din fiecare tip (mai putin GOVERNOR — vezi mai jos)
-//   - 4 GOVERNOR + governorsRecruited = 4 (deci urmatorul costa mai mult)
-//   - resurse la capacitate maxima
+// Full reset + seed for local testing. Creates 5 players (player1..player5),
+// each with a single city (City1..City5) having:
+//   - all buildings at maxLevel
+//   - 1000 units of each type (except GOVERNOR — see below)
+//   - 4 GOVERNOR + governorsRecruited = 4 (so the next one costs more)
+//   - resources at max capacity
 //
-// Ruleaza cu: docker compose exec app npx tsx scripts/reset-and-seed-test-world.ts
+// Run with: docker compose exec app npx tsx scripts/reset-and-seed-test-world.ts
 //
-// Scriptul incarca .env si construieste DATABASE_URL la fel ca src/core/env.ts,
-// ca sa poata fi rulat direct fara wrapper npm.
+// The script loads .env and builds DATABASE_URL the same way as src/core/env.ts,
+// so it can be run directly without an npm wrapper.
 //
-// Atentie: scriptul SCAPA tot — sterge useri, orase, comenzi, alianțe, asedii. Foloseste
-// doar in dev. Nu am pus prompt de confirmare ca sa pot suprascrie rapid intre teste.
+// Warning: the script WIPES everything — it deletes users, cities, commands, alliances,
+// sieges. Use only in dev. I didn't add a confirmation prompt so I can overwrite quickly
+// between tests.
 
 import path from "path";
 import dotenv from "dotenv";
@@ -75,7 +76,7 @@ async function wipeWorld() {
 async function createPlayer(i: number): Promise<{ x: number; y: number }> {
   const username = `player${i}`;
   const email    = `player${i}@fake.com`;
-  const cityName = `Oras${i}`;
+  const cityName = `City${i}`;
   const { x, y } = await pickFreeSlot();
 
   const hash = await bcrypt.hash(PASSWORD, 10);
@@ -85,7 +86,7 @@ async function createPlayer(i: number): Promise<{ x: number; y: number }> {
       username,
       email,
       password: hash,
-      governorsRecruited: GOVERNORS_PER_CITY, // urmatorul Governor recrutat de el va costa cost(N+1)
+      governorsRecruited: GOVERNORS_PER_CITY, // the next Governor he recruits will cost cost(N+1)
     },
   });
 

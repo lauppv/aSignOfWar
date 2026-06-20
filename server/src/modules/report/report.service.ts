@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db";
 
-// Returneaza notificarile de comenzi in care user-ul e implicat:
-// - ATTACK cu report != null (battle landed)
-// - SUPPORT  / RESOURCES cu status COMPLETED (trupele/resursele au ajuns)
-// Directia e marcata din perspectiva user-ului.
+// Returns the command notifications the user is involved in:
+// - ATTACK with report != null (battle landed)
+// - SUPPORT  / RESOURCES with status COMPLETED (the troops/resources arrived)
+// The direction is marked from the user's perspective.
 export const getReportsForUser = async (userId: string) => {
   const reports = await prisma.command.findMany({
     where: {
@@ -57,7 +57,7 @@ export const getReportsForUser = async (userId: string) => {
     const direction = r.attackerUserId === userId ? ("outgoing" as const) : ("incoming" as const);
     let report = r.report as Record<string, unknown> | null;
 
-    // Atacatorul care a pierdut nu vede compozitia aparatorului
+    // An attacker who lost does not see the defender's composition
     if (report && r.type === "ATTACK" && direction === "outgoing" && !(report as any).attackerWon) {
       const { defenderInitial, defenderSurvivors, airDefenseInitialLevel, airDefenseLevelsDestroyed, newAirDefenseLevel, ...rest } = report;
       report = rest;
@@ -67,7 +67,7 @@ export const getReportsForUser = async (userId: string) => {
   });
 };
 
-// "Sterge" un raport pentru user-ul curent: ascunde din partea lui
+// "Deletes" a report for the current user: hides it on their side
 // (fromCity.owner => attacker, toCity.owner => defender).
 export const deleteReportForUser = async (commandId: string, userId: string) => {
   const cmd = await prisma.command.findUnique({
@@ -94,9 +94,9 @@ export const deleteReportForUser = async (commandId: string, userId: string) => 
   const isDefender = cmd.defenderUserId === userId;
   if (!isAttacker && !isDefender) throw new Error("Forbidden");
 
-  // Daca user-ul e si attacker si defender (comenzi pe propriul oras, sau
-  // comenzi legate de un oras pe care l-a cucerit ulterior), trebuie sa
-  // ascundem AMBELE fete — altfel lista il va mai prinde prin cealalta fata.
+  // If the user is both attacker and defender (commands on their own city, or
+  // commands tied to a city they later conquered), we must
+  // hide BOTH sides — otherwise the list will still catch it via the other side.
   await prisma.command.update({
     where: { id: commandId },
     data: {
@@ -106,7 +106,7 @@ export const deleteReportForUser = async (commandId: string, userId: string) => 
   });
 };
 
-// "Sterge" toate rapoartele user-ului (ascunde din partea lui).
+// "Deletes" all of the user's reports (hides them on their side).
 export const deleteAllReportsForUser = async (userId: string) => {
   const reportableWhere: Prisma.CommandWhereInput = {
     OR: [

@@ -6,16 +6,16 @@ import { sendCommandSchema } from "./command.schema";
 
 const router = Router();
 
-// POST /api/cities/:cityId/commands  — trimite o comanda (attack/support/resources)
+// POST /api/cities/:cityId/commands  — send a command (attack/support/resources)
 router.post("/:cityId/commands", authMiddleware, validate(sendCommandSchema), sendCommandHandler);
 
-// GET  /api/cities/:cityId/commands  — comenzile orasului (outgoing + incoming)
+// GET  /api/cities/:cityId/commands  — the city's commands (outgoing + incoming)
 router.get("/:cityId/commands", authMiddleware, getCommandsHandler);
 
-// POST /api/cities/:cityId/commands/:commandId/cancel  — anuleaza o comanda TRAVELING
+// POST /api/cities/:cityId/commands/:commandId/cancel  — cancel a TRAVELING command
 router.post("/:cityId/commands/:commandId/cancel", authMiddleware, cancelCommandHandler);
 
-// POST /api/cities/:cityId/commands/withdraw — retrage unitati SUPPORT stationate
+// POST /api/cities/:cityId/commands/withdraw — withdraw stationed SUPPORT units
 router.post("/:cityId/commands/withdraw", authMiddleware, withdrawSupportHandler);
 
 export default router;

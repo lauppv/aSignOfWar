@@ -1,6 +1,6 @@
-// Inainte fiecare register facea SELECT pe toate orasele ca sa afle ce sloturi sunt ocupate.
-// Cu 5 useri/sec aveam 10 full table scans/sec + race condition (2 useri alegeau acelasi slot).
-// Allocator-ul tine totul in memorie si serializeaza cererile printr-un mutex async.
+// Before, each register did a SELECT on all cities to find out which slots were occupied.
+// With 5 users/sec we had 10 full table scans/sec + a race condition (2 users picking the same slot).
+// The allocator keeps everything in memory and serializes requests through an async mutex.
 import prisma from "../../core/db";
 import { MAP_SIZE, pickFreeSlotNear } from "./map.service";
 
@@ -11,14 +11,14 @@ class SlotAllocator {
   private queue: (() => void)[] = [];
   private locked = false;
 
-  // Incarca o singura data din DB la primul apel, dupa aia totul e in RAM
+  // Loads once from the DB on the first call; after that everything is in RAM
   async init(): Promise<void> {
     const cities = await prisma.city.findMany({ select: { x: true, y: true } });
     this.occupied = new Set(cities.map(c => slotIndex(c.x, c.y)));
   }
 
-  // Mutex async — un singur apel la un moment dat poate aloca sloturi.
-  // Fara asta, 5 registrari simultane citeau acelasi snapshot si alegeau aceleasi coordonate.
+  // Async mutex — only one call at a time can allocate slots.
+  // Without this, 5 simultaneous registrations read the same snapshot and picked the same coordinates.
   private async withLock<T>(fn: (occupied: Set<number>) => T): Promise<T> {
     if (!this.occupied) await this.init();
 
@@ -42,7 +42,7 @@ class SlotAllocator {
     }
   }
 
-  // Pentru starter city — aloca un singur slot
+  // For the starter city — allocates a single slot
   async allocateSlot(
     originX: number,
     originY: number
@@ -54,7 +54,7 @@ class SlotAllocator {
     });
   }
 
-  // Pentru ghost cities — aloca N sloturi dintr-o singura trecere prin lock
+  // For ghost cities — allocates N slots in a single pass through the lock
   async allocateSlots(
     originX: number,
     originY: number,
@@ -75,7 +75,7 @@ class SlotAllocator {
     return this.occupied?.size ?? 0;
   }
 
-  // Daca un oras e sters (cucerire, etc), eliberam slotul ca sa poata fi refolosit
+  // If a city is deleted (conquest, etc), we free the slot so it can be reused
   releaseSlot(x: number, y: number): void {
     this.occupied?.delete(slotIndex(x, y));
   }

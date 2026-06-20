@@ -16,9 +16,9 @@ const EMPTY_UNITS = (): Record<UnitName, number> =>
   Object.fromEntries(Object.keys(UNITS).map(k => [k, 0])) as Record<UnitName, number>;
 
 export default function SimulatorView({ onClose }: Props) {
-  // Simulatorul foloseste ACEEASI functie calculateBattle() ca serverul. Asta garanteaza
-  // ca rezultatele din simulator corespund bataliilor reale — nu exista o "aproximare
-  // client-side" separata care ar putea induce in eroare jucatorii.
+  // The simulator uses the SAME calculateBattle() function as the server. This guarantees
+  // that the simulator's results match real battles — there is no separate "client-side
+  // approximation" that could mislead players.
   const [attacker, setAttacker] = useState(EMPTY_UNITS);
   const [defender, setDefender] = useState(EMPTY_UNITS);
   const [airDefenseLevel, setAirDefenseLevel] = useState(0);
