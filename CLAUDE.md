@@ -4,6 +4,10 @@ Guidance for working in this repo. **aSignOfWar** is a browser-based war/strateg
 MMO: build a city, manage resources, recruit units, and attack/besiege other
 players in real time.
 
+The full game-design spec — mechanics, buildings, units, formulas, and the
+rationale behind them — lives in `plan.txt`. `shared/gameConfig.ts` holds the
+actual balance values; `plan.txt` explains the *why*.
+
 ## Stack
 
 - **server/** — Express 5 + TypeScript (CommonJS). Prisma 5 → PostgreSQL.

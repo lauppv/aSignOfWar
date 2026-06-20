@@ -1,59 +1,59 @@
-LE: NU toate mecanicile sunt scrise aici. Multe decizii au fost luate pe parcurs.
+NOTE: NOT every mechanic is written here. Many decisions were made along the way.
 
-Copie Triburile in epoca contemporana. Doar acest fisier este in RO. Codul sursa si websiteul vor fi in EN pentru consistenta
+A clone of Tribal Wars set in the modern era. The source code and the website are in EN for consistency; this document is in EN as well.
 
-Fiecare jucator incepe cu un singur oras si:
+Each player starts with a single city and:
 1) 10 Heavy
 2) 10 Light infantry
-3) 1000 din fiecare resursa
+3) 1000 of each resource
 4) Headquarters Level 1
 5) Power plant Level 1
 6) Bank Level 1
 7) Weapons factory Level 1
-8) Military base Level 0 (necesita Headquarters Level 5)
+8) Military base Level 0 (requires Headquarters Level 5)
 9) Housing Level 1
 10) Warehouse Level 1
-11) Harbor Level 0 (necesita Headquarters Level 15)
-12) Air defense Level 0 (necesita Headquarters Level 5)
+11) Harbor Level 0 (requires Headquarters Level 15)
+12) Air defense Level 0 (requires Headquarters Level 5)
 
 
-Unitatile si resursele vor fi pe oras, nu pe cont
-Nu exista Fierarie. Unitatile vor fi deblocate pe masura ce Headquarters si Military base cresc in Level (vezi Unitati + deblocare)
+Units and resources are per city, not per account.
+There is no Smithy. Units are unlocked as Headquarters and Military base grow in Level (see Units + unlocking).
 
 
-Tipuri de resurse:
-1) Money (produs de Bank) - Lemn in Triburile
-2) Energy (produs de Power plant - Argila in Triburile)
-3) Ammo (produs de Weapons factory - Fier in Triburile)
+Resource types:
+1) Money (produced by Bank) - Wood in Tribal Wars
+2) Energy (produced by Power plant - Clay in Tribal Wars)
+3) Ammo (produced by Weapons factory - Iron in Tribal Wars)
 
-Cladiri (cu perpendiculara pe Triburile):
-1) Headquarters (Cladire principala). Level maxim 30
-2) Bank (Taietori de lemne). Level maxim 30
-3) Power plant (Mina de lut). Level maxim 30
-4) Weapons factory (Mina de fier). Level maxim 30
-5) Military base (cazarma + grajd). Level maxim 25
-6) Housing (Ferma (population)). Level maxim 30
-7) Warehouse (Magazie (depoziteaza resurse)). Level maxim 30
-8) Harbor (targ (pentru a trimite resurse catre alte orase)). Level maxim 25
-9) Air defense (Zid). Cladire speciala care nu apare in imaginea orasului, dar va avea propriul ei card/componenta (probabil sub tabloul cu numarul de unitati din oras). Level maxim 20
+Buildings (with a mapping onto Tribal Wars):
+1) Headquarters (Main building). Max Level 30
+2) Bank (Timber camp). Max Level 30
+3) Power plant (Clay pit). Max Level 30
+4) Weapons factory (Iron mine). Max Level 30
+5) Military base (barracks + stable). Max Level 25
+6) Housing (Farm (population)). Max Level 30
+7) Warehouse (Warehouse (stores resources)). Max Level 30
+8) Harbor (market (to send resources to other cities)). Max Level 25
+9) Air defense (Wall). Special building that does not appear in the city image, but has its own card/component (probably below the panel with the city's unit counts). Max Level 20
 
 
-Unitati(cu perpendiculara pe Triburile) + deblocare (Level Headquarters):
-1) De attack:
-    Light infantry (luptator cu topor) - nu necesita Headquarters
-    Raider (cavalerie usoara) - Headquarters Level 10
-    Special forces (arcas calare) - Headquarters Level 15 + Military base Level 10
-2) De defense:
-    Heavy infantry (lancier) - nu necesita Headquarters
-    Defender infantry (luptator cu spada) - Headquarters Level 5
-    Sniper (arcas) - Headquarters Level 10 + Military base Level 10
+Units (with a mapping onto Tribal Wars) + unlocking (Headquarters Level):
+1) Attack:
+    Light infantry (axe fighter) - no Headquarters requirement
+    Raider (light cavalry) - Headquarters Level 10
+    Special forces (mounted archer) - Headquarters Level 15 + Military base Level 10
+2) Defense:
+    Heavy infantry (spearman) - no Headquarters requirement
+    Defender infantry (swordsman) - Headquarters Level 5
+    Sniper (archer) - Headquarters Level 10 + Military base Level 10
 3) Mix:
-    Tank (cavalerie grea) - Headquarters Level 20 + Military base Level 15
+    Tank (heavy cavalry) - Headquarters Level 20 + Military base Level 15
 4) Siege:
-    Missile launcher (berbec) - Headquarters Level 20 + Military base Level 15
-    Drone (catapulta) - Headquarters Level 20 + Military base Level 20
+    Missile launcher (ram) - Headquarters Level 20 + Military base Level 15
+    Drone (catapult) - Headquarters Level 20 + Military base Level 20
 
-Tipuri de unitati:
+Unit types:
     1) Infantry: Light infantry, Defender infantry, Heavy infantry
     2) Range: Sniper, Special forces
     3) Mechanized: Raider, Tank
@@ -61,30 +61,30 @@ Tipuri de unitati:
     5) Conquer: Governor
 
 
-Toate unitatile se recruteaza din Baza militara
+All units are recruited from the Military base.
 
-Vom avea si harta cu coordonate. Pentru a trimite comenzi (attack, suport, resurse) catre un oras, va exista un camp cu Command unde vei putea selecta tipul comenzii (militar(attack, suport) sau resurse) si numele jucatorului tinta. Daca jucatorul exista, arata-i orasele si selectezi orasul tinta. In functie de tipul comenzii, componenta va contine informatii diferite:
-1) attack/suport:
-    nume oras
-    nume proprietar
-    de unde vine comanda(orasul tau)
-    timp de deplasare (fara harta vom considera ca fiecare comanda face 60 de secunde)
-    ora sosire comanda (updatata in timp real, in fiecare secunda, ca in triburile, pentru incadrari de attack/suport)
-    ce trupe sunt pe cale sa fie trimise
-2) resurse:
-    cantiate Energy
-    cantitate Money
-    cantitate Ammo
-    timp de deplasare (fara harta, 60 de secunde)
-    ora sosire (la fel ca la attack/suport)
-Daca ID-ul nu e valabil, componenta va contine un simplu mesaj "orasul cu ID-ul X nu exista"
+We will also have a map with coordinates. To send commands (attack, support, resources) to a city, there will be a Command field where you select the command type (military (attack, support) or resources) and the target player's name. If the player exists, show their cities and you select the target city. Depending on the command type, the component shows different information:
+1) attack/support:
+    city name
+    owner name
+    where the command comes from (your city)
+    travel time (without a map we assume every command takes 60 seconds)
+    command arrival time (updated in real time, every second, like in Tribal Wars, for attack/support timing)
+    which troops are about to be sent
+2) resources:
+    Energy amount
+    Money amount
+    Ammo amount
+    travel time (without a map, 60 seconds)
+    arrival time (same as for attack/support)
+If the ID is not valid, the component shows a simple message "the city with ID X does not exist"
 
-Fiecare oras are ceva ce se numeste Loyalty (adeziune in Triburile). Fiecare oras incepe cu Loyalty = 100%. Cand aceasta scade sub 0%, orasul este cucerit. Pentru a scadea Loyalty, e nevoie de unul sau mai multi Governors. Un Governor poate scadea Loyalty cu 20-35%, iar acest lucru se intampla doar daca orasul atacat e lipsit de orice unitate in defense. Un Governor nu are valori ofensive sau defensive, dar ocupa 100 population.
-Pentru a recruta un Governor e necesar ca Headquarters sa fie la Level 30 (maxim). Acesta se poate recruta din Headquarters. In Headquarters avem numarul de Governors actuali din oras. Deoarece nu avem taleri ca in Triburile, fiecare Governor va costa exponential mai mult. Vor fi 3 bare de progres care trebuie umplute cu cele 3 resurse (ca Minunile Lumii in Grepolis sau ca nivelurile cladirilor legendare in Forge of Empires).
+Every city has something called Loyalty (adhesion in Tribal Wars). Every city starts with Loyalty = 100%. When it drops below 0%, the city is conquered. To lower Loyalty you need one or more Governors. A Governor can lower Loyalty by 20-35%, and this only happens if the attacked city has no defending unit at all. A Governor has no offensive or defensive values, but occupies 100 population.
+To recruit a Governor, Headquarters must be at Level 30 (max). It is recruited from Headquarters. In Headquarters we have the count of current Governors in the city. Since we don't have coins like in Tribal Wars, each Governor costs exponentially more. There will be 3 progress bars that must be filled with the 3 resources (like the Wonders of the World in Grepolis or the legendary building levels in Forge of Empires).
 
-Contorul de Governori e PER CONT (nu per oras). Adica al N-lea Governor recrutat pe cont costa la fel indiferent din ce oras il recrutezi — inclusiv Governorii pierduti in atacuri esuate raman numarati (nu se reseteaza contorul). Cei 3 recipienti (Money/Energy/Ammo) accepta depuneri partiale din orice oras propriu: poti contribui treptat pana cand toate cele 3 bare sunt pline, moment in care Governor-ul e recrutat in orasul unde ai completat ultima bara.
+The Governor counter is PER ACCOUNT (not per city). That is, the Nth Governor recruited on the account costs the same regardless of which city you recruit it from — including Governors lost in failed attacks, which stay counted (the counter does not reset). The 3 recipients (Money/Energy/Ammo) accept partial deposits from any of your own cities: you can contribute gradually until all 3 bars are full, at which point the Governor is recruited in the city where you completed the last bar.
 
-Costul fiecarei resurse pentru al N-lea Governor (Money = Energy = Ammo):
+The cost of each resource for the Nth Governor (Money = Energy = Ammo):
 
   Governor 1:    10,000
   Governor 2:    15,000
@@ -98,17 +98,17 @@ Costul fiecarei resurse pentru al N-lea Governor (Money = Energy = Ammo):
   Governor 10: 1,460,000
   ...
 
-Formula: pentru N ≤ 5, cost(N) = round(10_000 * 1.5^(N-1)); pentru N ≥ 6, cost(N) = cost(5) * 2^(N-5). Primii 5 cresc cu ~×1.5 (accesibili cu 1-2 orase bine dezvoltate), apoi de la al 6-lea curba se dubleaza (presiunea de expansiune — ai nevoie de mai multe orase care produc simultan).
+Formula: for N ≤ 5, cost(N) = round(10_000 * 1.5^(N-1)); for N ≥ 6, cost(N) = cost(5) * 2^(N-5). The first 5 grow by ~×1.5 (affordable with 1-2 well-developed cities), then from the 6th the curve doubles (expansion pressure — you need more cities producing simultaneously).
 
 
 --------------------------------------------------------------------------------
 Infantry
 --------------------------------------------------------------------------------
- 
-Light infantry (luptator cu topor)
+
+Light infantry (axe fighter)
   type: Infantry
-  rol: ofensiv
-  cost: 60 Money, 30 energie, 40 Ammo
+  role: offensive
+  cost: 60 Money, 30 energy, 40 Ammo
   population: 1
   speed: 18
   carry: 10
@@ -117,11 +117,11 @@ Light infantry (luptator cu topor)
   defense vs Infantry: 10
   defense vs Mechanized: 5
   defense vs Range: 10
- 
-Defender infantry (luptator cu spada)
+
+Defender infantry (swordsman)
   type: Infantry
-  rol: defensiv
-  cost: 30 Money, 30 energie, 70 Ammo
+  role: defensive
+  cost: 30 Money, 30 energy, 70 Ammo
   population: 1
   speed: 22
   carry: 15
@@ -130,11 +130,11 @@ Defender infantry (luptator cu spada)
   defense vs Infantry: 50
   defense vs Mechanized: 15
   defense vs Range: 40
- 
-Heavy infantry (lancier)
+
+Heavy infantry (spearman)
   type: Infantry
-  rol: anti-Mechanized
-  cost: 50 Money, 30 energie, 10 Ammo
+  role: anti-Mechanized
+  cost: 50 Money, 30 energy, 10 Ammo
   population: 1
   speed: 18
   carry: 25
@@ -143,15 +143,15 @@ Heavy infantry (lancier)
   defense vs Infantry: 15
   defense vs Mechanized: 45
   defense vs Range: 20
- 
+
 --------------------------------------------------------------------------------
 Range
 --------------------------------------------------------------------------------
- 
-Sniper (arcas)
+
+Sniper (archer)
   type: Range
-  rol: anti-Infantry
-  cost: 100 Money, 30 energie, 60 Ammo
+  role: anti-Infantry
+  cost: 100 Money, 30 energy, 60 Ammo
   population: 1
   speed: 18
   carry: 10
@@ -160,11 +160,11 @@ Sniper (arcas)
   defense vs Infantry: 50
   defense vs Mechanized: 40
   defense vs Range: 5
- 
-Special forces (arcas calare)
+
+Special forces (mounted archer)
   type: Range
-  rol: mobil
-  cost: 250 Money, 100 energie, 150 Ammo
+  role: mobile
+  cost: 250 Money, 100 energy, 150 Ammo
   population: 5
   speed: 10
   carry: 50
@@ -173,15 +173,15 @@ Special forces (arcas calare)
   defense vs Infantry: 40
   defense vs Mechanized: 30
   defense vs Range: 50
- 
+
 --------------------------------------------------------------------------------
 Mechanized
 --------------------------------------------------------------------------------
- 
-Raider (cavalerie usoara)
+
+Raider (light cavalry)
   type: Mechanized
-  rol: raider
-  cost: 125 Money, 100 energie, 250 Ammo
+  role: raider
+  cost: 125 Money, 100 energy, 250 Ammo
   population: 4
   speed: 10
   carry: 80
@@ -190,11 +190,11 @@ Raider (cavalerie usoara)
   defense vs Infantry: 30
   defense vs Mechanized: 40
   defense vs Range: 30
- 
-Tank (cavalerie grea)
+
+Tank (heavy cavalry)
   type: Mechanized
-  rol: greu
-  cost: 200 Money, 150 energie, 600 Ammo
+  role: heavy
+  cost: 200 Money, 150 energy, 600 Ammo
   population: 6
   speed: 11
   carry: 50
@@ -203,15 +203,15 @@ Tank (cavalerie grea)
   defense vs Infantry: 200
   defense vs Mechanized: 80
   defense vs Range: 180
- 
+
 --------------------------------------------------------------------------------
 Siege
 --------------------------------------------------------------------------------
- 
-Missile launcher (berbec)
+
+Missile launcher (ram)
   type: Siege
-  rol: Siege zid
-  cost: 300 Money, 200 energie, 200 Ammo
+  role: Siege wall
+  cost: 300 Money, 200 energy, 200 Ammo
   population: 5
   speed: 30
   carry: 0
@@ -220,12 +220,12 @@ Missile launcher (berbec)
   defense vs Infantry: 20
   defense vs Mechanized: 50
   defense vs Range: 20
-  efect Siege: wallDamage 60
- 
-Drone (catapulta)
+  Siege effect: wallDamage 60
+
+Drone (catapult)
   type: Siege
-  rol: Siege cladiri
-  cost: 320 Money, 400 energie, 100 Ammo
+  role: Siege buildings
+  cost: 320 Money, 400 energy, 100 Ammo
   population: 8
   speed: 30
   carry: 0
@@ -234,37 +234,38 @@ Drone (catapulta)
   defense vs Infantry: 100
   defense vs Mechanized: 50
   defense vs Range: 100
-  efect Siege: wallDamage 15, buildingDamage 80
- 
+  Siege effect: wallDamage 15, buildingDamage 80
+
 --------------------------------------------------------------------------------
 Conquer
 --------------------------------------------------------------------------------
- 
-Governor (nobil)
+
+Governor (nobleman)
   type: Conquer
-  cost: 1000 Money, 500 energie, 500 Ammo
+  cost: 1000 Money, 500 energy, 500 Ammo
   population: 100
   speed: 18
   carry: 0
   baseRecruitmentTime: 3600 sec
   attack: 0
   defense: 0
-  specialEffect: scade stabilitatea economica cu 20-35%
-  condition: functioneaza DOAR daca orasul atacat nu are unitati in defense
+  specialEffect: lowers economic stability by 20-35%
+  condition: works ONLY if the attacked city has no defending units
 
 
 
 
 ================================================================================
-GHOST CITIES (orase fara owner)
+GHOST CITIES (cities with no owner)
 ================================================================================
 
-Orasele fantoma sunt orase neutre, fara proprietar, generate automat in jurul
-fiecarui oras nou fondat. Pentru fiecare jucator nou creat pe lume, se genereaza 3 Ghost city. Aceste orase se pot cuceri de catre alti jucatori
+Ghost cities are neutral, ownerless cities, generated automatically around each
+newly founded city. For every new player created in a world, 3 Ghost cities are
+generated. These cities can be conquered by other players.
 --------------------------------------------------------------------------------
-Sablon initial (la generare)
+Initial template (at generation)
 --------------------------------------------------------------------------------
-Cladiri:
+Buildings:
   Headquarters     Level 3
   Bank             Level 3
   Power plant      Level 3
@@ -275,239 +276,241 @@ Cladiri:
   Harbor           Level 0
   Air defense      Level 0
 
-Resurse: full (egal cu capacitatea Warehouse Level 3 = 1511 din fiecare).
+Resources: full (equal to the capacity of Warehouse Level 3 = 1511 of each).
 Loyalty: 100%.
-Unitati: niciuna (orasul fantoma nu are armata initiala).
+Units: none (the ghost city has no initial army).
 
 --------------------------------------------------------------------------------
-Productie de resurse
+Resource production
 --------------------------------------------------------------------------------
-Resursele cresc normal, dupa aceleasi formule ca orice alt oras (in functie de
-Level-urile Bank/Power plant/Weapons factory). Se cap-eaza la capacitatea
-Warehouse curent. Cand orasul e cucerit, jucatorul preia resursele la zi.
+Resources grow normally, following the same formulas as any other city (based on
+the Bank/Power plant/Weapons factory Levels). They are capped at the current
+Warehouse capacity. When the city is conquered, the player takes over the
+resources as of that moment.
 
 --------------------------------------------------------------------------------
-Auto-upgrade cladiri (cresterea pasiva)
+Building auto-upgrade (passive growth)
 --------------------------------------------------------------------------------
-La interval regulat, orasul fantoma alege RANDOM o cladire si ii urca Level-ul
-cu 1 (NU pune comenzi de constructie in coada, ci aplica direct Level+1):
+At a regular interval, the ghost city picks a RANDOM building and raises its
+Level by 1 (it does NOT enqueue build commands, it applies Level+1 directly):
 
-  - tick interval: la fiecare ~6h (de calibrat in functie de game speed)
-  - cladiri eligibile: TOATE cele 9 cladiri ale orasului — inclusiv Military
-    base si Air defense. Singura restrictie e ca orasul fantoma nu poate
-    recruta unitati (vezi sectiunea "Armata").
+  - tick interval: every ~6h (to be calibrated based on game speed)
+  - eligible buildings: ALL 9 buildings of the city — including Military
+    base and Air defense. The only restriction is that the ghost city cannot
+    recruit units (see the "Army" section).
       Headquarters, Bank, Power plant, Weapons factory, Housing, Warehouse,
       Military base, Harbor, Air defense
-  - selectie: random uniform peste cladirile eligibile in tick-ul curent
-  - respecta toate cerintele de HQ (ex. Harbor cere HQ Level 15, Military base
-    si Air defense cer HQ Level 5). O cladire blocata de HQ e exclusa din
-    pool-ul de selectie pentru tick-ul curent.
-  - GRATUIT: auto-upgrade-ul NU consuma resursele orasului fantoma. Motivul:
-    jucatorii vor farma in mod constant aceste orase, deci ele vor avea
-    rareori resurse suficiente; daca am cere costuri reale, cresterea pasiva
-    s-ar bloca de fapt si scopul (tinte tot mai grase) nu s-ar realiza.
-  - se opreste cand toate cladirile sunt la maxLevel
+  - selection: uniform random over the buildings eligible in the current tick
+  - respects all HQ requirements (e.g. Harbor requires HQ Level 15, Military base
+    and Air defense require HQ Level 5). A building blocked by HQ is excluded from
+    the selection pool for the current tick.
+  - FREE: the auto-upgrade does NOT consume the ghost city's resources. Reason:
+    players will constantly farm these cities, so they will rarely have enough
+    resources; if we charged real costs, the passive growth would effectively
+    stall and the goal (ever-fatter targets) would not be achieved.
+  - stops when all buildings are at maxLevel
 
-Efect: chiar daca nimeni nu il cucereste, orasul fantoma creste continuu in
-punctaj si in aparare (Air defense). Cu cat e lasat mai mult, cu atat devine
-o tinta mai grasa (mai multe puncte la cucerire) si mai greu de spart (bonus
-Air defense mare)
-
---------------------------------------------------------------------------------
-Armata (interzisa)
---------------------------------------------------------------------------------
-Orasul fantoma NU poate recruta unitati. Military base creste ca punctaj/Level,
-dar nu produce trupe. In consecinta:
-  - orasul fantoma nu trimite niciodata comenzi (attack, support, resources, spy)
-  - fiind fara unitati de aparare (decat daca e sprijinit de un jucator), orice Governor trimis pe fantoma ii reduce Loyalty cu 20-35% (regula standard de cucerire)
-  - dupa cucerire, cladirile raman la Level-urile lor curente, dar jucatorul
-    nou-proprietar incepe sa recruteze normal din Military base
+Effect: even if nobody conquers it, the ghost city keeps growing in score and in
+defense (Air defense). The longer it is left alone, the fatter a target it
+becomes (more points on conquest) and the harder it is to crack (big Air defense
+bonus).
 
 --------------------------------------------------------------------------------
-De calibrat
+Army (forbidden)
 --------------------------------------------------------------------------------
-  - intervalul de auto-upgrade (6h e doar punct de start; depinde de durata
-    medie a unei lumi si de game speed)
-  - daca auto-upgrade tine cont de game speed (probabil DA: tick = 6h / gameSpeed)
+The ghost city CANNOT recruit units. The Military base grows in score/Level, but
+produces no troops. As a consequence:
+  - the ghost city never sends commands (attack, support, resources, spy)
+  - having no defending units (unless supported by a player), any Governor sent
+    against the ghost reduces its Loyalty by 20-35% (the standard conquest rule)
+  - after conquest, the buildings stay at their current Levels, but the
+    new-owner player starts recruiting normally from the Military base
+
+--------------------------------------------------------------------------------
+To calibrate
+--------------------------------------------------------------------------------
+  - the auto-upgrade interval (6h is just a starting point; it depends on the
+    average duration of a world and on game speed)
+  - whether auto-upgrade accounts for game speed (probably YES: tick = 6h / gameSpeed)
 
 
 ================================================================================
 BUILDINGS CONFIG
 ================================================================================
- 
-Nota: costurile cresc exponential per Level (costGrowth ~1.22-1.28).
-Timpul de constructie creste exponential per Level (timeGrowth ~1.18-1.25).
-Valorile de mai jos sunt pentru nivelul 1 (baza).
- 
---------------------------------------------------------------------------------
-Headquarters (Cladire principala)
---------------------------------------------------------------------------------
-  Level maxim: 30
-  cost baza: 90 Money, 80 energie, 70 Ammo
-  timp baza: 60 sec
-  Level initial: 1
-  efect per Level:
-    - reduce timpul de constructie al tuturor cladirilor cu 2% per Level
-    - deblocheaza niveluri pentru celelalte cladiri si unitati
- 
 
-** Valorile de mai jos sunt cele din Triburile. Ele par hardcodate. Nu par sa urmeze o formula matematica
-
+Note: costs grow exponentially per Level (costGrowth ~1.22-1.28).
+Build time grows exponentially per Level (timeGrowth ~1.18-1.25).
+The values below are for level 1 (base).
 
 --------------------------------------------------------------------------------
-Warehouse (Magazie)
+Headquarters (Main building)
 --------------------------------------------------------------------------------
-  Level maxim: 30
-  cost baza: 60 Money, 50 energie, 40 Ammo
-  timp baza: 50 sec
-  Level initial: 1
-  efect per Level:
-    - capacitate depozitare per resursa:
-      niv.1=1000,   niv.2=1229,   niv.3=1511,   niv.4=1858,   niv.5=2285
-      niv.6=2809,   niv.7=3454,   niv.8=4247,   niv.9=5221,   niv.10=6420
-      niv.11=7893,  niv.12=9704,  niv.13=11932, niv.14=14670, niv.15=18037
-      niv.16=22176, niv.17=27265, niv.18=33523, niv.19=41216, niv.20=50675
-      niv.21=62305, niv.22=76603, niv.23=94183, niv.24=115798,niv.25=142373
-      niv.26=175047,niv.27=215219,niv.28=264610,niv.29=325337,niv.30=400000
---------------------------------------------------------------------------------
-Bank (Taietori de lemne)
---------------------------------------------------------------------------------
-  Level maxim: 30
-  cost baza: 50 Money, 60 energie, 30 Ammo
-  timp baza: 45 sec
-  Level initial: 1
-  efect per Level:
-    - productie Money per ora (valorile din Triburile):
-      niv.1=30,   niv.2=34,   niv.3=40,   niv.4=47,   niv.5=54
-      niv.6=63,   niv.7=74,   niv.8=86,   niv.9=100,  niv.10=116
-      niv.11=135, niv.12=158, niv.13=183, niv.14=213, niv.15=248
-      niv.16=289, niv.17=336, niv.18=391, niv.19=455, niv.20=529
-      niv.21=616, niv.22=716, niv.23=833, niv.24=969, niv.25=1127
-      niv.26=1311,niv.27=1525,niv.28=1774,niv.29=2063,niv.30=2400
-
---------------------------------------------------------------------------------
-Power plant (Mina de argila)
---------------------------------------------------------------------------------
-  Level maxim: 30
-  cost baza: 55 Money, 35 energie, 25 Ammo
-  timp baza: 45 sec
-  Level initial: 1
-  efect per Level:
-    - productie energie per ora (valorile din Triburile):
-      niv.1=30,   niv.2=34,   niv.3=40,   niv.4=47,   niv.5=54
-      niv.6=63,   niv.7=74,   niv.8=86,   niv.9=100,  niv.10=116
-      niv.11=135, niv.12=158, niv.13=183, niv.14=213, niv.15=248
-      niv.16=289, niv.17=336, niv.18=391, niv.19=455, niv.20=529
-      niv.21=616, niv.22=716, niv.23=833, niv.24=969, niv.25=1127
-      niv.26=1311,niv.27=1525,niv.28=1774,niv.29=2063,niv.30=2400
-
---------------------------------------------------------------------------------
-Weapons factory (Mina de fier)
---------------------------------------------------------------------------------
-  Level maxim: 30
-  cost baza: 65 Money, 55 energie, 35 Ammo
-  timp baza: 55 sec
-  Level initial: 1
-  efect per Level:
-    - productie Ammo per ora (valorile din Triburile):
-      niv.1=30,   niv.2=34,   niv.3=40,   niv.4=47,   niv.5=54
-      niv.6=63,   niv.7=74,   niv.8=86,   niv.9=100,  niv.10=116
-      niv.11=135, niv.12=158, niv.13=183, niv.14=213, niv.15=248
-      niv.16=289, niv.17=336, niv.18=391, niv.19=455, niv.20=529
-      niv.21=616, niv.22=716, niv.23=833, niv.24=969, niv.25=1127
-      niv.26=1311,niv.27=1525,niv.28=1774,niv.29=2063,niv.30=2400
-
---------------------------------------------------------------------------------
-Housing (Ferma)
---------------------------------------------------------------------------------
-  Level maxim: 30
-  cost baza: 45 Money, 40 energie, 20 Ammo
-  timp baza: 50 sec
-  Level initial: 1
-  efect per Level:
-    - population maxima (valorile din Triburile):
-      niv.1=240,  niv.2=281,  niv.3=329,  niv.4=386,  niv.5=452
-      niv.6=530,  niv.7=621,  niv.8=728,  niv.9=854,  niv.10=1001
-      niv.11=1173,niv.12=1375,niv.13=1611,niv.14=1889,niv.15=2214
-      niv.16=2594,niv.17=3041,niv.18=3564,niv.19=4177,niv.20=4895
-      niv.21=5738,niv.22=6724,niv.23=7881,niv.24=9237,niv.25=10848
-      niv.26=12688,niv.27=14870,niv.28=17428,niv.29=20426,niv.30=23939
-
---------------------------------------------------------------------------------
-Harbor (Targ)
---------------------------------------------------------------------------------
-  Level maxim: 25
-  cost baza: 80 Money, 60 energie, 45 Ammo
-  timp baza: 70 sec
-  Level initial: 0 (blocat pana la Headquarters
-   niv. 15)
-  efect per Level:
-    - capacitate carry resurse per trimitere (factor 1.25):
-      niv.1=200,   niv.2=250,   niv.3=312,   niv.4=390,   niv.5=488
-      niv.6=610,   niv.7=762,   niv.8=953,   niv.9=1192,  niv.10=1490
-      niv.11=1862, niv.12=2328, niv.13=2910, niv.14=3637, niv.15=4547
-      niv.16=5684, niv.17=7105, niv.18=8881, niv.19=11102,niv.20=13877
-      niv.21=17347,niv.22=21684,niv.23=27105,niv.24=33881,niv.25=45000
---------------------------------------------------------------------------------
-Military base (Cazarma + Grajd)
---------------------------------------------------------------------------------
-  Level maxim: 25
-  cost baza: 85 Money, 75 energie, 55 Ammo
-  timp baza: 80 sec
-  Level initial: 0 (blocat pana la Headquarters
-   niv. 5)
-  efect per Level:
-    - timp recrutare = timp_baza_unitate * speed_factor(Level)
-      niv.1=63%,  niv.2=59%,  niv.3=56%,  niv.4=53%,  niv.5=50%
-      niv.6=47%,  niv.7=44%,  niv.8=42%,  niv.9=39%,  niv.10=37%
-      niv.11=35%, niv.12=33%, niv.13=31%, niv.14=29%, niv.15=28%
-      niv.16=26%, niv.17=25%, niv.18=23%, niv.19=22%, niv.20=21%
-      niv.21=20%, niv.22=19%, niv.23=17%, niv.24=16%, niv.25=16%
-    - exemplu: Light infantry (880 sec) la Military base niv.10 = 880 * 0.37 = 325 sec
-
---------------------------------------------------------------------------------
-Air defense (Zid)
---------------------------------------------------------------------------------
-  Level maxim: 20
-  cost baza: 120 Money, 140 energie, 90 Ammo
-  timp baza: 120 sec
-  Level initial: 0 (blocat pana la Headquarters
-   niv. 5)
-  nota: NU apare in imaginea orasului. Are propriul card/componenta separat
-  efect per Level:
-    - bonus defense trupe defensive (valorile din Triburile):
-      niv.1=4%,   niv.2=8%,   niv.3=12%,  niv.4=16%,  niv.5=20%
-      niv.6=24%,  niv.7=29%,  niv.8=34%,  niv.9=39%,  niv.10=44%
-      niv.11=49%, niv.12=55%, niv.13=60%, niv.14=66%, niv.15=72%
-      niv.16=79%, niv.17=85%, niv.18=92%, niv.19=99%, niv.20=107%
+  Max Level: 30
+  base cost: 90 Money, 80 energy, 70 Ammo
+  base time: 60 sec
+  initial Level: 1
+  effect per Level:
+    - reduces the build time of all buildings by 2% per Level
+    - unlocks levels for the other buildings and units
 
 
-Un jucator poate da oricate comenzi de constructie si recrutare, atata timp cat are suficiente resurse si populatie. Comenzile se pun in asteptare, rulandu-se una dupa alta, NU in paralel.
-
-Exista optiune de anulare recrutare si comanda de constructie, dar acest lucru va face ca doar 75% din resurse sa se intoarca in depozit, deci 25% se pierd
+** The values below are the ones from Tribal Wars. They appear hardcoded. They do not seem to follow a mathematical formula.
 
 
-Va exista si un Simulator de batalii, dar nu ca cladire, ci jos in footer, la fel ca harta, rapoarte, mesaje etc
-                                                              
-                                                        
-Pentru a spiona se trimis hackeri. Aceasta este o comanda diferita de cea de attack numita spy. 
-Mecanismul e hacker vs hacker. Un hacker ignora unitatile de aparare din orasul tinta. Batalia e hacker vs hacker.
-Daca orasul tinta are 100 hackers, e nevoie de cel putin 101 hackers pentru a se putea spiona orasul. Din cei 101 hackers atacatori, va supravietui 1. Asadar e nevoie de cel putin un hacker in viata pentru a putea spiona cu succes. Hackerii din aparare NU vor muri.                              
-                                                                              
+--------------------------------------------------------------------------------
+Warehouse
+--------------------------------------------------------------------------------
+  Max Level: 30
+  base cost: 60 Money, 50 energy, 40 Ammo
+  base time: 50 sec
+  initial Level: 1
+  effect per Level:
+    - storage capacity per resource:
+      lv.1=1000,   lv.2=1229,   lv.3=1511,   lv.4=1858,   lv.5=2285
+      lv.6=2809,   lv.7=3454,   lv.8=4247,   lv.9=5221,   lv.10=6420
+      lv.11=7893,  lv.12=9704,  lv.13=11932, lv.14=14670, lv.15=18037
+      lv.16=22176, lv.17=27265, lv.18=33523, lv.19=41216, lv.20=50675
+      lv.21=62305, lv.22=76603, lv.23=94183, lv.24=115798,lv.25=142373
+      lv.26=175047,lv.27=215219,lv.28=264610,lv.29=325337,lv.30=400000
+--------------------------------------------------------------------------------
+Bank (Timber camp)
+--------------------------------------------------------------------------------
+  Max Level: 30
+  base cost: 50 Money, 60 energy, 30 Ammo
+  base time: 45 sec
+  initial Level: 1
+  effect per Level:
+    - Money production per hour (values from Tribal Wars):
+      lv.1=30,   lv.2=34,   lv.3=40,   lv.4=47,   lv.5=54
+      lv.6=63,   lv.7=74,   lv.8=86,   lv.9=100,  lv.10=116
+      lv.11=135, lv.12=158, lv.13=183, lv.14=213, lv.15=248
+      lv.16=289, lv.17=336, lv.18=391, lv.19=455, lv.20=529
+      lv.21=616, lv.22=716, lv.23=833, lv.24=969, lv.25=1127
+      lv.26=1311,lv.27=1525,lv.28=1774,lv.29=2063,lv.30=2400
+
+--------------------------------------------------------------------------------
+Power plant (Clay pit)
+--------------------------------------------------------------------------------
+  Max Level: 30
+  base cost: 55 Money, 35 energy, 25 Ammo
+  base time: 45 sec
+  initial Level: 1
+  effect per Level:
+    - energy production per hour (values from Tribal Wars):
+      lv.1=30,   lv.2=34,   lv.3=40,   lv.4=47,   lv.5=54
+      lv.6=63,   lv.7=74,   lv.8=86,   lv.9=100,  lv.10=116
+      lv.11=135, lv.12=158, lv.13=183, lv.14=213, lv.15=248
+      lv.16=289, lv.17=336, lv.18=391, lv.19=455, lv.20=529
+      lv.21=616, lv.22=716, lv.23=833, lv.24=969, lv.25=1127
+      lv.26=1311,lv.27=1525,lv.28=1774,lv.29=2063,lv.30=2400
+
+--------------------------------------------------------------------------------
+Weapons factory (Iron mine)
+--------------------------------------------------------------------------------
+  Max Level: 30
+  base cost: 65 Money, 55 energy, 35 Ammo
+  base time: 55 sec
+  initial Level: 1
+  effect per Level:
+    - Ammo production per hour (values from Tribal Wars):
+      lv.1=30,   lv.2=34,   lv.3=40,   lv.4=47,   lv.5=54
+      lv.6=63,   lv.7=74,   lv.8=86,   lv.9=100,  lv.10=116
+      lv.11=135, lv.12=158, lv.13=183, lv.14=213, lv.15=248
+      lv.16=289, lv.17=336, lv.18=391, lv.19=455, lv.20=529
+      lv.21=616, lv.22=716, lv.23=833, lv.24=969, lv.25=1127
+      lv.26=1311,lv.27=1525,lv.28=1774,lv.29=2063,lv.30=2400
+
+--------------------------------------------------------------------------------
+Housing (Farm)
+--------------------------------------------------------------------------------
+  Max Level: 30
+  base cost: 45 Money, 40 energy, 20 Ammo
+  base time: 50 sec
+  initial Level: 1
+  effect per Level:
+    - max population (values from Tribal Wars):
+      lv.1=240,  lv.2=281,  lv.3=329,  lv.4=386,  lv.5=452
+      lv.6=530,  lv.7=621,  lv.8=728,  lv.9=854,  lv.10=1001
+      lv.11=1173,lv.12=1375,lv.13=1611,lv.14=1889,lv.15=2214
+      lv.16=2594,lv.17=3041,lv.18=3564,lv.19=4177,lv.20=4895
+      lv.21=5738,lv.22=6724,lv.23=7881,lv.24=9237,lv.25=10848
+      lv.26=12688,lv.27=14870,lv.28=17428,lv.29=20426,lv.30=23939
+
+--------------------------------------------------------------------------------
+Harbor (Market)
+--------------------------------------------------------------------------------
+  Max Level: 25
+  base cost: 80 Money, 60 energy, 45 Ammo
+  base time: 70 sec
+  initial Level: 0 (locked until Headquarters
+   lv. 15)
+  effect per Level:
+    - resource carry capacity per shipment (factor 1.25):
+      lv.1=200,   lv.2=250,   lv.3=312,   lv.4=390,   lv.5=488
+      lv.6=610,   lv.7=762,   lv.8=953,   lv.9=1192,  lv.10=1490
+      lv.11=1862, lv.12=2328, lv.13=2910, lv.14=3637, lv.15=4547
+      lv.16=5684, lv.17=7105, lv.18=8881, lv.19=11102,lv.20=13877
+      lv.21=17347,lv.22=21684,lv.23=27105,lv.24=33881,lv.25=45000
+--------------------------------------------------------------------------------
+Military base (Barracks + Stable)
+--------------------------------------------------------------------------------
+  Max Level: 25
+  base cost: 85 Money, 75 energy, 55 Ammo
+  base time: 80 sec
+  initial Level: 0 (locked until Headquarters
+   lv. 5)
+  effect per Level:
+    - recruitment time = unit_base_time * speed_factor(Level)
+      lv.1=63%,  lv.2=59%,  lv.3=56%,  lv.4=53%,  lv.5=50%
+      lv.6=47%,  lv.7=44%,  lv.8=42%,  lv.9=39%,  lv.10=37%
+      lv.11=35%, lv.12=33%, lv.13=31%, lv.14=29%, lv.15=28%
+      lv.16=26%, lv.17=25%, lv.18=23%, lv.19=22%, lv.20=21%
+      lv.21=20%, lv.22=19%, lv.23=17%, lv.24=16%, lv.25=16%
+    - example: Light infantry (880 sec) at Military base lv.10 = 880 * 0.37 = 325 sec
+
+--------------------------------------------------------------------------------
+Air defense (Wall)
+--------------------------------------------------------------------------------
+  Max Level: 20
+  base cost: 120 Money, 140 energy, 90 Ammo
+  base time: 120 sec
+  initial Level: 0 (locked until Headquarters
+   lv. 5)
+  note: does NOT appear in the city image. It has its own separate card/component
+  effect per Level:
+    - defense bonus for defensive troops (values from Tribal Wars):
+      lv.1=4%,   lv.2=8%,   lv.3=12%,  lv.4=16%,  lv.5=20%
+      lv.6=24%,  lv.7=29%,  lv.8=34%,  lv.9=39%,  lv.10=44%
+      lv.11=49%, lv.12=55%, lv.13=60%, lv.14=66%, lv.15=72%
+      lv.16=79%, lv.17=85%, lv.18=92%, lv.19=99%, lv.20=107%
+
+
+A player can issue any number of build and recruitment commands, as long as they have enough resources and population. Commands are queued and run one after another, NOT in parallel.
+
+There is an option to cancel a recruitment and a build command, but doing so returns only 75% of the resources to the warehouse, so 25% is lost.
+
+
+There will also be a Battle Simulator, but not as a building — instead at the bottom in the footer, like the map, reports, messages, etc.
+
+
+To spy, you send hackers. This is a command different from attack, called spy.
+The mechanic is hacker vs hacker. A hacker ignores the defending units in the target city. The battle is hacker vs hacker.
+If the target city has 100 hackers, you need at least 101 hackers to be able to spy on the city. Of the 101 attacking hackers, 1 will survive. So you need at least one surviving hacker to spy successfully. The defending hackers will NOT die.
+
 ================================================================================
-SCORING (puncte oras + puncte cont)
+SCORING (city points + account points)
 ================================================================================
 
-Valorile sunt PRELUATE direct din tabelul Triburile (incremental per Level).
-points_per_level[i] = puncte adaugate cand cladirea trece de la Level i-1 la i.
-total_cladire(L) = sum(points_per_level[1..L])
-total_oras       = sum(total_cladire pentru fiecare cladire din oras)
-total_cont       = sum(total_oras pentru fiecare oras detinut)
+The values are TAKEN directly from the Tribal Wars table (incremental per Level).
+points_per_level[i] = points added when the building goes from Level i-1 to i.
+total_building(L) = sum(points_per_level[1..L])
+total_city       = sum(total_building for each building in the city)
+total_account    = sum(total_city for each city owned)
 
-Punctajul se recalculeaza la finalizarea oricarei comenzi de constructie sau la
-cucerirea/pierderea unui oras. Recrutarea de unitati NU da puncte (doar
-cladirile). Anularea unui upgrade nu afecteaza punctajul (Level-ul nu s-a
-schimbat). Clasament jucatori (descrescator dupa total_cont) 
+The score is recalculated when any build command finishes or when a city is
+conquered/lost. Recruiting units does NOT give points (only buildings do).
+Cancelling an upgrade does not affect the score (the Level did not change).
+Player ranking (descending by total_account)
 --------------------------------------------------------------------------------
 Headquarters (max 30)
 --------------------------------------------------------------------------------
@@ -517,8 +520,8 @@ points_per_level (L1..L30):
   64, 77, 92, 110, 133, 159, 191, 229, 274, 330
 
 --------------------------------------------------------------------------------
-Bank / Power plant / Weapons factory (max 30, partajeaza aceleasi valori)
-mapate pe Timber camp / Clay pit / Iron mine din Triburile
+Bank / Power plant / Weapons factory (max 30, share the same values)
+mapped onto Timber camp / Clay pit / Iron mine from Tribal Wars
 --------------------------------------------------------------------------------
 points_per_level (L1..L30):
   6, 1, 2, 1, 2, 3, 3, 3, 5, 5,
@@ -526,7 +529,7 @@ points_per_level (L1..L30):
   38, 46, 55, 66, 80, 95, 115, 137, 165, 198
 
 --------------------------------------------------------------------------------
-Warehouse (max 30) - mapata pe Warehouse din Triburile
+Warehouse (max 30) - mapped onto Warehouse from Tribal Wars
 --------------------------------------------------------------------------------
 points_per_level (L1..L30):
   6, 1, 2, 1, 2, 3, 3, 3, 5, 5,
@@ -534,7 +537,7 @@ points_per_level (L1..L30):
   38, 46, 55, 66, 80, 95, 115, 137, 165, 198
 
 --------------------------------------------------------------------------------
-Housing (max 30) - mapata pe Farm din Triburile
+Housing (max 30) - mapped onto Farm from Tribal Wars
 --------------------------------------------------------------------------------
 points_per_level (L1..L30):
   5, 1, 1, 2, 1, 2, 3, 3, 3, 5,
@@ -542,7 +545,7 @@ points_per_level (L1..L30):
   32, 38, 46, 55, 66, 80, 95, 115, 137, 165
 
 --------------------------------------------------------------------------------
-Military base (max 25) - mapata pe Barracks din Triburile
+Military base (max 25) - mapped onto Barracks from Tribal Wars
 --------------------------------------------------------------------------------
 points_per_level (L1..L25):
   16, 3, 4, 5, 5, 7, 8, 9, 12, 14, 16,
@@ -550,7 +553,7 @@ points_per_level (L1..L25):
   122, 147, 175, 210, 212
 
 --------------------------------------------------------------------------------
-Harbor (max 25) - mapata pe Market din Triburile
+Harbor (max 25) - mapped onto Market from Tribal Wars
 --------------------------------------------------------------------------------
 points_per_level (L1..L25):
   10, 2, 2, 3, 4, 4, 5, 6, 7, 9,
@@ -558,36 +561,36 @@ points_per_level (L1..L25):
   64, 77, 92, 110, 133
 
 --------------------------------------------------------------------------------
-Air defense (max 20) - mapata pe Wall din Triburile
+Air defense (max 20) - mapped onto Wall from Tribal Wars
 --------------------------------------------------------------------------------
 points_per_level (L1..L20):
   8, 2, 2, 2, 3, 3, 4, 5, 5, 7,
   9, 12, 12, 15, 20, 20, 29, 29, 36, 43
 
 --------------------------------------------------------------------------------
-Note de implementare
+Implementation notes
 --------------------------------------------------------------------------------
-- Valorile mai sus sunt transcrise dintr-un screenshot al wiki-ului Triburile.
-  Daca apar discrepante in joc, valorile cele mai sigure sunt:
-    Headquarters    cumulativ L30 = 1982
-    Resurse/Wh      cumulativ L30 = 924
-    Farm/Housing    cumulativ L30 = 891
-    Barracks/MilB.  cumulativ L25 ≈ 1481
-    Market/Harbor   cumulativ L25 ≈ 793
-    Wall/AirDef     cumulativ L20 ≈ 266
-- Pentru o implementare curata, valorile se stocheaza intr-un singur loc
-  (ex. server/src/config/buildingPoints.ts) ca array per cladire si nu se
-  duplica in cod.
+- The values above are transcribed from a screenshot of the Tribal Wars wiki.
+  If discrepancies show up in game, the safest values are:
+    Headquarters    cumulative L30 = 1982
+    Resources/Wh    cumulative L30 = 924
+    Farm/Housing    cumulative L30 = 891
+    Barracks/MilB.  cumulative L25 ≈ 1481
+    Market/Harbor   cumulative L25 ≈ 793
+    Wall/AirDef     cumulative L20 ≈ 266
+- For a clean implementation, the values are stored in a single place
+  (e.g. server/src/config/buildingPoints.ts) as an array per building and are not
+  duplicated in code.
 
 
 ================================================================================
 SPY
 ================================================================================
 
-Hacker (Spion)
+Hacker (Spy)
   type: Spy
-  rol: spionaj (hacker vs hacker, ignora unitatile de aparare)
-  cost: 50 Money, 50 energie, 20 Ammo
+  role: espionage (hacker vs hacker, ignores defending units)
+  cost: 50 Money, 50 energy, 20 Ammo
   population: 2
   speed: 9
   carry: 0
@@ -599,222 +602,234 @@ Hacker (Spion)
 
 
 ================================================================================
-HARTA SI COORDONATE
+MAP AND COORDINATES
 ================================================================================
 
-Lumea e o grila 100x100 (configurabila). Fiecare oras ocupa exact o celula,
-identificata printr-o pereche (x, y). Coordonatele sunt cheia primara "reala"
-a unui oras in joc: numele pot sa se repete intre jucatori, dar (x, y) e unic.
-De aceea scripturile de dezvoltare (vezi server/scripts/dev-cheats.ts) iau ca
-argument "x,y", nu nume — numele "ORAS2" poate exista la doi jucatori diferiti.
+The world is a 100x100 grid (configurable). Each city occupies exactly one cell,
+identified by an (x, y) pair. The coordinates are the "real" primary key of a
+city in the game: names can repeat across players, but (x, y) is unique.
+That is why the development scripts (see server/scripts/dev-cheats.ts) take "x,y"
+as an argument, not a name — the name "ORAS2" can exist for two different players.
 
-Harta client-side (MapPage) deseneaza gridul ca un repeating-linear-gradient
-ca sa evite zeci de mii de noduri DOM, si randeaza fiecare oras ca un sprite
-ales in functie de punctaj (0-299, 300-999, 1000-2999, 3000-8999, 9000+).
-Panoul de actiune care apare la click (CityActionPanel) e acelasi indiferent
-daca orasul e al tau, al aliantei (TODO), al unui alt jucator sau fantoma —
-doar butoanele si etichetele se schimba in functie de relatie.
+The client-side map (MapPage) draws the grid as a repeating-linear-gradient to
+avoid tens of thousands of DOM nodes, and renders each city as a sprite chosen
+based on its score (0-299, 300-999, 1000-2999, 3000-8999, 9000+).
+The action panel that appears on click (CityActionPanel) is the same regardless
+of whether the city is yours, the alliance's (TODO), another player's, or a ghost —
+only the buttons and labels change depending on the relationship.
 
 --------------------------------------------------------------------------------
-Distanta si timpi de deplasare
+Distance and travel times
 --------------------------------------------------------------------------------
 
-Distanta dintre doua orase se masoara euclidian, in "campuri":
+The distance between two cities is measured by Euclidean distance, in "fields":
 
     distance = sqrt((x2 - x1)^2 + (y2 - y1)^2)
 
-Pentru comenzi militare (ATTACK, SUPPORT, SPY), timpul de deplasare se
-calculeaza exact ca in Triburile: se ia unitatea cea mai lenta din pachet,
-se multiplica speed-ul ei (exprimat in minute pe camp) cu distanta si cu 60
-(ca sa obtinem secunde), apoi se imparte la GAME_SPEED:
+For military commands (ATTACK, SUPPORT, SPY), travel time is computed exactly as
+in Tribal Wars: take the slowest unit in the package, multiply its speed
+(expressed in minutes per field) by the distance and by 60 (to get seconds),
+then divide by GAME_SPEED:
 
     travelSec = distance * slowestSpeedMinPerField * 60 / gameSpeed
 
-Prin urmare, un pachet cu Tank (speed 11) si Light infantry (speed 18) se
-misca in ritmul Light infantry. Important: la intoarcere, timpul se recalculeaza
-pe baza supravietuitorilor — daca doar tank-urile au scapat, drumul inapoi
-devine mai scurt. Analog, Hacker-ii au propria lor viteza (9 min/camp), asa ca
-o comanda SPY nu e constransa de restul armatei.
+Therefore, a package with a Tank (speed 11) and Light infantry (speed 18) moves
+at the pace of the Light infantry. Important: on the way back, the time is
+recomputed based on the survivors — if only the tanks made it out, the trip home
+becomes shorter. Likewise, Hackers have their own speed (9 min/field), so a SPY
+command is not constrained by the rest of the army.
 
-Pentru RESOURCES (prin HARBOR) avem o constanta globala de 2 minute pe camp
-(RESOURCE_TRAVEL_MIN_PER_FIELD): negustorii nu depind de unitatile din oras si
-trebuie sa fie rezonabil de rapizi, altfel logistica intre orase proprii devine
-prohibitiva.
+For RESOURCES (via HARBOR) we have a global constant of 2 minutes per field
+(RESOURCE_TRAVEL_MIN_PER_FIELD): merchants do not depend on the city's units and
+must be reasonably fast, otherwise the logistics between your own cities become
+prohibitive.
 
-Toate aceste formule traiesc in shared/gameConfig.ts (getFieldDistance,
-getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec) ca sa nu
-existe drift intre client si server — clientul le foloseste pentru ETA-uri de
-preview, serverul pentru delay-ul real al job-urilor BullMQ.
-
-
-================================================================================
-CUCERIREA UNUI ORAS
-================================================================================
-
-Un Governor nu cucereste singur — el doar reduce loyalty-ul cand pachetul lui
-curata toata apararea. Fiecare Governor supravietuitor scade loyalty cu 20-35%
-(roll random per Governor). Cand loyalty ajunge la 0 sau mai jos, se intampla
-urmatoarele, atomic, in aceeasi tranzactie:
-
-  1) Un Governor e consumat din pachet (restul raman).
-  2) Loyalty-ul se reseteaza la 100.
-  3) ownerId al orasului se schimba in jucatorul atacator.
-  4) Toate comenzile SUPPORT "ARRIVED" de la alti jucatori care stationau in
-     oras sunt "displaced" inapoi spre casa: fiecare comanda isi recalculeaza
-     timpul de drum pe baza propriei distante si propriei unitati celei mai
-     lente, apoi e re-programata ca job de intoarcere. Asta e important: nu
-     dispar si nu raman in oras sub noul proprietar.
-  5) Supravietuitorii atacatorului (mai putin Governor-ul consumat) NU devin
-     unitati ale noului oras. In schimb, se creeaza o comanda SUPPORT cu
-     status "ARRIVED" de la orasul atacator catre orasul nou cucerit.
-     Flag-urile reportHidden* sunt ambele true ca sa nu genereze raport
-     redundant de "support arrived".
-
-De ce garnizoana e SUPPORT si nu "trupe pe oras"?
-
-  - ele trebuie sa contribuie la aparare daca cineva contraataca imediat
-    (logica de defense trateaza SUPPORT stationat ca defender),
-  - dar noul proprietar NU trebuie sa le poata folosi ca si cum ar fi propriile
-    trupe: nu trebuie sa le poata trimite la attack, nu trebuie sa apara in
-    listele de recrutare/total,
-  - atacatorul trebuie sa le poata retrage cu mecanismul standard de withdraw,
-  - daca un alt atacator curata apararea (inclusiv garnizoana asta), comanda
-    dispare natural prin acelasi code path ca orice alt SUPPORT pierdut.
-
-Re-folosind infrastructura SUPPORT "ARRIVED" obtinem gratis toate aceste
-comportamente fara duplicare de logica.
-
---------------------------------------------------------------------------------
-Governor deposit (contor per cont)
---------------------------------------------------------------------------------
-
-Contorul de Governori e per cont, nu per oras. Al N-lea Governor produs pe
-cont costa la fel indiferent de unde a fost "finalizat", iar costul creste
-dupa formula din sectiunea de mai sus (×1.5 pana la N=5, apoi ×2 de la N=6).
-
-Recrutarea fizica se face in trei pasi:
-
-  1) Jucatorul depune resurse (Money, Energy, Ammo) din orice oras propriu in
-     cele trei bare de progres partajate pe cont. POST /api/governor/deposit
-     scade resursele din orasul sursa si urca bara corespunzatoare.
-  2) Depunerile pot fi partiale si pot veni din orase diferite — e util cand
-     un singur oras nu are suficient dintr-o resursa, dar combinand doua da.
-  3) Cand toate cele 3 bare sunt pline, jucatorul apasa "Recruit governor".
-     POST /api/governor/recruit creeaza unitatea GOVERNOR in orasul din care
-     s-a facut apelul (implicit: orasul in care era activ clientul), incrementeaza
-     contorul producedCount si reseteaza deposit-ul la zero. Costul urmatorului
-     Governor devine automat cost(N+1).
-
-Governorii pierduti in atacuri esuate raman numarati in producedCount — nu se
-decrementeaza. Asta e o decizie de design: vrem ca presiunea economica sa
-creasca strict monoton, ca sa nu poti "reseta" pretul prin auto-sabotaj.
+All these formulas live in shared/gameConfig.ts (getFieldDistance,
+getSlowestUnitSpeed, getUnitTravelTimeSec, getResourceTravelTimeSec) so there is
+no drift between client and server — the client uses them for preview ETAs, the
+server for the real BullMQ job delay.
 
 
 ================================================================================
-MULTIPLE ORASE PE CONT
+CONQUERING A CITY
 ================================================================================
 
-Un jucator poate detine oricate orase — orasul de start plus orice fantoma sau
-oras adversar cucerit cu un Governor. Clientul are in orice moment un singur
-oras "activ": toate call-urile de tipul GET /api/cities/mine, recrutari,
-upgrade-uri de cladiri si comenzi sunt scoped pe orasul activ.
+A Governor does not conquer on its own — it only reduces loyalty when its package
+clears all the defense. Each surviving Governor lowers loyalty by 20-35%
+(random roll per Governor). When loyalty reaches 0 or below, the following
+happens, atomically, in the same transaction:
 
-Persistenta si sincronizare:
+  1) One Governor is consumed from the package (the rest remain).
+  2) Loyalty resets to 100.
+  3) The city's ownerId changes to the attacking player.
+  4) All "ARRIVED" SUPPORT commands from other players that were stationed in the
+     city are "displaced" back home: each command recomputes its travel time
+     based on its own distance and its own slowest unit, then is re-scheduled as
+     a return job. This is important: they do not disappear and do not stay in the
+     city under the new owner.
+  5) The attacker's survivors (minus the consumed Governor) do NOT become units of
+     the new city. Instead, a SUPPORT command with status "ARRIVED" is created
+     from the attacker's city to the newly conquered city.
+     The reportHidden* flags are both true so as not to generate a redundant
+     "support arrived" report.
 
-  - activeCityId e salvat in localStorage (cheia "activeCityId") si in
-    acelasi timp oglindit in URL ca ?cityId=... Un refresh pastreaza aceeasi
-    selectie, si o navigatie prin link direct stie de la inceput ce oras sa
-    incarce (nu mai clipeste orasul default).
-  - CityPage foloseste urlCityId cu fallback la localStorage, si la fiecare
-    fetch de oras updateaza localStorage-ul la id-ul real primit (nu la ce a
-    cerut) — asa ca orase sterse sau cucerite inapoi nu lasa referinte moarte.
-  - React Query foloseste cheia ["city", activeCityId ?? "default"] ca sa nu
-    amestece caches intre orase. La switch, invalidam prefixul ["city"] si
-    ["commands"] ca sa fortam refetch fara sa stergem si alte query-uri.
+Why is the garrison a SUPPORT and not "troops on the city"?
 
-Interfata:
+  - they must contribute to the defense if someone counterattacks immediately
+    (the defense logic treats stationed SUPPORT as a defender),
+  - but the new owner must NOT be able to use them as if they were their own
+    troops: they must not be able to send them to attack, they must not appear in
+    the recruitment/total lists,
+  - the attacker must be able to withdraw them with the standard withdraw
+    mechanism,
+  - if another attacker clears the defense (including this garrison), the command
+    disappears naturally through the same code path as any other lost SUPPORT.
 
-  - ResourceBar arata un dropdown "▾" langa numele orasului doar daca
-    ownedCities.length > 1. In dropdown apar toate orasele cu coordonate si un
-    marker (●) pe cel activ.
-  - Pe harta, click pe un oras propriu care NU e cel activ deschide panoul de
-    actiune cu doua butoane: "Select" (doar schimba orasul activ si ramai pe
-    harta) si "Enter" (te duce pe /city?cityId=...). Click pe orasul activ nu
-    arata niciun buton de switch — e deja activ.
-  - Tot pe panoul de actiune al unui oras propriu non-activ apar si butoanele
-    "Support" si "Resources", ca sa poti trimite sprijin intern sau sa muti
-    resurse intre orasele proprii. Orasul activ nu arata aceste butoane fata
-    de el insusi (A nu poate trimite la A).
-  - Redenumirea foloseste PATCH /api/cities/mine/name cu { name, cityId }.
-    BuildingsView paseaza explicit city.id al orasului curent vizionat — asa
-    se repara bug-ul in care redenumirea unui oras nou cucerit afecta, de
-    fapt, orasul default (primul din ownedCities ordonat dupa createdAt).
+By reusing the SUPPORT "ARRIVED" infrastructure we get all these behaviors for
+free without duplicating logic.
+
+--------------------------------------------------------------------------------
+Governor deposit (per-account counter)
+--------------------------------------------------------------------------------
+
+The Governor counter is per account, not per city. The Nth Governor produced on
+the account costs the same regardless of where it was "finalized", and the cost
+grows following the formula from the section above (×1.5 up to N=5, then ×2 from
+N=6).
+
+The physical recruitment is done in three steps:
+
+  1) The player deposits resources (Money, Energy, Ammo) from any of their own
+     cities into the three account-shared progress bars. POST /api/governor/deposit
+     subtracts the resources from the source city and raises the corresponding bar.
+  2) Deposits can be partial and can come from different cities — useful when a
+     single city doesn't have enough of one resource, but combining two does.
+  3) When all 3 bars are full, the player presses "Recruit governor".
+     POST /api/governor/recruit creates the GOVERNOR unit in the city from which
+     the call was made (by default: the city the client was active in), increments
+     the producedCount counter, and resets the deposit to zero. The cost of the
+     next Governor automatically becomes cost(N+1).
+
+Governors lost in failed attacks stay counted in producedCount — they are not
+decremented. This is a design decision: we want the economic pressure to grow
+strictly monotonically, so you can't "reset" the price through self-sabotage.
 
 
 ================================================================================
-COMENZI: WITHDRAW, CANCEL SI RAPOARTE
+MULTIPLE CITIES PER ACCOUNT
+================================================================================
+
+A player can own any number of cities — the starting city plus any ghost or enemy
+city conquered with a Governor. At any moment the client has a single "active"
+city: all calls of the type GET /api/cities/mine, recruitments, building upgrades
+and commands are scoped to the active city.
+
+Persistence and synchronization:
+
+  - activeCityId is saved in localStorage (the key "activeCityId") and at the
+    same time mirrored in the URL as ?cityId=... A refresh keeps the same
+    selection, and navigating through a direct link knows from the start which
+    city to load (the default city no longer flickers).
+  - CityPage uses urlCityId with a fallback to localStorage, and on every city
+    fetch updates localStorage to the real id received (not to what was
+    requested) — so deleted or re-conquered cities don't leave dead references.
+  - React Query uses the key ["city", activeCityId ?? "default"] so it doesn't
+    mix caches between cities. On switch, we invalidate the ["city"] and
+    ["commands"] prefixes to force a refetch without dropping other queries.
+
+Interface:
+
+  - ResourceBar shows a "▾" dropdown next to the city name only if
+    ownedCities.length > 1. The dropdown lists all cities with coordinates and a
+    marker (●) on the active one.
+  - On the map, clicking a city of yours that is NOT the active one opens the
+    action panel with two buttons: "Select" (only changes the active city and you
+    stay on the map) and "Enter" (takes you to /city?cityId=...). Clicking the
+    active city shows no switch button — it's already active.
+  - Also on the action panel of a non-active city of yours, the "Support" and
+    "Resources" buttons appear, so you can send internal support or move
+    resources between your own cities. The active city does not show these buttons
+    toward itself (A cannot send to A).
+  - Renaming uses PATCH /api/cities/mine/name with { name, cityId }.
+    BuildingsView explicitly passes the city.id of the currently viewed city —
+    this fixes the bug where renaming a newly conquered city actually affected the
+    default city (the first one in ownedCities ordered by createdAt).
+
+
+================================================================================
+COMMANDS: WITHDRAW, CANCEL AND REPORTS
 ================================================================================
 
 --------------------------------------------------------------------------------
-Withdraw (retragere SUPPORT stationat)
+Withdraw (pulling back stationed SUPPORT)
 --------------------------------------------------------------------------------
 
-Cand ai trimis SUPPORT care a ajuns in alt oras (status ARRIVED), poti cere
-retragerea: integral sau partial, per unitate. Retragerea calculeaza un timp
-de drum folosind distanta reala intre orasul-tinta si orasul-casa, cu viteza
-unitatii celei mai lente din pachetul retras. In modul "all", daca ai mai
-multe comenzi SUPPORT stationate in acelasi oras, fiecare comanda isi primeste
-propriul delay (nu se fac batch-uri care s-ar misca la viteza celui mai lent
-pachet combinat).
+When you have sent SUPPORT that arrived in another city (status ARRIVED), you can
+request the withdrawal: full or partial, per unit. The withdrawal computes a
+travel time using the real distance between the target city and the home city,
+with the speed of the slowest unit in the withdrawn package. In "all" mode, if
+you have multiple SUPPORT commands stationed in the same city, each command gets
+its own delay (no batching that would move at the speed of the slowest combined
+package).
 
 --------------------------------------------------------------------------------
-Anulari (building / recruitment / comenzi)
+Cancellations (building / recruitment / commands)
 --------------------------------------------------------------------------------
 
-  - Anularea unei comenzi de constructie sau de recrutare: 75% din resurse
-    sunt rambursate, 25% se pierd. Level-ul nu se schimba deci punctajul
-    ramane egal.
-  - Anularea unei comenzi de tip ATTACK/SUPPORT/RESOURCES/SPY aflata in
-    TRAVELING: disponibila doar in primele 5 minute de la plecare (fereastra
-    de regret pentru greseli evidente). Dupa cele 5 minute, comanda e
-    "committed" — altfel jucatorii ar putea sa o anuleze la vederea unui
-    contra-atac si ar anula intreaga dinamica. Dupa anulare, trupele se
-    intorc "simetric": cat timp au mers pana in punctul respectiv, atata mai
-    au pana acasa.
+  - Cancelling a build or recruitment command: 75% of the resources are refunded,
+    25% is lost. The Level does not change so the score stays the same.
+  - Cancelling an ATTACK/SUPPORT/RESOURCES/SPY command that is in TRAVELING:
+    available only in the first 5 minutes after departure (a regret window for
+    obvious mistakes). After those 5 minutes, the command is "committed" —
+    otherwise players could cancel it upon seeing a counterattack and would ruin
+    the whole dynamic. After cancellation, the troops return "symmetrically": as
+    much time as they traveled to that point, that's how much they have left to
+    get home.
 
 --------------------------------------------------------------------------------
-Rapoarte (soft-hide per utilizator)
+Reports (soft-hide per user)
 --------------------------------------------------------------------------------
 
-Nu salvam randuri duplicate pentru fiecare participant la o batalie — avem un
-singur rand Command cu rezultatul bataliei, si doua flag-uri boolean
-reportHiddenByAttacker si reportHiddenByDefender. Un utilizator care apasa
-"Hide report" seteaza doar flag-ul corespunzator rolului sau, iar celalalt
-participant vede in continuare raportul pana cand decide sa il ascunda si el.
+We don't save duplicate rows for each participant in a battle — we have a single
+Command row with the battle result, and two boolean flags
+reportHiddenByAttacker and reportHiddenByDefender. A user who presses
+"Hide report" sets only the flag corresponding to their role, and the other
+participant still sees the report until they decide to hide it too.
 
-Categorii:
-  - ATTACK (atacator + aparator, fiecare vede propriul raport)
-  - SPY (doar atacator; defender-ul nu afla ca s-a spionat)
-  - SUPPORT (confirmare de sosire pentru cel care a trimis, plus notificare
-    pentru cel care primeste)
-  - RESOURCES (confirmare de sosire, cantitati livrate)
+Categories:
+  - ATTACK (attacker + defender, each sees their own report)
+  - SPY (attacker only; the defender does not find out they were spied on)
+  - SUPPORT (arrival confirmation for the sender, plus a notification for the
+    receiver)
+  - RESOURCES (arrival confirmation, delivered amounts)
 
-Clientul tine un contor per-user de rapoarte necitite (cheia e user id-ul din
-JWT) ca sa nu se amestece starea intre conturi care au facut login pe acelasi
-browser.
+The client keeps a per-user counter of unread reports (the key is the user id
+from the JWT) so the state doesn't mix between accounts that logged in on the
+same browser.
 
 
-Din Map, cand se trimite o comanda, dupa ce se selecteaaza trupele/resursele, sa se arate si timpul de deplasare + inlocuirea numelor unitatilor cu imaginile aferente 
+From the Map, when a command is sent, after the troops/resources are selected,
+also show the travel time + replace the unit names with their corresponding
+images.
 
-La hover peste cladirile din city overview, pe langa numele cladirii sa se arate si nivelul in paranteza
+On hover over the buildings in the city overview, besides the building name also
+show the level in parentheses.
 
-Sistem de aliante. Un jucator nu poate ataca jucatori care se afla in aceeasi alianta cu el
+Alliance system. A player cannot attack players who are in the same alliance as
+them.
 
-Mesaje intre jucatori si in cadrul aliantei. Exista doua sectiuni, ca in forge of empires, cu mesaje la nivel de alianta pe care le vede toata lumea si o sectiune de mesaje private intre jucatori. Mesajele sa fie in timp real, fara refresh manual
+Messages between players and within the alliance. There are two sections, like in
+Forge of Empires, with alliance-level messages that everyone sees and a section
+of private messages between players. The messages should be real-time, with no
+manual refresh.
 
-Rapoartele se pot publica, adica se pot trimite altor jucatori fie prin mesaj privat, fie mesaj la nivel de alianta
+Reports can be published, i.e. they can be sent to other players either by
+private message or alliance-level message.
 
-Profil jucator. Acesta poate avea ca avatar o imagine 240x180 (sau cum e in triburile), plecand cu avatar default. Aici se vor afisa numarul de orase + listarea acestora, locul in clasament, numarul total de puncte, alianta din care face parte, descriere 
+Player profile. It can have a 240x180 image as an avatar (or whatever it is in
+Tribal Wars), starting with a default avatar. Here we show the number of cities +
+their listing, the rank in the leaderboard, the total number of points, the
+alliance they belong to, a description.
 
-Cand dai click pe o alianta, se poate vizualiza profilul ei: numar de jucatori, clasament, numar total de puncte, media punctelor pe jucator, numarul de orase, etc
-
+When you click an alliance, you can view its profile: number of players, ranking,
+total number of points, average points per player, number of cities, etc.
