@@ -2,7 +2,7 @@
 
 A multiplayer real-time strategy game inspired by browser-based strategy games like Tribal Wars (RO: Triburile). Each player starts with a single city and develops it over time by constructing buildings, gathering resources, and training military units. Players form alliances and wage conquest wars against each other.
 
-> **Note:** This is a portfolio project. This README intentionally includes detailed API endpoints, database schema, game mechanics, and architecture decisions that would normally live in internal documentation — the goal is to give reviewers a complete picture of the system without having to dig through the code.
+> **Note:** This README doubles as the project's reference documentation. It covers the full API surface, database schema, game mechanics, and architecture decisions so that contributors and self-hosters get a complete picture of the system without having to dig through the code. New to the project? See [CONTRIBUTING.md](CONTRIBUTING.md) to get set up.
 
 ## Table of contents
 
@@ -36,6 +36,8 @@ A multiplayer real-time strategy game inspired by browser-based strategy games l
 - [Deployment](#deployment)
 - [Development Approach](#development-approach)
 - [Architecture Decisions](#architecture-decisions)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
@@ -955,3 +957,13 @@ The `test.rest` file covers every endpoint in the project: auth, cities, buildin
 - **Mutex-based slot allocation**: City placement uses an in-memory `SlotAllocator` singleton with an async mutex. All slot reservations are serialized, eliminating coordinate collisions entirely. The occupied set is loaded once from DB at startup and updated in-memory on each allocation — zero DB queries for slot-finding.
 - **Shared battle calculator**: `battleCalc.ts` is imported by both the server (for real combat) and the client (for the battle simulator). One formula, zero drift.
 - **Soft-delete reports**: Each side of a battle can independently hide their report without affecting the other player's view.
+
+## Contributing
+
+Contributions are welcome — bug reports, balance tweaks, and new features alike.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, the checks your change
+needs to pass, and the pull request workflow.
+
+## License
+
+[BSD 3-Clause](LICENSE)
