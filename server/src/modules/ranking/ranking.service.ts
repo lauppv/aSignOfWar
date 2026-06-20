@@ -32,8 +32,8 @@ export interface AllianceRankingEntry {
   totalKills: number;
 }
 
-// Cache in-memory cu TTL — rankings nu se schimba la fiecare request.
-// Inainte fiecare GET /rankings incarca toti userii cu toate orasele cu toate buildings.
+// In-memory cache with TTL — rankings don't change on every request.
+// Before, each GET /rankings loaded all users with all their cities and all their buildings.
 let rankingsCache: { data: PlayerRankingEntry[]; expiresAt: number } | null = null;
 let allianceRankingsCache: { data: AllianceRankingEntry[]; expiresAt: number } | null = null;
 const RANKINGS_CACHE_TTL_MS = 10_000;

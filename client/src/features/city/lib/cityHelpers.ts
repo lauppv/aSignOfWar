@@ -1,6 +1,6 @@
-// Helperi specifici UI-ului — nu config (config-ul e in shared/gameConfig.ts).
-// computeCityPoints replica calculul serverului pe client — asta inseamna ca punctele
-// din resource bar se actualizeaza instant fara sa astepte refetch-ul de 30s al rankings.
+// UI-specific helpers — not config (config lives in shared/gameConfig.ts).
+// computeCityPoints replicates the server's calculation on the client — this means the points
+// in the resource bar update instantly without waiting for the rankings' 30s refetch.
 
 import type { UnitName } from "@shared/gameConfig.ts";
 import { UNITS, getBuildingPoints } from "@shared/gameConfig.ts";
@@ -16,8 +16,8 @@ export const UNIT_POPULATION: Record<UnitName, number> = Object.fromEntries(
   Object.entries(UNITS).map(([name, cfg]) => [name, cfg.population])
 ) as Record<UnitName, number>;
 
-// Population = toate unitatile proprii inca in viata (acasa + in drum/stationate in
-// comenzi pornite din oras). Serverul calculeaza valoarea in getCityOverview.
+// Population = all of your own units still alive (at home + in transit/stationed in
+// commands started from the city). The server computes the value in getCityOverview.
 export function computePopulation(city: CityOverview): number {
   return city.totalPopulation;
 }

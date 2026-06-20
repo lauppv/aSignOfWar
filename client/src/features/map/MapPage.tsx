@@ -8,29 +8,29 @@ import { getActiveCityId, setActiveCityId } from "@/shared/api/client";
 import type { MapCity } from "@/shared/types";
 import CityActionPanel from "@/features/city/components/CityActionPanel";
 
-// Latura unei celule a hartii (px). Folosita peste tot: pozitionarea oraselor,
-// marimea riglelor, grid-ul de fundal, hit-testing pe cursor.
+// Side of one map cell (px). Used everywhere: city positioning,
+// ruler sizing, the background grid, cursor hit-testing.
 const CELL = 80;
-// Culoarea liniilor grid-ului suprapus peste imaginea "grass.jpg" a hartii.
+// Color of the grid lines overlaid on the map's "grass.jpg" image.
 const GRID_LINE = "#3d660e";
 
-// Paleta conturului oraselor pe harta - fiecare culoare apare si in legenda
-// din bottom-bar-ul hartii (jos-stanga). Ordinea aici = ordinea din legenda.
-const COLOR_ACTIVE   = "#e85aad"; // orasul pe care jucatorul il are selectat ca "activ"
-const COLOR_OWN      = "#e3b341"; // celelalte orase ale jucatorului (non-active)
-const COLOR_GHOST    = "#ffffff"; // orase ghost (fara owner) - pot fi cucerite
-const COLOR_ALLIANCE = "#58a6ff"; // orase ale colegilor de alianta
-const COLOR_OTHER    = "#7125b8"; // restul jucatorilor (adversari potentiali)
+// Palette for city outlines on the map - each color also appears in the legend
+// in the map's bottom-bar (bottom-left). The order here = the order in the legend.
+const COLOR_ACTIVE   = "#e85aad"; // the city the player has selected as "active"
+const COLOR_OWN      = "#e3b341"; // the player's other cities (non-active)
+const COLOR_GHOST    = "#ffffff"; // ghost cities (no owner) - can be conquered
+const COLOR_ALLIANCE = "#58a6ff"; // cities of alliance members
+const COLOR_OTHER    = "#7125b8"; // the rest of the players (potential opponents)
 
-// Clasificarea unui oras din perspectiva jucatorului curent - determina
-// culoarea conturului, glow-ul si butoanele disponibile in CityActionPanel.
+// Classification of a city from the current player's perspective - determines
+// the outline color, the glow, and the buttons available in CityActionPanel.
 type CityKind = "active" | "own" | "ghost" | "alliance" | "other";
-// Tipul terenului unei celule care NU contine oras (vezi getTileInfo).
+// The terrain type of a cell that does NOT contain a city (see getTileInfo).
 type TileType = "forest" | "mountain" | "lake" | "grass";
 
-// Decide ce categorie primeste un oras pe harta. Ordinea ramurilor conteaza:
-// "active" bate "own" (orasul activ ESTE al meu, dar il vrem cu culoarea roz
-// distincta), iar "alliance" se verifica doar daca orasul are owner.
+// Decides which category a city gets on the map. The branch order matters:
+// "active" beats "own" (the active city IS mine, but we want it in the distinct
+// pink color), and "alliance" is only checked if the city has an owner.
 function classify(
   c: MapCity,
   ownedIds: Set<string>,
@@ -54,10 +54,10 @@ function colorFor(kind: CityKind): string {
   }
 }
 
-// Alege ilustratia orasului in functie de punctaj (puncte = suma punctelor
-// cladirilor). Pragurile sunt pur vizuale - un oras mic arata ca un sat,
-// unul de 9000+ arata ca o metropola. Trebuie pastrate sincronizate cu
-// imaginile din /public/images/map/.
+// Picks the city illustration based on score (points = sum of the building
+// points). The thresholds are purely visual - a small city looks like a village,
+// one at 9000+ looks like a metropolis. They must be kept in sync with the
+// images in /public/images/map/.
 function spriteFor(points: number): string {
   if (points >= 9000) return "/images/map/9000-max.jpg";
   if (points >= 3000) return "/images/map/3000-8999.jpg";
@@ -66,20 +66,20 @@ function spriteFor(points: number): string {
   return "/images/map/0-299.jpg";
 }
 
-// Hash deterministic (x, y) -> [0,1). Folosit DOAR pentru decorul hartii, ca
-// terenul sa fie acelasi la fiecare refresh fara sa fie stocat pe server.
+// Deterministic hash (x, y) -> [0,1). Used ONLY for the map decoration, so the
+// terrain is the same on every refresh without being stored on the server.
 function getPseudoRandom(x: number, y: number) {
   const dot = x * 12.9898 + y * 78.233;
   const val = Math.sin(dot) * 43758.5453123;
   return val - Math.floor(val);
 }
 
-// Imparte celulele goale in tipuri de teren pentru decor. Distributia:
-// 5% mountain, 5% lake, 30% forest, 60% grass. Nu are efect gameplay - doar
-// vizual (iarba e randata prin backgroundul grilei, restul prin imagini).
-// Teren pseudo-random determinist: aspectul tile-ului e derivat din coordonate printr-o
-// functie hash, deci acelasi (x,y) produce mereu acelasi tile. Nu e nevoie de state pe
-// server pentru teren — e pur cosmetic. Hash-ul evita stocarea unui grid 200x200 in memorie.
+// Splits empty cells into terrain types for decoration. The distribution:
+// 5% mountain, 5% lake, 30% forest, 60% grass. It has no gameplay effect - only
+// visual (grass is rendered via the grid background, the rest via images).
+// Deterministic pseudo-random terrain: a tile's appearance is derived from its coordinates via a
+// hash function, so the same (x,y) always produces the same tile. No server state is needed
+// for terrain — it's purely cosmetic. The hash avoids storing a 200x200 grid in memory.
 function getTileInfo(x: number, y: number) {
   const rand = getPseudoRandom(x, y);
   const seed = rand * 100;
@@ -92,17 +92,17 @@ function getTileInfo(x: number, y: number) {
   return { type };
 }
 
-// Ecranul /map - harta mare scrollabila cu toate orasele din lume.
-// Are rigle X/Y pe stanga si jos, si un bottom-bar cu legenda culorilor +
-// butoanele "Center city" / "Enter current city". Click pe un oras deschide
-// CityActionPanel (panoul flotant cu info si butoane Attack/Support/etc.).
+// The /map screen - a large scrollable map with all the cities in the world.
+// It has X/Y rulers on the left and bottom, and a bottom-bar with the color legend +
+// the "Center city" / "Enter current city" buttons. Clicking a city opens
+// CityActionPanel (the floating panel with info and Attack/Support/etc. buttons).
 export default function MapPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  // Orasul "activ" al jucatorului - cel pentru care se afiseaza resursele in
-  // header si de la care pleaca comenzile. Persistat in localStorage prin
-  // api/client.ts ca sa supravietuiasca refresh-ului.
+  // The player's "active" city - the one whose resources are shown in the
+  // header and from which commands depart. Persisted in localStorage via
+  // api/client.ts so it survives a refresh.
   const [activeCityId, setActiveCityIdState] = useState<string | undefined>(() => getActiveCityId() ?? undefined);
 
   useEffect(() => {
@@ -111,44 +111,44 @@ export default function MapPage() {
     return () => window.removeEventListener("activeCityChanged", handler);
   }, []);
 
-  // Container-ul scrollabil al hartii (div-ul cu overflow:auto).
+  // The map's scrollable container (the div with overflow:auto).
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Stare pan cu mouse-ul pe harta (null = niciun drag activ).
+  // Mouse-pan state on the map (null = no active drag).
   const dragState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  // Flag ca sa distingem "click" de "drag peste oras": daca user-ul a tras
-  // cu mouse-ul >4px nu mai consideram evenimentul selectare.
+  // Flag to distinguish "click" from "drag over a city": if the user dragged
+  // the mouse >4px we no longer treat the event as a selection.
   const [hasDragged, setHasDragged] = useState(false);
-  // Celula peste care sta cursorul (coordonate harta x,y, nu pixeli). Folosita
-  // pentru dreptunghiul albastru de highlight si pentru coordonatele din
-  // coltul stanga-jos (intersectia riglelor).
+  // The cell the cursor is over (map coordinates x,y, not pixels). Used
+  // for the blue highlight rectangle and for the coordinates in the
+  // bottom-left corner (the rulers' intersection).
   const [cursorCell, setCursorCell] = useState<{ x: number; y: number } | null>(null);
-  // Snapshot-ul viewport-ului scrollabil. Folosit pentru a randa doar riglele
-  // si tile-urile de teren vizibile, nu toate 100x100 celule.
+  // Snapshot of the scrollable viewport. Used to render only the rulers
+  // and terrain tiles that are visible, not all 100x100 cells.
   const [scroll, setScroll] = useState({ left: 0, top: 0, w: 0, h: 0 });
-  // Orasul pe care user-ul a dat click (null = niciun panou deschis).
-  // px/py = pozitia in pixeli a coltului stanga-sus, ca sa putem aseza
-  // CityActionPanel imediat langa el.
+  // The city the user clicked (null = no panel open).
+  // px/py = the pixel position of the top-left corner, so we can place
+  // CityActionPanel right next to it.
   const [selected, setSelected] = useState<{ city: MapCity; px: number; py: number } | null>(null);
-  // One-shot flag - primul load centreaza harta pe orasul jucatorului.
+  // One-shot flag - the first load centers the map on the player's city.
   const [centered, setCentered] = useState(false);
-  // Offset-ul cumulat al CityActionPanel fata de pozitia default (vine din
-  // drag-ul header-ului panoului). Se reseteaza la schimbarea orasului selectat.
+  // The cumulative offset of CityActionPanel from its default position (comes from
+  // dragging the panel's header). Reset when the selected city changes.
   const [panelOffset, setPanelOffset] = useState({ dx: 0, dy: 0 });
   const panelDragRef = useRef<{ startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  // Coordonata Y (px, relativ la viewport) unde incepe CityActionPanel.
-  // Recalculata dupa inaltimea reala a panoului ca sa nu iasa in afara
-  // viewport-ului cand orasul selectat e jos in scroll.
+  // The Y coordinate (px, relative to the viewport) where CityActionPanel starts.
+  // Recalculated from the panel's real height so it doesn't go outside the
+  // viewport when the selected city is far down in the scroll.
   const [panelTop, setPanelTop] = useState(0);
 
-  // Cand user-ul selecteaza alt oras, panoul "revine acasa" (uita drag-ul).
+  // When the user selects another city, the panel "returns home" (forgets the drag).
   useEffect(() => { setPanelOffset({ dx: 0, dy: 0 }); }, [selected?.city.id]);
 
-  // Calculeaza Y-ul CityActionPanel: ideal la acelasi Y ca orasul selectat,
-  // dar "ancorat" ca sa nu iasa peste bottom-bar sau peste marginea de sus.
-  // Ruleaza dupa fiecare render ca sa prinda schimbari de continut (de ex.
-  // cand panoul se mareste pentru ca orasul primeste stationed units).
+  // Computes CityActionPanel's Y: ideally at the same Y as the selected city,
+  // but "anchored" so it doesn't go over the bottom-bar or past the top edge.
+  // Runs after every render to catch content changes (e.g.
+  // when the panel grows because the city receives stationed units).
   useEffect(() => {
     if (!selected || !panelRef.current) return;
     const idealTop = selected.py - scroll.top;
@@ -159,9 +159,9 @@ export default function MapPage() {
     setPanelTop(top);
   });
 
-  // Mouse-down pe header-ul CityActionPanel = start drag al panoului.
-  // Ataseaza listeneri globali pe window ca sa putem trage si dincolo de
-  // marginea panoului. Se detaseaza singuri la mouseup.
+  // Mouse-down on CityActionPanel's header = start dragging the panel.
+  // Attaches global listeners on window so we can drag beyond the
+  // panel's edge. They detach themselves on mouseup.
   function handlePanelHeaderMouseDown(e: React.MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
@@ -187,34 +187,34 @@ export default function MapPage() {
     window.addEventListener("mouseup", onUp);
   }
 
-  // Toate orasele de pe harta (inclusiv ghost). Polling la 15s ca sa se
-  // actualizeze punctele/ownership-ul dupa ce alti jucatori atacă sau cresc.
+  // All cities on the map (including ghosts). Polled at 15s so the
+  // points/ownership update after other players attack or grow.
   const { data: map, isLoading, error } = useQuery({
     queryKey: ["map"],
     queryFn: getMap,
     refetchInterval: 15000,
   });
 
-  // Datele orasului activ - ne trebuie aici pentru: butonul "Center city",
-  // butonul "Enter current city", si pentru a marca cu COLOR_OWN toate
-  // orasele proprii (prin myCity.ownedCities).
+  // The active city's data - we need it here for: the "Center city" button,
+  // the "Enter current city" button, and to mark all of the player's own
+  // cities with COLOR_OWN (via myCity.ownedCities).
   const { data: myCity } = useQuery({
     queryKey: ["city", activeCityId ?? "default"],
     queryFn: () => getMyCity(activeCityId),
   });
 
-  // Alianta jucatorului - folosita DOAR ca sa stim ce orase sa coloram cu
-  // COLOR_ALLIANCE. Daca nu e in nicio alianta, niciun oras nu intra in
-  // categoria "alliance" (vezi functia classify de mai sus).
+  // The player's alliance - used ONLY to know which cities to color with
+  // COLOR_ALLIANCE. If not in any alliance, no city falls into the
+  // "alliance" category (see the classify function above).
   const { data: myAlliance } = useQuery({
     queryKey: ["alliance", "me"],
     queryFn: getMyAlliance,
   });
   const myAllianceId = myAlliance?.id ?? null;
 
-  // Click pe butonul "Select" din CityActionPanel = schimba orasul activ
-  // fara a parasi harta (user-ul ramane pe /map). Invalideaza queries ca
-  // header-ul de resurse si comenzile sa se re-fetch-uie pentru noul oras.
+  // Clicking the "Select" button in CityActionPanel = change the active city
+  // without leaving the map (the user stays on /map). Invalidates queries so the
+  // resource header and commands re-fetch for the new city.
   function handleSelectCity(cityId: string) {
     setActiveCityId(cityId);
     setActiveCityIdState(cityId);
@@ -223,13 +223,13 @@ export default function MapPage() {
     setSelected(null);
   }
 
-  // Set cu id-urile TUTUROR oraselor jucatorului (nu doar cel activ). Dacă
-  // vei avea 1 singur oras, setul are 1 element. Folosit in classify().
+  // A set with the ids of ALL the player's cities (not just the active one). If
+  // you have only 1 city, the set has 1 element. Used in classify().
   const ownedCityIds = new Set(myCity?.ownedCities?.map((c) => c.id) ?? []);
 
-  // Sincronizeaza `scroll` state-ul cu container-ul scrollabil (pozitie +
-  // dimensiune). Ruleaza la scroll si la resize (ResizeObserver). Trigger
-  // pentru re-calcularea tile-urilor vizibile si a riglelor.
+  // Syncs the `scroll` state with the scrollable container (position +
+  // size). Runs on scroll and on resize (ResizeObserver). Triggers
+  // re-computation of the visible tiles and the rulers.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -243,9 +243,9 @@ export default function MapPage() {
     return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
   }, [map]);
 
-  // Auto-center: la primul load, pozitioneaza orasul jucatorului in mijlocul
-  // viewport-ului. Ruleaza doar o data (`centered` flag) ca sa nu anuleze
-  // scroll-ul manual al user-ului la re-fetch-uri.
+  // Auto-center: on the first load, positions the player's city in the middle of
+  // the viewport. Runs only once (the `centered` flag) so it doesn't undo
+  // the user's manual scroll on re-fetches.
   useEffect(() => {
     if (centered || !map || !myCity || !scrollRef.current) return;
     const el = scrollRef.current;
@@ -254,8 +254,8 @@ export default function MapPage() {
     setCentered(true);
   }, [map, myCity, centered]);
 
-  // Deep-link: /map?selectCityId=<id> — centreaza harta pe orasul dat si deschide panoul.
-  // Folosit din rapoarte si profilul jucatorului ca sa poti ataca/sprijini direct din acolo.
+  // Deep-link: /map?selectCityId=<id> — centers the map on the given city and opens the panel.
+  // Used from reports and the player profile so you can attack/support directly from there.
   const selectCityIdParam = searchParams.get("selectCityId");
   useEffect(() => {
     if (!selectCityIdParam || !map || !scrollRef.current) return;
@@ -266,25 +266,25 @@ export default function MapPage() {
     el.scrollTop  = city.y * CELL + CELL / 2 - el.clientHeight / 2;
     setSelected({ city, px: city.x * CELL, py: city.y * CELL });
     setCentered(true);
-    // Stergem param-ul din URL ca sa nu re-selecteze la re-render
+    // Remove the param from the URL so it doesn't re-select on re-render
     const next = new URLSearchParams(searchParams);
     next.delete("selectCityId");
     setSearchParams(next, { replace: true });
   }, [selectCityIdParam, map]);
 
-  // Set cu cheile "x,y" ale tuturor celulelor ocupate de orase - folosit ca
-  // sa NU desenam tile de teren (padure/lac/munte) peste un oras.
+  // A set with the "x,y" keys of all cells occupied by cities - used so we
+  // do NOT draw a terrain tile (forest/lake/mountain) over a city.
   const citySlots = useMemo(() => {
     if (!map) return new Set<string>();
     return new Set(map.cities.map(c => `${c.x},${c.y}`));
   }, [map]);
 
-  // Calculeaza tile-urile de teren "speciale" (non-grass) DOAR pentru zona
-  // vizibila + 1 celula marja. Fara asta am randa 100x100=10k div-uri. La
-  // scroll se recalculeaza in mod natural prin dependenta pe `scroll.*`.
-  // Randez doar tile-urile vizibile in viewport — fara asta, 200x200 = 40,000 elemente
-  // DOM ar omori browserul. Calculez range-ul vizibil din pozitia scroll-ului si adaug
-  // un buffer de 2 celule pe fiecare parte pentru scrolling smooth.
+  // Computes the "special" (non-grass) terrain tiles ONLY for the visible
+  // area + 1 cell margin. Without this we'd render 100x100=10k divs. On
+  // scroll it recomputes naturally through the dependency on `scroll.*`.
+  // I render only the tiles visible in the viewport — without this, 200x200 = 40,000 DOM
+  // elements would kill the browser. I compute the visible range from the scroll position and add
+  // a 2-cell buffer on each side for smooth scrolling.
   const visibleSpecialTiles = useMemo(() => {
     if (!map) return [];
     const tiles = [];

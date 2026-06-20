@@ -204,7 +204,7 @@ export const getSiegeStatusForCity = async (cityId: string, userId: string): Pro
     .filter(([, q]) => q > 0)
     .map(([name, quantity]) => ({ name, quantity }));
 
-  // SPY e complet invizibil pentru apărător. ATTACK: ascundem compoziția.
+  // SPY is completely invisible to the defender. ATTACK: we hide the composition.
   const sanitizedIncoming = incoming
     .filter(c => c.type !== "SPY")
     .map(c => ({
@@ -453,11 +453,11 @@ export const completeConquest = async (siegeId: string): Promise<void> => {
 };
 
 // ─── Auto-battle: arriving force attacks besieger garrison ──────────────────
-// Cand o comanda de SUPPORT ajunge pe un oras asediat, sau cand trupe se intorc
-// acasa la un oras asediat, se aruncă imediat in lupta cu garnizoana besieger-ului.
-// Defenderii = garnizoana besieger-ului + alte SUPPORT-uri stationate + city.units.
-// Atacatorii = unitatile care sosesc.
-// Returneaza supravietuitorii atacatorului si daca siege-ul a fost spart.
+// When a SUPPORT command arrives at a besieged city, or when troops return
+// home to a besieged city, they are immediately thrown into battle against the besieger's garrison.
+// Defenders = the besieger's garrison + other stationed SUPPORTs + city.units.
+// Attackers = the arriving units.
+// Returns the attacker's survivors and whether the siege was broken.
 export const resolveAttackOnBesiegedCity = async (args: {
   attackerUnits: { name: UnitName; quantity: number }[];
   toCityId: string;

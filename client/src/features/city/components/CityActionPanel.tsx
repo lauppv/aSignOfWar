@@ -38,10 +38,10 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
 
-  // Panoul serveste dublu scop: info oras (populatie, cladiri, trupe stationate)
-  // si formular comanda (trimite atac/suport/resurse/spion). Mode toggle comuta intre ele.
-  // Panoul traieste pe MapPage ca overlay draggable, nu ca modal — ca sa poti vedea
-  // contextul hartii in timp ce planifici un atac.
+  // The panel serves a dual purpose: city info (population, buildings, stationed troops)
+  // and command form (send attack/support/resources/spy). The mode toggle switches between them.
+  // The panel lives on MapPage as a draggable overlay, not as a modal — so you can see
+  // the map context while planning an attack.
   const now = useNow();
   const isOwn     = myCity?.id === city.id;
   const canSwitch = !!isOwnedByMe && !isOwn && (!!onSelectCity || !!onEnterCity);
@@ -359,7 +359,7 @@ export default function CityActionPanel({ city, myCity, headerColor, kindLabel, 
           )}
         </div>
       ) : (
-        // pentru atac si suport, afisam lista de unitati disponibile cu input pentru cantitate. Pentru spionaj, doar hackerii.
+        // for attack and support, show the list of available units with a quantity input. For spying, only hackers.
         <div className="flex flex-col gap-1 max-h-[480px] overflow-y-auto pr-1">
           {availableUnits.length === 0 ? (
             <div className="text-[10px] text-[#b1bac4] py-1">No units available</div>

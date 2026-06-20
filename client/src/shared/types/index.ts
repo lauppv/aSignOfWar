@@ -1,5 +1,5 @@
 // Types matching backend Prisma response shapes
-// BuildingName, UnitName, UnitCategory vin din sursa unica de adevar (shared/)
+// BuildingName, UnitName, UnitCategory come from the single source of truth (shared/)
 
 import type { BuildingName, UnitName, UnitCategory } from "@shared/gameConfig.ts";
 export type { BuildingName, UnitName, UnitCategory };

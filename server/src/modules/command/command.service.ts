@@ -13,10 +13,10 @@ import { CommandType, UnitName, BuildingName } from "@prisma/client";
 import { syncResourcesFromCity } from "../city/city.service";
 import { isCityBesieged } from "../siege/siege.service";
 
-// Lifecycle-ul unei comenzi: TRAVELING -> ARRIVING (worker) -> RETURNING -> COMPLETED
-// Fereastra de anulare: 5 min dupa plecare, intoarcerea e simetrica (mers X sec = retur X sec).
-// Toate deducerile de resurse/unitati folosesc optimistic locking (updateMany cu WHERE >= qty)
-// pentru a preveni race conditions intre request-uri concurente fara lock-uri explicite pe DB.
+// A command's lifecycle: TRAVELING -> ARRIVING (worker) -> RETURNING -> COMPLETED
+// Cancellation window: 5 min after departure, the return is symmetric (X sec outbound = X sec return).
+// All resource/unit deductions use optimistic locking (updateMany with WHERE >= qty)
+// to prevent race conditions between concurrent requests without explicit DB locks.
 
 export const sendCommand = async (
   fromCityId: string,
@@ -45,7 +45,7 @@ export const sendCommand = async (
   if (!fromCity)             throw new Error("CITY_NOT_FOUND");
   if (!toCity)               throw new Error("TARGET_CITY_NOT_FOUND");
   if (fromCity.ownerId !== userId) throw new Error("UNAUTHORIZED");
-  // Cat timp orasul-sursa e sub asediu, nu se pot trimite comenzi noi.
+  // As long as the source city is under siege, no new commands can be sent.
   if (await isCityBesieged(fromCityId)) throw new Error("CITY_UNDER_SIEGE");
   if (type === "ATTACK" && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_ATTACK_OWN_CITY");
   if (type === "SPY"    && fromCity.ownerId === toCity.ownerId) throw new Error("CANNOT_SPY_OWN_CITY");
@@ -64,7 +64,7 @@ export const sendCommand = async (
     .filter(([, qty]) => qty && qty > 0)
     .map(([name, qty]) => ({ name: name as UnitName, quantity: qty! }));
 
-  // Validare unitati
+  // Unit validation
   if (type !== "RESOURCES") {
     if (units.length === 0) throw new Error("NO_UNITS");
     for (const { name, quantity } of units) {
@@ -75,25 +75,25 @@ export const sendCommand = async (
     }
   }
 
-  // SPY: acceptam doar hackeri
+  // SPY: we only accept hackers
   if (type === "SPY") {
     const nonHacker = units.find(u => u.name !== "HACKER");
     if (nonHacker) throw new Error("SPY_REQUIRES_HACKERS_ONLY");
     const totalHackers = units.reduce((s, u) => s + u.quantity, 0);
     if (totalHackers < 1) throw new Error("NO_UNITS");
   }
-  // ATTACK/SUPPORT: hackerii nu pot fi trimisi (nu participa la bataliile normale)
+  // ATTACK/SUPPORT: hackers can't be sent (they don't take part in normal battles)
   if (type === "ATTACK" || type === "SUPPORT") {
     if (units.some(u => u.name === "HACKER")) throw new Error("HACKERS_CANNOT_JOIN_BATTLE");
   }
 
-  // targetBuilding doar cu drone in ATTACK
+  // targetBuilding only with drones in ATTACK
   if (targetBuilding) {
     if (type !== "ATTACK") throw new Error("TARGET_BUILDING_ONLY_FOR_ATTACK");
     if (!units.some(u => u.name === "DRONE" && u.quantity > 0)) throw new Error("TARGET_BUILDING_REQUIRES_DRONES");
   }
 
-  // Validare resurse (RESOURCES)
+  // Resource validation (RESOURCES)
   if (type === "RESOURCES") {
     const harbor = fromCity.buildings.find(b => b.name === "HARBOR");
     if (!harbor || harbor.level < 1) throw new Error("HARBOR_REQUIRED");
@@ -120,9 +120,9 @@ export const sendCommand = async (
   let commandId!: string;
 
   await prisma.$transaction(async (tx) => {
-    // Optimistic locking: WHERE quantity >= X face ca doua comenzi concurente sa nu poata
-    // deduce din acelasi pool. Daca updateMany.count === 0, altcineva a luat unitatile
-    // primul — aruncam eroare si tranzactia se face rollback.
+    // Optimistic locking: WHERE quantity >= X makes it so two concurrent commands can't
+    // deduct from the same pool. If updateMany.count === 0, someone else took the units
+    // first — we throw an error and the transaction rolls back.
     for (const { name, quantity } of units) {
       const updated = await tx.unit.updateMany({
         where: { cityId: fromCityId, name, quantity: { gte: quantity } },
@@ -131,7 +131,7 @@ export const sendCommand = async (
       if (updated.count === 0) throw new Error(`INSUFFICIENT_UNITS:${name}`);
     }
 
-    // Scade resursele din oras (RESOURCES)
+    // Deduct the resources from the city (RESOURCES)
     if (type === "RESOURCES") {
       const updated = await tx.city.updateMany({
         where: {
@@ -174,8 +174,8 @@ export const sendCommand = async (
   return { commandId, arrivalAt };
 };
 
-// Anuleaza o comanda TRAVELING: unitatile/resursele se intorc simetric acasa
-// (daca au mers x secunde, se mai intorc exact x secunde pana acasa).
+// Cancel a TRAVELING command: the units/resources return home symmetrically
+// (if they traveled x seconds out, they take exactly x seconds back home).
 export const cancelCommand = async (commandId: string, userId: string) => {
   const command = await prisma.command.findUnique({
     where:   { id: commandId },
@@ -200,10 +200,10 @@ export const cancelCommand = async (commandId: string, userId: string) => {
   return { commandId, arrivalAt: newArrivalAt };
 };
 
-// Retrage unitati stationate ca SUPPORT intr-un oras. Doua variante:
-//   - mode "all"  → toate comenzile stationate pleaca inapoi (flip ARRIVED → RETURNING).
-//   - mode partial cu unitCounts → creeaza o comanda noua RETURNING cu unitatile cerute,
-//     scazand din comenzile stationate existente (oldest first).
+// Withdraw units stationed as SUPPORT in a city. Two variants:
+//   - mode "all"  → all stationed commands head back (flip ARRIVED → RETURNING).
+//   - partial mode with unitCounts → create a new RETURNING command with the requested units,
+//     subtracting from the existing stationed commands (oldest first).
 export const withdrawStationedSupport = async (
   fromCityId: string,
   targetCityId: string,
@@ -230,9 +230,9 @@ export const withdrawStationedSupport = async (
   });
   if (stationed.length === 0) throw new Error("NO_STATIONED_UNITS");
 
-  // Besieger-ul nu poate retrage garnizoana cat timp asediul e activ — guvernatorul
-  // si escortele sunt blocate in oras pana cand siege-ul se termina (cucerire reusita,
-  // spart de defender, sau inlocuit de alt atacator).
+  // The besieger can't withdraw the garrison while the siege is active — the governor
+  // and the escorts are locked in the city until the siege ends (successful capture,
+  // broken by the defender, or replaced by another attacker).
   const activeSiege = await prisma.siege.findFirst({
     where:  { cityId: targetCityId, status: "ACTIVE", garrisonCommandId: { in: stationed.map(s => s.id) } },
     select: { id: true },
@@ -273,7 +273,7 @@ export const withdrawStationedSupport = async (
     return { withdrawnCommandIds: ids };
   }
 
-  // Partial: aduna cat sa scoti per unit type
+  // Partial: tally up how much to pull out per unit type
   const remaining = new Map<UnitName, number>();
   for (const [name, qty] of Object.entries(unitCounts) as [UnitName, number | undefined][]) {
     if (qty && qty > 0) remaining.set(name, qty);
@@ -298,9 +298,9 @@ export const withdrawStationedSupport = async (
         remaining.set(cu.name as UnitName, need - take);
         withdrawn.set(cu.name as UnitName, (withdrawn.get(cu.name as UnitName) ?? 0) + take);
       }
-      // Daca toate unitatile comenzii stationate au devenit 0, marcheaza COMPLETED
-      // si o ascundem din rapoarte — valoarea de notificare e pe noua comanda
-      // RETURNING creata mai jos, care poarta flag-ul de withdrawal.
+      // If all units of the stationed command have become 0, mark it COMPLETED
+      // and hide it from reports — the notification value is on the new RETURNING
+      // command created below, which carries the withdrawal flag.
       const refreshed = await tx.commandUnit.findMany({ where: { commandId: cmd.id } });
       if (refreshed.every(u => u.quantity === 0)) {
         await tx.command.update({
@@ -324,9 +324,9 @@ export const withdrawStationedSupport = async (
     partialDelayMs       = travelMsFor(withdrawnUnits);
     partialArrivalAt     = new Date(Date.now() + partialDelayMs);
 
-    // Withdraw-ul nou pleaca din orasul "atacator" (expeditor) catre orasul
-    // "defender" (targetul unde stationau). Proprietarii raman legati de
-    // participantii originali ai sprijinului, nu de cine detine orasele azi.
+    // The new withdrawal departs from the "attacker" city (sender) toward the
+    // "defender" city (the target where they were stationed). The owners stay tied to
+    // the original support participants, not to whoever owns the cities today.
     const srcCity = await tx.city.findUnique({ where: { id: fromCityId },   select: { ownerId: true } });
     const dstCity = await tx.city.findUnique({ where: { id: targetCityId }, select: { ownerId: true } });
 
@@ -357,9 +357,9 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
   if (!city)                   throw new Error("CITY_NOT_FOUND");
   if (city.ownerId !== userId) throw new Error("UNAUTHORIZED");
 
-  // Outgoing: aratam TRAVELING (pleaca) si RETURNING (se intorc acasa).
-  // Incoming: aratam doar TRAVELING — un atac ajuns la noi care s-a intors RETURNING
-  // nu mai e treaba defenderului, e doar un trip de intoarcere al atacatorului.
+  // Outgoing: we show TRAVELING (leaving) and RETURNING (heading back home).
+  // Incoming: we show only TRAVELING — an attack that reached us and has turned RETURNING
+  // is no longer the defender's concern, it's just the attacker's return trip.
   const [outgoing, incoming] = await Promise.all([
     prisma.command.findMany({
       where:   { fromCityId: cityId, status: { in: ["TRAVELING", "RETURNING", "ARRIVED"] } },
@@ -373,8 +373,8 @@ export const getCommandsForCity = async (cityId: string, userId: string) => {
     }),
   ]);
 
-  // SPY-urile sunt complet invizibile pentru apărător (nu știe că vine un spionaj).
-  // ATTACK: ascundem compoziția (units), dar apărătorul vede că vine un atac.
+  // SPY commands are completely invisible to the defender (they don't know a spy mission is coming).
+  // ATTACK: we hide the composition (units), but the defender can see that an attack is incoming.
   const sanitizedIncoming = incoming
     .filter(c => c.type !== "SPY")
     .map(c => c.type === "ATTACK" ? { ...c, units: [] } : c);

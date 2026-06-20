@@ -1,7 +1,7 @@
-// Multiplicatorul de viteza al jocului, preluat de pe server la boot. Controleaza cat
-// de rapid merge totul: productie resurse, timp constructie, timp calatorie.
-// Stocat ca state la nivel de modul (nu React state) pentru ca e citit de functii pure
-// din gameConfig care nu au acces la React context. Setat o data, nu se schimba in sesiune.
+// The game speed multiplier, fetched from the server at boot. It controls how
+// fast everything runs: resource production, construction time, travel time.
+// Stored as module-level state (not React state) because it's read by pure functions
+// in gameConfig that have no access to React context. Set once, never changes during a session.
 import { api } from "@/shared/api/client";
 
 export let GAME_SPEED = 1;

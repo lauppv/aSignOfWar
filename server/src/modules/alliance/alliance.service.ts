@@ -50,9 +50,9 @@ export async function getAlliance(allianceId: string) {
 }
 
 export async function getAllianceProfile(allianceId: string) {
-  // Profilul public al aliantei: metrici + rank fata de celelalte aliante.
-  // Calculeaza toate totalurile intr-un singur query (nu folosim getAllianceRankings
-  // ca sa nu mai facem inca un round-trip).
+  // The alliance's public profile: metrics + rank relative to the other alliances.
+  // Compute all totals in a single query (we don't use getAllianceRankings
+  // to avoid making yet another round-trip).
   const alliances = await prisma.alliance.findMany({
     include: {
       leader: { select: { id: true, username: true } },

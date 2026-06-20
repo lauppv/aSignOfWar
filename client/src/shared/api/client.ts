@@ -1,10 +1,10 @@
 const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
-// Mapare cod eroare -> mesaj human-readable. Serverul trimite coduri masina
-// (ex: "INSUFFICIENT_RESOURCES") si clientul le traduce. Asta decupleaza afisarea
-// de implementarea serverului — serverul nu trebuie sa stie de i18n, si eu pot
-// schimba textul fara sa ating backend-ul.
-// Codurile cu parametri (HQ_REQUIRED:5, MB_REQUIRED:10) sunt tratate in humanizeError().
+// Error code -> human-readable message mapping. The server sends machine codes
+// (e.g. "INSUFFICIENT_RESOURCES") and the client translates them. This decouples the
+// display from the server implementation — the server doesn't need to know about i18n,
+// and I can change the text without touching the backend.
+// Parameterized codes (HQ_REQUIRED:5, MB_REQUIRED:10) are handled in humanizeError().
 const ERROR_MESSAGES: Record<string, string> = {
   USERNAME_AND_EMAIL_TAKEN: "Username and email are already taken",
   USERNAME_TAKEN: "Username is already taken",
